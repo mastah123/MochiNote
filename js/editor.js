@@ -47,6 +47,8 @@ const NotesEditor = (function () {
           const c = v.split(/\s+/).filter(x => (tag === 'UL' && x === 'checklist') || (tag === 'LI' && x === 'done') || (tag === 'DIV' && x === 'callout'));
           if (c.length) { ch.setAttribute('class', c.join(' ')); ok = true; }
         }
+        else if (tag === 'DIV' && n === 'data-sticker' && /^[^<>"'&\s]{1,8}$/.test(v)) ok = true;
+        else if (tag === 'OL' && n === 'start' && /^\d{1,4}$/.test(v)) ok = true;
         else if (tag === 'A' && n === 'href') { const u = safeUrl(v); if (u) { ch.setAttribute('href', u); ok = true; } }
         else if (tag === 'IMG' && n === 'src') { const u = safeUrl(v, true); if (u) { ch.setAttribute('src', u); ok = true; } }
         else if (tag === 'IMG' && n === 'alt') { ch.setAttribute('alt', v.slice(0, 200)); ok = true; }
@@ -59,12 +61,15 @@ const NotesEditor = (function () {
         if (!ch.getAttribute('href')) { while (ch.firstChild) node.insertBefore(ch.firstChild, ch); ch.remove(); return; }
         ch.setAttribute('target', '_blank'); ch.setAttribute('rel', 'noopener noreferrer');
       }
+      if (tag === 'DIV' && ch.hasAttribute('data-sticker') && !ch.classList.contains('callout')) ch.removeAttribute('data-sticker');
       if (tag === 'IMG' && !ch.getAttribute('src')) ch.remove();
     });
   }
   function sanitize(html) {
     const doc = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html');
     cleanNode(doc.body);
+    // browsers wrap pasted blocks (e.g. a list) in a bare <div>; keep the stored HTML clean
+    Array.from(doc.body.children).forEach(d => { if (d.tagName === 'DIV' && !d.attributes.length && d.children.length && d.children.length === d.childNodes.length && Array.from(d.children).every(c => /^(DIV|UL|OL|P|H[1-3]|BLOCKQUOTE)$/.test(c.tagName))) d.replaceWith(...Array.from(d.childNodes)); });
     return doc.body.innerHTML;
   }
 
@@ -121,7 +126,7 @@ const NotesEditor = (function () {
     changed(); updateToolbar();
   }
 
-  /* ---------- callout card (💡): a <div class="callout"> holding ordinary block children ---------- */
+  /* ---------- card: a <div class="callout" [data-sticker]> holding ordinary block children; the sticker is optional ---------- */
   const calloutOf = n => { const el = n && (n.nodeType === 1 ? n : n.parentElement); const c = el && el.closest && el.closest('.callout'); return c && body.contains(c) ? c : null; };
   const topBlock = n => { while (n && n.parentNode !== body) n = n.parentNode; return n; };
   const INLINE = /^(B|STRONG|I|EM|U|S|STRIKE|DEL|A|SPAN|FONT|MARK|IMG|BR)$/;
@@ -175,7 +180,7 @@ const NotesEditor = (function () {
     const flush = () => { const t = buf.replace(/\s+/g, ' ').trim(); if (t) lines.push(t); buf = ''; };
     const BLOCK = /^(DIV|P|H[1-6]|BLOCKQUOTE)$/;
     const list = (el, depth) => {
-      let i = 0; const ordered = el.tagName === 'OL', check = el.classList.contains('checklist');
+      const ordered = el.tagName === 'OL'; let i = ordered ? (parseInt(el.getAttribute('start'), 10) || 1) - 1 : 0; const check = el.classList.contains('checklist');
       Array.from(el.children).forEach(li => {
         if (li.tagName !== 'LI') return; i++;
         if (!range.intersectsNode(li)) return;
@@ -202,7 +207,7 @@ const NotesEditor = (function () {
         if (tag === 'UL' || tag === 'OL') { flush(); list(ch, 0); return; }
         if (BLOCK.test(tag)) {
           flush();
-          if (ch.classList.contains('callout')) { const n0 = lines.length; walk(ch, true); flush(); if (lines.length > n0) lines[n0] = '💡 ' + lines[n0]; }
+          if (ch.classList.contains('callout')) { const n0 = lines.length; walk(ch, true); flush(); if (lines.length > n0 && ch.getAttribute('data-sticker')) lines[n0] = ch.getAttribute('data-sticker') + ' ' + lines[n0]; }
           else { walk(ch, false); flush(); }
           return;
         }
@@ -284,6 +289,7 @@ const NotesEditor = (function () {
       const data = c.toDataURL('image/webp', 0.85);
       restoreRange();
       document.execCommand('insertImage', false, data);
+      document.execCommand('insertParagraph');          // a fresh line under the picture, so typing continues below it
       if (data.length > 1.5e6) opts.toast('Large image added — it uses a lot of local storage.');
       changed();
     } catch (e) { opts.toast(e.message || 'Could not add that image.'); }
@@ -330,6 +336,7 @@ const NotesEditor = (function () {
         if (cmd === 'insertUnorderedList') on = listsInSelection('ul').some(u => !u.classList.contains('checklist'));
         if (cmd === 'insertOrderedList') on = listsInSelection('ol').length > 0;
         if (cmd === 'checklist') on = listsInSelection('ul').some(u => u.classList.contains('checklist'));
+        if (/^h[123]$/.test(cmd)) { const s0 = sel(); const e0 = s0.anchorNode && (s0.anchorNode.nodeType === 1 ? s0.anchorNode : s0.anchorNode.parentElement); const hh = e0 && e0.closest && e0.closest('h1,h2,h3'); on = !!(hh && body.contains(hh) && hh.tagName.toLowerCase() === cmd); }
         if (cmd === 'callout') { const r0 = currentRange(); on = !!(r0 && calloutOf(r0.startContainer)); }
       }
       b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -341,15 +348,62 @@ const NotesEditor = (function () {
     }
   }
 
+  // Keep the line being typed above the format bar / keyboard (like the keyboard does): scroll the note area so the caret is visible.
+  function caretRect() {
+    const r = currentRange(); if (!r) return null;
+    let rect = r.getClientRects()[0];
+    if (rect && (rect.height || rect.width)) return rect;
+    // collapsed at an element boundary: measure the line the caret is on (the last leaf before it), not the whole container
+    let n = r.startContainer;
+    if (n.nodeType === 1) { n = n.childNodes[r.startOffset - 1] || n.childNodes[r.startOffset] || n; while (n.lastChild) n = n.lastChild; }
+    const rr = document.createRange();
+    if (n.nodeType === 3) { rr.selectNodeContents(n); const rs = rr.getClientRects(); if (rs.length) return rs[rs.length - 1]; }
+    const el = n.nodeType === 1 && n !== body ? n : n.parentElement;
+    const er = el && el.getBoundingClientRect();
+    return er && er.height ? (el.tagName === 'BR' ? el.parentElement.getBoundingClientRect() : er) : null;
+  }
+  function keepCaretVisible() {
+    const sc = body && body.closest('.ed-scroll'); const rect = caretRect(); if (!sc || !rect || !rect.height) return;
+    const box = sc.getBoundingClientRect(), pad = Math.min(36, box.height / 4);
+    if (rect.bottom > box.bottom - pad) sc.scrollTop += rect.bottom - (box.bottom - pad);
+    else if (rect.top < box.top + 6) sc.scrollTop -= (box.top + 6) - rect.top;
+  }
+
   function onBodyInput(e) {
     if (e.inputType === 'insertParagraph') {      // new checklist item shouldn't inherit "done"
       const r = currentRange(), li = r && (r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement).closest('li.done');
       if (li) li.classList.remove('done');
     }
     changed(); updateSuggest();
+    if (window.matchMedia('(max-width: 899px)').matches) requestAnimationFrame(keepCaretVisible);
   }
 
+  /* ---------- stickers: tiny emoji picker. From the toolbar it inserts at the caret; from a card's gutter it sets the card's own sticker ---------- */
+  const STICKERS = ['💡', '⭐', '❤️', '🔥', '✅', '❗', '❓', '📌', '📝', '🎯', '🌱', '☁️', '🍡', '🌸', '🎨', '🎵', '📚', '💬', '🛒', '🏠', '✈️', '💰', '🔔', '🧠', '😊', '🎉', '⚡', '🌙'];
+  let stickerCb = null, stickerAnchor = null;
+  function hideSticker() { const p = root && root.querySelector('#stickerPop'); if (p) p.hidden = true; stickerCb = null; stickerAnchor = null; }
+  function openSticker(anchor, title, current, cb) {
+    const pop = root.querySelector('#stickerPop'), grid = root.querySelector('#stickerGrid'), inp = root.querySelector('#stickerInput'), none = root.querySelector('#stickerNone');
+    saveRange(); stickerCb = cb; stickerAnchor = anchor;
+    root.querySelector('#stickerTitle').textContent = title; inp.value = ''; none.hidden = !current;
+    if (!grid.childNodes.length) STICKERS.forEach(s => { const b = document.createElement('button'); b.type = 'button'; b.className = 'sticker'; b.textContent = s; b.setAttribute('aria-label', 'Sticker ' + s); b.dataset.s = s; grid.appendChild(b); });
+    Array.from(grid.children).forEach(b => b.classList.toggle('on', b.dataset.s === current));
+    pop.hidden = false;
+    const r = anchor.getBoundingClientRect(), er = (root.matches('#editor') ? root : root.querySelector('#editor') || root).getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight, M = 8;
+    let left = Math.max(er.left + M, Math.min(r.left, er.right - pw - M)), top = r.bottom + 6;
+    if (top + ph > er.bottom - M) top = Math.max(er.top + M, r.top - ph - 6);
+    pop.style.left = Math.round(left - er.left) + 'px'; pop.style.top = Math.round(top - er.top) + 'px';
+  }
+  function pickSticker(s) { const cb = stickerCb; hideSticker(); if (cb) cb(s); }
+  function insertSticker(s) { restoreRange(); document.execCommand('insertText', false, s); saveRange(); changed(); updateToolbar(); }
+  function setCardSticker(card, s) { if (s) card.setAttribute('data-sticker', s); else card.removeAttribute('data-sticker'); changed(); }
+
   function onBodyClick(e) {
+    const card = e.target.classList && e.target.classList.contains('callout') ? e.target : null;
+    if (card && e.clientX - card.getBoundingClientRect().left < 46) {         // the card's sticker slot
+      const cur = card.getAttribute('data-sticker') || '';
+      openSticker(card, 'Card sticker', cur, s => setCardSticker(card, s)); return;
+    }
     const li = e.target;
     if (li && li.tagName === 'LI' && li.parentElement.classList.contains('checklist') && e.clientX - li.getBoundingClientRect().left < 34) {
       li.classList.toggle('done'); changed();
@@ -358,12 +412,99 @@ const NotesEditor = (function () {
     if (a && (e.ctrlKey || e.metaKey)) window.open(a.href, '_blank', 'noopener');
   }
 
+  /* ---------- pasted "- item", "1. item", "☐ item" lines become real lists ---------- */
+  const MARKERS = [
+    { kind: 'check', re: /^(\s*(?:[-*•]\s+)?)(\[( |x|X|✓|✔)\]|[☐☑☒✅⬜✔✓])\s+/ },
+    { kind: 'ul', re: /^(\s*)[-*•·▪◦‣]\s+/ },
+    { kind: 'ol', re: /^(\s*)(\d{1,4})[.)]\s+/ }
+  ];
+  function classifyLine(text) {
+    const t = text.replace(/\u00a0/g, ' ');
+    for (const m of MARKERS) {
+      const x = m.re.exec(t);
+      if (x && t.length > x[0].length && t.slice(x[0].length).trim()) {
+        return { kind: m.kind, len: x[0].length, done: m.kind === 'check' && /[xX✓✔☑☒✅]/.test(x[2]), num: m.kind === 'ol' ? parseInt(x[2], 10) : 0 };
+      }
+    }
+    return null;
+  }
+  function stripLead(div, n) {                       // remove the first n characters of text (across inline tags)
+    const w = document.createTreeWalker(div, NodeFilter.SHOW_TEXT); let t;
+    while (n > 0 && (t = w.nextNode())) { const k = Math.min(n, t.nodeValue.length); t.nodeValue = t.nodeValue.slice(k); n -= k; }
+  }
+  // Split pasted content into lines (<br> and block boundaries); headings / quotes stay whole.
+  function linesFromDom(rootEl) {
+    const lines = []; let cur = document.createElement('div');
+    const flush = force => { if (cur.childNodes.length || force) lines.push({ el: cur }); cur = document.createElement('div'); };
+    (function walk(node) {
+      Array.from(node.childNodes).forEach(ch => {
+        if (ch.nodeType === 1 && ch.tagName === 'BR') { flush(true); return; }
+        if (ch.nodeType === 1 && /^(H[1-3]|BLOCKQUOTE)$/.test(ch.tagName)) { if (cur.childNodes.length) flush(); lines.push({ el: ch.cloneNode(true), atomic: true }); return; }
+        if (ch.nodeType === 1 && /^(DIV|P)$/.test(ch.tagName)) { if (cur.childNodes.length) flush(); walk(ch); if (cur.childNodes.length) flush(); return; }
+        cur.appendChild(ch.cloneNode(true));
+      });
+    })(rootEl);
+    if (cur.childNodes.length) flush();
+    return lines;
+  }
+  // Returns HTML with real <ul>/<ol>/checklist for runs of 2+ marker lines (1 line when allowSingle), or null.
+  function listifyLines(lines, allowSingle) {
+    const info = lines.map(l => l.atomic ? null : classifyLine(l.el.textContent));
+    let out = '', found = false, i = 0;
+    const plain = l => l.atomic ? l.el.outerHTML : '<div>' + (l.el.innerHTML || '<br>') + '</div>';
+    while (i < lines.length) {
+      const c = info[i];
+      if (!c) { out += plain(lines[i]); i++; continue; }
+      let j = i; while (j < lines.length && info[j] && info[j].kind === c.kind) j++;
+      if (j - i < 2 && !(allowSingle && lines.length === 1)) { for (let k = i; k < j; k++) out += plain(lines[k]); i = j; continue; }
+      found = true;
+      const items = []; for (let k = i; k < j; k++) { const d = lines[k].el.cloneNode(true); stripLead(d, info[k].len); items.push('<li' + (info[k].done ? ' class="done"' : '') + '>' + (d.innerHTML || '<br>') + '</li>'); }
+      out += c.kind === 'ol' ? '<ol' + (c.num > 1 ? ' start="' + c.num + '"' : '') + '>' + items.join('') + '</ol>' : c.kind === 'check' ? '<ul class="checklist">' + items.join('') + '</ul>' : '<ul>' + items.join('') + '</ul>';
+      i = j;
+    }
+    return found ? out : null;
+  }
+  function listifyHtml(clean, allowSingle) {
+    const box = document.createElement('div'); box.innerHTML = clean;
+    if (box.querySelector('ul,ol,li')) return null;      // already real lists: keep as they are
+    return listifyLines(linesFromDom(box), allowSingle);
+  }
+  function listifyText(text, allowSingle) {
+    const lines = text.replace(/\r\n?/g, '\n').replace(/\n+$/, '').split('\n').map(t => { const d = document.createElement('div'); d.textContent = t; return { el: d }; });
+    return listifyLines(lines, allowSingle);
+  }
+  function caretLineIsEmpty() {
+    const r = currentRange(); if (!r) return false;
+    const b = topBlock(r.startContainer); if (!b || b === body) return !body.textContent.trim();
+    return !b.textContent.trim() && !b.querySelector('img,ul,ol');
+  }
+
+  // Pasting block HTML onto an empty line replaces that line (no wrapper <div>, undo still works).
+  function insertBlocks(h) {
+    const r = currentRange();
+    if (r && r.collapsed && caretLineIsEmpty()) {
+      const b = topBlock(r.startContainer);
+      if (b && b !== body && /^(DIV|P)$/.test(b.tagName) && !b.classList.contains('callout') && !b.querySelector('li')) {
+        const rr = document.createRange(); rr.selectNode(b); sel().removeAllRanges(); sel().addRange(rr);
+      }
+    }
+    document.execCommand('insertHTML', false, h);
+  }
+
   function onPaste(e) {
     e.preventDefault();
     const cd = e.clipboardData;
     const html = cd.getData('text/html'), text = cd.getData('text/plain');
-    if (html) document.execCommand('insertHTML', false, sanitize(html));
-    else if (text) document.execCommand('insertText', false, text);
+    const single = caretLineIsEmpty();
+    if (html) {
+      const clean = sanitize(html);
+      const lists = listifyHtml(clean, single && !/\n/.test(text.trim())) || (/<(ul|ol)\b/i.test(clean) ? null : (text && listifyText(text, false)));
+      insertBlocks(lists || clean);
+    }
+    else if (text) {
+      const lists = listifyText(text, single);
+      if (lists) insertBlocks(lists); else document.execCommand('insertText', false, text);
+    }
     else {
       const f = Array.from(cd.files || []).find(x => x.type.startsWith('image/'));
       if (f) attachImage(f);
@@ -371,8 +512,34 @@ const NotesEditor = (function () {
     changed();
   }
 
+  /* ---------- caret in front of a list item (before its number / bullet / checkbox) ---------- */
+  function liAtLineStart() {
+    const r = currentRange(); if (!r || !r.collapsed) return null;
+    const el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;
+    const li = el && el.closest('li'); if (!li || !body.contains(li)) return null;
+    const pre = document.createRange(); pre.selectNodeContents(li); pre.setEnd(r.startContainer, r.startOffset);
+    return pre.toString() === '' && !pre.cloneContents().querySelector('img') ? li : null;
+  }
+  // A list at the very top of a note has no line above it. Enter in front of its first item (or Arrow Up)
+  // adds a normal line above and leaves the list exactly as it was.
+  function lineAboveTopList(e, onlyIfText) {
+    const li = liAtLineStart(); if (!li) return false;
+    const list = li.parentElement, wrap = list.parentNode !== body && list.parentNode.parentNode === body && list.parentNode.tagName === 'DIV' && !list.parentNode.attributes.length && list.parentNode.childNodes.length === 1 ? list.parentNode : null;
+    const top = (list.parentNode === body || wrap) && /^(UL|OL)$/.test(list.tagName);
+    if (!top || li !== list.firstElementChild) return false;
+    const block = wrap || list;
+    let prev = block.previousSibling; while (prev && prev.nodeType === 3 && !prev.nodeValue.trim()) prev = prev.previousSibling;
+    if (prev) return false;
+    if (onlyIfText && !li.textContent.trim()) return false;      // an empty first item: Enter keeps its normal "leave the list" behaviour
+    e.preventDefault();
+    const d = document.createElement('div'); d.appendChild(document.createElement('br')); body.insertBefore(d, block);
+    caretIn(d, false);
+    changed(); updateToolbar(); return true;
+  }
+
   function onKeydown(e) {
-    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { maybeExitCallout(e); return; }
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { if (lineAboveTopList(e, true)) return; maybeExitCallout(e); return; }
+    if (e.key === 'ArrowUp' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { lineAboveTopList(e, false); return; }
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
     const k = e.key.toLowerCase();
@@ -393,9 +560,15 @@ const NotesEditor = (function () {
       else if (cmd === 'insertOrderedList') toggleNumbered();
       else if (cmd === 'checklist') toggleChecklist();
       else if (cmd === 'callout') toggleCallout();
+      else if (cmd === 'sticker') openSticker(b, 'Insert a sticker', '', s => insertSticker(s));
+      else if (/^h[123]$/.test(cmd)) { const cur = (document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); exec('formatBlock', '<' + (cur === cmd ? 'p' : cmd) + '>'); }
       else if (cmd === 'link') insertLink();
       else if (cmd === 'image') { saveRange(); root.querySelector('#imgInput').click(); }
       else exec(cmd);
+    });
+    root.querySelectorAll('.ed-top [data-cmd]').forEach(b => {
+      b.addEventListener('mousedown', e => e.preventDefault());
+      b.addEventListener('click', () => { restoreRange(); exec(b.dataset.cmd); });
     });
     const withRange = fn => () => { restoreRange(); fn(); updateToolbar(); };
     root.querySelector('#blockSel').addEventListener('change', e => { const v = e.target.value; withRange(() => exec('formatBlock', '<' + v + '>'))(); });
@@ -406,6 +579,18 @@ const NotesEditor = (function () {
       if (v) withRange(() => { document.execCommand('styleWithCSS', false, true); exec('hiliteColor', v === 'none' ? 'transparent' : v); document.execCommand('styleWithCSS', false, false); })();
       e.target.value = '';
     });
+    const sp = root.querySelector('#stickerPop');
+    sp.addEventListener('mousedown', e => { if (e.target.id !== 'stickerInput') e.preventDefault(); });
+    sp.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.classList.contains('sticker')) pickSticker(b.dataset.s);
+      else if (b.id === 'stickerUse') { const v = root.querySelector('#stickerInput').value.trim(); if (v) pickSticker(v.slice(0, 8)); }
+      else if (b.id === 'stickerNone') pickSticker('');
+    });
+    root.querySelector('#stickerInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); root.querySelector('#stickerUse').click(); } });
+    document.addEventListener('pointerdown', e => { if (!sp.hidden && !sp.contains(e.target) && !(stickerAnchor && stickerAnchor.contains && stickerAnchor.contains(e.target))) hideSticker(); }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sp.hidden) { e.stopImmediatePropagation(); e.preventDefault(); hideSticker(); } }, true);
+    window.addEventListener('popstate', hideSticker);
     root.querySelector('#imgInput').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) attachImage(f); });
 
     // body events are delegated through root so the body element can be replaced (resets undo history per note)
@@ -430,5 +615,5 @@ const NotesEditor = (function () {
     return body;
   }
 
-  return { init, load, sanitize, hideSuggest, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), el: () => body, focus: () => focusBody(), updateToolbar };
+  return { init, load, sanitize, hideSuggest, hideSticker, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), keepCaretVisible, el: () => body, focus: () => focusBody(), updateToolbar };
 })();

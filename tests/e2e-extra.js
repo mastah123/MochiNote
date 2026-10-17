@@ -12,33 +12,33 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   const browser = await chromium.launch({ executablePath: process.env.CHROME });
   const page = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage(); const errs = [];
   // Format bar is bottom-docked on phones and closes when you tap into the text: reopen it when a test needs it.
-  const ensureTb = async () => { if (!(await page.locator('#toolbar').isVisible()) && (await page.locator('#edFmt').isVisible())) await page.click('#edFmt'); };
+  const ensureTb = async (g = 'aa') => { const open = (await page.locator('#toolbar').isVisible()) && (await page.getAttribute('#toolbar', 'data-open')) === g; if (!open && (await page.locator('#edBar').isVisible())) { if ((await page.locator('#toolbar').isVisible()) && (await page.getAttribute('#toolbar', 'data-open')) !== g) await page.click('#edBar [data-open=' + g + ']'); else if (!(await page.locator('#toolbar').isVisible())) await page.click('#edBar [data-open=' + g + ']'); } };
 
   page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await page.goto('http://localhost:' + srv.address().port + '/'); await page.waitForSelector('#newNote');
-  const openSB = async () => { if (!(await page.$eval('#sidebar', e => e.classList.contains('open')))) await page.click('#openSidebar'); };
+  const openSB = async () => { if (await page.evaluate(() => window.__mochiNote.state.view === 'settings')) await page.evaluate(() => window.__mochiNote.go('all')); if (!(await page.$eval('#sidebar', e => e.classList.contains('open')))) await page.click('#openSidebar'); };
   const body = () => page.$eval('#edBody', e => e.innerHTML);
   // note 1 with tag so autocomplete has something to suggest
   await page.click('#newNote'); await page.fill('#edTitle', 'First'); await page.click('#edBody'); await page.keyboard.type('hello #projectx'); await page.click('#edBack'); await page.waitForTimeout(300);
   await page.click('#newNote'); await page.click('#edFmt'); await page.click('#edBody');
   // undo / redo
-  await page.keyboard.type('one two'); await ensureTb(); await page.click('[data-cmd=undo]'); const afterUndo = await page.$eval('#edBody', e => e.textContent);
-  ok('undo removes typed text', afterUndo !== 'one two', afterUndo); await ensureTb(); await page.click('[data-cmd=redo]'); ok('redo restores it', (await page.$eval('#edBody', e => e.textContent)) === 'one two');
+  await page.keyboard.type('one two'); await page.click('#edUndo'); const afterUndo = await page.$eval('#edBody', e => e.textContent);
+  ok('undo removes typed text', afterUndo !== 'one two', afterUndo); await page.click('#edRedo'); ok('redo restores it', (await page.$eval('#edBody', e => e.textContent)) === 'one two');
   // tag autocomplete
-  await page.keyboard.press('Enter'); await page.keyboard.type('#proj');
+  await page.waitForTimeout(400); await page.keyboard.press('Enter'); await page.keyboard.type('#proj');
   await page.waitForSelector('#tagSuggest:not([hidden])'); ok('tag suggestion appears', (await page.textContent('#tagSuggest')).includes('#projectx'));
+  await page.waitForTimeout(400); 
   await page.click('#tagSuggest button'); ok('tag suggestion inserts full tag', (await page.$eval('#edBody', e => e.textContent)).includes('#projectx '));
   // case-insensitive tag
-  console.log('DBG text:', JSON.stringify(await page.$eval('#edBody', e => e.textContent)));
   await page.keyboard.type('#ProjectX'); await page.waitForTimeout(700);
   ok('#ProjectX and #projectx are one tag', (await page.$$eval('#edTags .tag', e => e.map(x => x.textContent))).filter(t => t === '#projectx').length === 1, JSON.stringify(await page.$$eval('#edTags .tag', e => e.map(x => x.textContent))) + ' status=' + await page.textContent('#edStatus'));
   // link
-  await page.keyboard.press('Enter'); await ensureTb(); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'example.com'); await page.click('#dlgOk');
+  await page.keyboard.press('Enter'); await ensureTb('plus'); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'example.com'); await page.click('#dlgOk'); await page.waitForTimeout(250);
   ok('link inserted (https added, safe attrs)', /<a href="https:\/\/example\.com"[^>]*rel="noopener noreferrer"/.test(await body()) || /<a href="https:\/\/example\.com"/.test(await body()), await body());
-  await page.keyboard.press('Enter'); await ensureTb(); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'javascript:alert(1)'); await page.click('#dlgOk');
+  await page.keyboard.press('Enter'); await ensureTb('plus'); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'javascript:alert(1)'); await page.click('#dlgOk');
   ok('javascript: links rejected', !/javascript:/i.test(await body()));
   // image
-  await ensureTb(); await page.click('[data-cmd=image]'); await page.setInputFiles('#imgInput', { name: 't.png', mimeType: 'image/png', buffer: PNG }); await page.waitForSelector('#edBody img', { timeout: 5000 });
+  await ensureTb('plus'); await page.click('[data-cmd=image]'); await page.setInputFiles('#imgInput', { name: 't.png', mimeType: 'image/png', buffer: PNG }); await page.waitForSelector('#edBody img', { timeout: 5000 });
   ok('image attached as data URL', /<img src="data:image\//.test(await body()));
   // sanitizer on paste-like injection
   const clean = await page.evaluate(() => NotesEditor.sanitize('<p onclick="x()">a<script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:alert(1)">l</a></p>'));
@@ -47,13 +47,15 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   await page.click('.note >> text=one two'); await page.waitForSelector('#edBody img'); ok('image + link persist', /<img/.test(await body()) && /example\.com/.test(await body())); await page.click('#edBack'); await page.waitForTimeout(300);
   // subfolders + rename + delete
   await openSB(); await page.click('#addFolderBtn'); await page.fill('#dlgInput', 'Work'); await page.click('#dlgOk');
-  await page.click('#sideFolders button:has-text("Work")'); await openSB(); await page.click('.folder-tools button:text-is("+ Subfolder")'); await page.fill('#dlgInput', 'Reports'); await page.click('#dlgOk'); await page.waitForTimeout(300); await openSB();
-  ok('subfolder created and nested', await page.locator('#sideFolders button:has-text("Reports")').count() === 1);
+  await page.click('#sideFolders button:has-text("Work")'); await openSB();
+  ok('no subfolder button in folder tools', await page.locator('.folder-tools button:text-is("+ Subfolder")').count() === 0);
+  await page.click('#addFolderBtn'); await page.waitForSelector('#dlg[open]'); ok('new folder dialog is plain "New folder"', (await page.textContent('#dlgTitle')) === 'New folder'); await page.fill('#dlgInput', 'Reports'); await page.click('#dlgOk'); await page.waitForTimeout(300); await openSB();
+  ok('second folder created at top level', await page.locator('#sideFolders button:has-text("Reports")').count() === 1);
   await openSB(); await page.click('#sideFolders button:has-text("Reports")'); await page.waitForTimeout(250);
   await page.click('#newNote'); await page.fill('#edTitle', 'In reports'); await page.click('#edBody'); await page.keyboard.type('q3'); await page.click('#edBack'); await page.waitForTimeout(300);
   ok('new note inherits current folder', await page.locator('.note', { hasText: 'In reports' }).count() === 1 && (await page.textContent('.note')).includes('Reports'));
   await openSB(); await page.click('#sideFolders button:has-text("Work")'); await page.waitForTimeout(250);
-  ok('parent folder shows subfolder notes', await page.locator('.note', { hasText: 'In reports' }).count() === 1);
+  ok('other folder does not show that note', await page.locator('.note', { hasText: 'In reports' }).count() === 0);
   await openSB(); await page.click('.folder-tools button:text-is("Rename")'); await page.fill('#dlgInput', 'Job'); await page.click('#dlgOk'); await page.waitForTimeout(200);
   await openSB(); ok('folder renamed', await page.locator('#sideFolders button:has-text("Job")').count() === 1);
   await openSB(); await page.click('.folder-tools button:text-is("Delete")'); await page.click('#dlgOk'); await page.waitForTimeout(300);

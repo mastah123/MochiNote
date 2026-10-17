@@ -16,13 +16,14 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KA
     await page.goto(url); await page.waitForSelector('#newNote');
     await page.click('#newNote'); await page.waitForSelector('#edBody');
     const long = 'Averyveryverylongunbrokenwordthatwouldnormallystretchthewholepageandmakeitscrollsidewaysforever'.repeat(2);
+    const big = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 400; const x = c.getContext('2d'); x.fillStyle = '#88aabb'; x.fillRect(0, 0, 800, 400); return c.toDataURL('image/png'); });
     await page.evaluate(([png, long]) => {
       const b = document.getElementById('edBody');
       b.innerHTML = '<div>' + long + '</div><div><a href="https://example.com/' + long + '">' + long + '</a></div>' +
         '<ul class="checklist"><li>Plain item</li><li class="done">Done item</li><li>Mix <b>bold</b> and <i>italic</i> <span>span</span> text that is long enough to wrap onto a second line of the card</li><li><br></li></ul>' +
         '<img src="' + png + '"><img src="' + png + '" style="width:3000px;height:3000px">';
       b.dispatchEvent(new Event('input', { bubbles: true }));
-    }, [PNG, long]);
+    }, [big, long]);
     await page.waitForTimeout(200);
     const g = await page.evaluate(() => {
       const q = s => document.querySelector(s), b = q('#edBody'), sc = q('.ed-scroll'), ed = q('.editor');
@@ -40,7 +41,8 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KA
     });
     ok(label + ': page has no sideways overflow', g.docW <= g.innerW + 1, JSON.stringify(g));
     ok(label + ': note area does not scroll sideways', g.scW <= g.scC + 1 && g.bW <= g.bC + 1 && g.edW <= g.edC + 1, JSON.stringify(g));
-    ok(label + ': all images share the fixed height', g.imgs.every(i => i.h === imgH), JSON.stringify(g.imgs));
+    ok(label + ': images are scaled into the fixed box (never taller than ' + imgH + 'px) keeping their 2:1 shape', g.imgs.every(i => i.h - 12 <= imgH + 1 && Math.abs((i.w - 12) / (i.h - 12) - 2) < 0.05), JSON.stringify(g.imgs));
+    ok(label + ': images are centred', await page.evaluate(() => [...document.querySelectorAll('#edBody img')].every(i => { const r = i.getBoundingClientRect(), b = document.getElementById('edBody').getBoundingClientRect(), cs = getComputedStyle(document.getElementById('edBody')); const l = r.left - b.left - parseFloat(cs.paddingLeft), rt = b.right - parseFloat(cs.paddingRight) - r.right; return Math.abs(l - rt) <= 2; })));
     ok(label + ': images never wider than the note area', g.imgs.every(i => i.w <= i.bodyW), JSON.stringify(g.imgs));
     ok(label + ': both images identical in size despite huge inline size', g.imgs[0].w === g.imgs[1].w && g.imgs[0].h === g.imgs[1].h);
     ok(label + ': checklist items are block rows (not flex)', g.cs === 'block');
@@ -59,10 +61,10 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KA
     // add a real image through the file input
     await page.evaluate(() => { const b = document.getElementById('edBody'); b.innerHTML = '<div>hi</div>'; });
     await page.focus('#edBody'); await page.keyboard.press('End');
-    const buf = Buffer.from(PNG.split(',')[1], 'base64');
+    const buf = Buffer.from(big.split(',')[1], 'base64');
     await page.setInputFiles('#imgInput', { name: 'a.png', mimeType: 'image/png', buffer: buf }); await page.waitForTimeout(600);
     const ih = await page.$eval('#edBody img', i => Math.round(i.getBoundingClientRect().height)).catch(() => -1);
-    ok(label + ': an image added from the toolbar gets the fixed height', ih === imgH, String(ih));
+    ok(label + ': an image added from the toolbar is scaled into the fixed box', ih > 12 && ih - 12 <= imgH + 1, String(ih));
     const sw = await page.evaluate(() => document.querySelector('.ed-scroll').scrollWidth <= document.querySelector('.ed-scroll').clientWidth + 1);
     ok(label + ': still no sideways scroll after adding an image', sw);
     await page.screenshot({ path: (process.env.SHOTS || '/tmp') + '/b9-' + label + '.png' });

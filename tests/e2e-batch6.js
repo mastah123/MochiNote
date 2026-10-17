@@ -21,7 +21,6 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   const seed = page => page.evaluate(() => {
     const S = window.__mochiNote.state, now = Date.now();
     ['Personal', 'Ideas', 'Work', 'Travel', 'Recipes'].forEach((n, i) => S.folders.push({ id: 'f' + i, name: n, parentId: null, created: now + i }));
-    S.folders.push({ id: 'fs', name: 'Sub', parentId: 'f0', created: now + 9 });
     const mk = (id, title, html, extra) => S.notes.push(Object.assign({ id, title, html, text: html.replace(/<[^>]+>/g, ' '), tags: [], folderId: null, color: 'default', pinned: false, archived: false, trashed: false, trashedAt: null, created: now, updated: now - parseInt(id.slice(1), 10) * 1000 }, extra));
     mk('n1', 'Pinned idea', '<div>Things to build someday and a very long line that goes on and on</div>', { pinned: true, folderId: 'f0' });
     mk('n2', 'Averyveryverylongunbrokentitlethatshouldnotstretchthecardwideropen', '<div>Averyveryverylongunbrokenwordinsidethepreviewthatmustclipnotoverflow</div>', { tags: ['ideas', 'projects', 'home'] });
@@ -115,7 +114,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   // all-folders page
   await m.click('#showAllFolders'); await m.waitForTimeout(250);
   ok('Show all opens a separate Folders page', (await m.getAttribute('#main', 'data-view')) === 'folders' && await vis(m, '#foldersView') && !(await vis(m, '#notesView')) && JSON.stringify(JSON.parse(await hist(m)).view) === '"folders"');
-  ok('the page lists every folder (incl. subfolder path)', (await m.$$eval('#allFolders .folder-card .fname', e => e.map(x => x.textContent))).join('|') === 'Ideas|Personal|Personal / Sub|Recipes|Travel|Work', (await m.$$eval('#allFolders .folder-card .fname', e => e.map(x => x.textContent))).join('|'));
+  ok('the page lists every folder', (await m.$$eval('#allFolders .folder-card .fname', e => e.map(x => x.textContent))).join('|') === 'Ideas|Personal|Recipes|Travel|Work', (await m.$$eval('#allFolders .folder-card .fname', e => e.map(x => x.textContent))).join('|'));
   ok('folders page has a back arrow and a New folder button; no New note button', await vis(m, '#foldersBack') && await vis(m, '#foldersNew') && !(await vis(m, '#newNote')) && !(await vis(m, '#searchBtn')));
   await m.click('#foldersBack'); await m.waitForTimeout(250);
   ok('back arrow returns to home', (await m.getAttribute('#main', 'data-view')) === 'all' && await vis(m, '#hero'));

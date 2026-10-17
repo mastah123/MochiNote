@@ -80,6 +80,12 @@
     return names;
   }
   function folderDepth(folders, id) { return Math.max(0, folderPath(folders, id).length - 1); }
+  // Subfolders are no longer used: make every folder top level (notes keep their folder). Returns the folders that changed.
+  function flattenFolders(folders) {
+    const changed = [];
+    folders.forEach(f => { if (f.parentId) { f.parentId = null; changed.push(f); } });
+    return changed;
+  }
   // Folders in tree order (children after their parent), with depth.
   function folderTree(folders) {
     const out = [];
@@ -216,5 +222,5 @@
     return { notes, folders, skippedNotes, skippedFolders, settings: data.settings && typeof data.settings === 'object' ? data.settings : null };
   }
 
-  return { COLORS, SORTS, NO_FOLDER, uid, htmlToText, extractTags, normalizeTag, makePreview, folderMap, folderDescendants, folderPath, folderDepth, folderTree, matchesQuery, filterNotes, sortNotes, formatDate, validateImport, titleOf };
+  return { COLORS, SORTS, NO_FOLDER, uid, htmlToText, extractTags, normalizeTag, makePreview, folderMap, folderDescendants, folderPath, folderDepth, flattenFolders, folderTree, matchesQuery, filterNotes, sortNotes, formatDate, validateImport, titleOf };
 });

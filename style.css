@@ -57,7 +57,8 @@ h1, h2, h3 { margin: 0; }
 .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.3); opacity: 0; pointer-events: none; transition: opacity 240ms; z-index: 25; }
 .scrim.show { opacity: 1; pointer-events: auto; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; }
-.logo { width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 1.3rem; }
+.logo { width: 40px; height: 40px; border-radius: 12px; display: block; flex: none; }
+.about-logo { width: 72px; height: 72px; border-radius: 18px; display: block; margin-bottom: 4px; }
 .brand-name { font-size: 1.35rem; font-weight: 600; flex: 1; }
 .nav { display: grid; gap: 2px; }
 .nav-item, .side-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; background: none; border-radius: 12px; text-align: left; transition: background var(--dur); }
@@ -168,6 +169,9 @@ html[data-mode="dark"] .folder-card.f0 { color: var(--text); }
 .menu { position: absolute; right: 4px; top: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px; min-width: 210px; z-index: 5; display: grid; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 .menu button { border: 0; background: none; text-align: left; min-height: 44px; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 12px; }
 .menu button .ico { opacity: .8; }
+.menu-info { display: none; padding: 8px 12px 4px; margin-top: 4px; border-top: 1px solid var(--border); color: var(--muted); font-size: .8rem; }
+.ed-bar[hidden] { display: none !important; }
+.toolbar .hd { font-weight: 700; }
 .menu-theme { display: none; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 10px; color: var(--muted); font-size: .9rem; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .menu-theme .swatch { width: 26px; height: 26px; }
 .menu-theme .swatch.on { border-color: var(--accent); }
@@ -179,7 +183,7 @@ html[data-mode="dark"] .folder-card.f0 { color: var(--text); }
 .ed-meta, .ed-foot { max-width: 100%; min-width: 0; overflow-x: hidden; }
 .ed-body, .ed-title { max-width: 100%; min-width: 0; }
 .ed-body * { max-width: 100%; }
-.ed-body { overflow-x: hidden; word-break: break-word; }
+.ed-body { overflow-x: clip; flex: 1 0 auto; word-break: break-word; }   /* the outer .ed-scroll is the one scroller */
 .ed-scroll { overflow-x: hidden; touch-action: pan-y; overscroll-behavior-x: none; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; overscroll-behavior: contain; }
 .ed-title { width: 100%; flex: none; border: 0; background: transparent; font-size: 1.5rem; font-weight: 600; padding: 16px 20px 4px; outline: none; color: var(--text); }
 .ed-title::placeholder { color: var(--muted); opacity: .6; }
@@ -199,14 +203,14 @@ html[data-mode="dark"] .folder-card.f0 { color: var(--text); }
 .toolbar .hl { flex: none; display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted); }
 .toolbar .sep { width: 1px; height: 24px; background: var(--border); flex: none; margin: 0 2px; }
 @media (max-width: 600px) { .toolbar .sep { display: none; } .toolbar select { max-width: 120px; } }
-.ed-body { flex: 1; min-height: 40vh; padding: 8px 16px 12px; outline: none; font-family: var(--editor-font); font-size: var(--editor-size); line-height: 1.6; caret-color: var(--accent); overflow-wrap: anywhere; }
+.ed-body { flex: 1 0 auto; min-height: 40vh; padding: 8px 16px 12px; outline: none; font-family: var(--editor-font); font-size: var(--editor-size); line-height: 1.6; caret-color: var(--accent); overflow-wrap: anywhere; }
 .ed-body:empty::before { content: attr(data-placeholder); color: var(--muted); opacity: .7; }
 .ed-body h1 { font-size: 1.7em; margin: .5em 0 .25em; } .ed-body h2 { font-size: 1.4em; margin: .5em 0 .25em; } .ed-body h3 { font-size: 1.15em; margin: .5em 0 .25em; }
 .ed-body p, .ed-body div { margin: 0 0 .35em; }
 .ed-body ul, .ed-body ol { margin: .2em 0 .4em; padding-left: 1.5em; }
 .ed-body a { color: var(--accent); text-decoration: underline; }
 /* images: fixed display box so every picture takes the same space (phone vs desktop sizes below) */
-.ed-body img { display: block; width: 100% !important; max-width: 100% !important; height: 220px !important; object-fit: contain; background: var(--surface-2); border-radius: 12px; margin: .5em 0; }
+.ed-body img { display: block; box-sizing: content-box; width: auto !important; height: auto !important; max-width: calc(100% - 12px) !important; max-height: 220px !important; padding: 6px; background: var(--surface-2); border-radius: 16px; margin: .5em auto; }
 .ed-body mark { border-radius: 4px; padding: 0 2px; }
 .ed-body .hashtag { color: var(--accent); font-weight: 500; }
 /* checklist */
@@ -263,7 +267,7 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
   .ed-top { height: 52px; padding: 0 12px; gap: 8px; }
   .ed-meta { display: flex; }
   .ed-title { padding: 16px 20px 4px; font-size: 1.6rem; }
-  .ed-body img { width: min(100%, 460px) !important; height: 300px !important; }
+  .ed-body img { max-width: min(calc(100% - 12px), 460px) !important; max-height: 300px !important; }
   .fab { right: 36px; bottom: 28px; }
   /* desktop toolbar visible by default (JS removes hidden attr on desktop) */
   .toolbar { display: flex; }
@@ -271,14 +275,25 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 
 /* callout card (💡) — content styles apply everywhere so a note made on mobile reads the same on desktop */
 .ed-body .callout { position: relative; margin: .5em 0; padding: 12px 16px 12px 46px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); }
-.ed-body .callout::before { content: "💡"; position: absolute; left: 14px; top: 11px; font-size: 1.2em; line-height: 1.4; pointer-events: none; user-select: none; }
+/* the sticker slot: the chosen sticker, or a faint dashed "+" to tap (no default icon) */
+.ed-body .callout::before { content: "+"; position: absolute; left: 12px; top: 13px; width: 24px; height: 24px; display: grid; place-items: center; box-sizing: border-box; border: 1.5px dashed var(--muted); border-radius: 50%; color: var(--muted); font-size: .95rem; line-height: 1; opacity: .55; pointer-events: none; user-select: none; }
+.ed-body .callout[data-sticker]::before { content: attr(data-sticker); left: 14px; top: 11px; width: auto; height: auto; display: block; border: 0; border-radius: 0; opacity: 1; color: inherit; font-size: 1.2em; line-height: 1.4; }
 .ed-body .callout > div, .ed-body .callout > p { margin: 0 0 .25em; }
 .ed-body .callout > div:last-child, .ed-body .callout > p:last-child { margin-bottom: 0; }
 .ed-body .callout > :first-child:not(:last-child) { font-weight: 600; }
 
 /* format bar: desktop shows text labels, mobile swaps in icons */
 .t-ico, .tb-head { display: none; }
-.t-emoji { font-size: 1.25rem; line-height: 1; }
+.n-rich .pl-callout .pl-m:empty { display: none; }
+/* sticker picker */
+.sticker-pop { position: absolute; z-index: 60; width: min(300px, calc(100% - 16px)); background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.22); animation: sheetpop 160ms ease both; }
+.sticker-title { font-size: .85rem; font-weight: 600; color: var(--muted); padding: 0 4px 8px; }
+.sticker-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.sticker { border: 0; background: none; border-radius: 10px; min-height: 38px; font-size: 1.35rem; line-height: 1; }
+.sticker:hover, .sticker:active, .sticker.on { background: var(--accent-soft); }
+.sticker-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.sticker-row input { flex: 1; min-width: 0; min-height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); padding: 0 10px; }
+.sticker-btn { flex: none; min-height: 38px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--accent-soft); color: var(--text); }
 
 /* home: icon-only controls, "Your space" card, folder header and the all-folders page are mobile-only; desktop keeps the original text controls */
 .sel-ico, .seg-ico, .hero, .folder-head, .notes-label, .page-head, .f-ico, .sb-close, .hero-edit { display: none; }
@@ -314,15 +329,33 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
   .notes.list .n-rich .pl:nth-child(n+2) { display: none; }
   .note, .folder-card, .side-item, .hero { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   /* format bar lives at the bottom (above the footer) with a close button and icon buttons */
-  .ed-scroll { order: 1; }
-  .toolbar { order: 2; border-block: 0; border-top: 1px solid var(--border); max-height: 42vh; padding: 0 6px 8px; gap: 0 2px; animation: rise 200ms ease both; }
+  .ed-scroll { order: 1; scroll-padding-bottom: 40px; }
+  /* about 5 lines of free scroll space under the last line, so the end of a note is easy to reach, select and type at */
+  .ed-body { padding-bottom: calc(var(--editor-size, 16px) * 1.6 * 5 + 12px); }
+  .toolbar { order: 2; border-block: 0; border-top: 1px solid var(--border); max-height: 48px; padding: 2px 6px; gap: 0 2px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; animation: rise 200ms ease both; }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .toolbar #blockSel { display: none; }
+  .toolbar .tb-head, .toolbar .sep { display: none; }
+  /* footer icons: each opens only its own group of options */
+  .toolbar[data-open="plus"] > :not([data-grp="plus"]):not(input), .toolbar[data-open="aa"] > :not([data-grp="aa"]):not(input), .toolbar[data-open="list"] > :not([data-grp="list"]):not(input) { display: none !important; }
+  .toolbar [data-cmd="sticker"], .toolbar [data-cmd="undo"], .toolbar [data-cmd="redo"] { display: none; }
   .ed-foot { order: 3; }
-  .tb-head { display: flex; flex: 1 0 100%; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1; background: var(--surface); padding: 0 2px 0 8px; min-height: 44px; }
-  .tb-title { font-weight: 600; color: var(--muted); font-size: .9rem; }
-  .toolbar button { min-width: 44px; min-height: 44px; padding: 0 8px; display: inline-grid; place-items: center; }
+  .ed-bar { order: 4; display: flex; align-items: center; justify-content: space-around; flex: none; border-top: 1px solid var(--border); background: var(--surface); padding: 2px 8px; }
+  .bar-btn { flex: 1; max-width: 96px; min-height: 44px; border: 0; background: none; border-radius: 12px; color: var(--text); display: grid; place-items: center; font-size: 1.05rem; font-weight: 700; }
+  .bar-btn[aria-pressed="true"] { background: var(--accent-soft); }
+  .ed-foot #edInfo { display: none; }
+  .ed-foot { display: none; }
+  .menu-info { display: block; }
+  .tag-suggest { bottom: 56px; }
+  .toolbar button { min-width: 40px; min-height: 40px; padding: 0 8px; display: inline-grid; place-items: center; }
   .toolbar .t-txt { display: none; }
   .toolbar .t-ico { display: block; }
-  .toolbar select { min-height: 44px; }
+  .toolbar select { min-height: 40px; }
+  /* undo / redo: smaller, a little away from Back, close to each other */
+  #edUndo, #edRedo { width: 34px; height: 34px; border-radius: 10px; }
+  #edUndo .ico, #edRedo .ico { width: 18px; height: 18px; }
+  #edUndo { margin-left: 12px; }
+  #edRedo { margin-left: -2px; }
 
   /* ---- mobile home: fixed header [menu ... search icon]; "Your space" card, folders and notes scroll underneath ---- */
   :root { --head-h: 60px; }
@@ -410,11 +443,11 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
   .main .notes.list .note .n-rich { grid-column: 1; flex: none; }
   .main .notes.list .note .n-tags { grid-column: 1; margin-top: 4px; }
   .notes.list .note .pin-mark { top: auto; bottom: 10px; right: 12px; }
-  .editor-layer { height: 100dvh; }
+  .editor-layer { inset: auto; left: 0; right: 0; top: var(--vvt, 0px); height: var(--vvh, 100dvh); }
   .ed-top { height: 44px; padding: 0 4px; gap: 2px; }
   .ed-meta { display: none !important; }
   .ed-title { padding: 12px 16px 2px; }
-  .ed-body img { width: 100% !important; height: 200px !important; }
+  .ed-body img { max-width: calc(100% - 12px) !important; max-height: 200px !important; }
   .fab { bottom: 18px; }
   .ed-foot { padding: 5px 14px; }
 }

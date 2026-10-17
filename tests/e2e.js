@@ -12,7 +12,7 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, acceptDownloads: true });
   const page = await ctx.newPage(); const errs = [];
   // Format bar is bottom-docked on phones and closes when you tap into the text: reopen it when a test needs it.
-  const ensureTb = async () => { if (!(await page.locator('#toolbar').isVisible()) && (await page.locator('#edFmt').isVisible())) await page.click('#edFmt'); };
+  const ensureTb = async (g = 'aa') => { const open = (await page.locator('#toolbar').isVisible()) && (await page.getAttribute('#toolbar', 'data-open')) === g; if (!open && (await page.locator('#edBar').isVisible())) { if ((await page.locator('#toolbar').isVisible()) && (await page.getAttribute('#toolbar', 'data-open')) !== g) await page.click('#edBar [data-open=' + g + ']'); else if (!(await page.locator('#toolbar').isVisible())) await page.click('#edBar [data-open=' + g + ']'); } };
   // Phones: search is behind the header icon.
   const openSearch = async () => { if (!(await page.locator('#search').isVisible())) await page.click('#searchBtn'); };
 
@@ -24,9 +24,9 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   await page.click('#newNote'); await page.click('#edFmt'); await page.fill('#edTitle', 'Trip plan');
   await page.click('#edBody');
   await page.keyboard.type('Intro paragraph with #Travel and #ideas');
-  await page.keyboard.press('Enter'); await ensureTb(); await page.click('[data-cmd=insertUnorderedList]'); await page.keyboard.type('bullet one'); await page.keyboard.press('Enter'); await page.keyboard.type('bullet two'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
-  await ensureTb(); await page.click('[data-cmd=insertOrderedList]'); await page.keyboard.type('first'); await page.keyboard.press('Enter'); await page.keyboard.type('second'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
-  await ensureTb(); await page.click('[data-cmd=checklist]'); await page.keyboard.type('pack bags'); await page.keyboard.press('Enter'); await page.keyboard.type('book hotel');
+  await page.keyboard.press('Enter'); await ensureTb('list'); await page.click('[data-cmd=insertUnorderedList]'); await page.keyboard.type('bullet one'); await page.keyboard.press('Enter'); await page.keyboard.type('bullet two'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+  await ensureTb('list'); await page.click('[data-cmd=insertOrderedList]'); await page.keyboard.type('first'); await page.keyboard.press('Enter'); await page.keyboard.type('second'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+  await ensureTb('list'); await page.click('[data-cmd=checklist]'); await page.keyboard.type('pack bags'); await page.keyboard.press('Enter'); await page.keyboard.type('book hotel');
   let html = await page.$eval('#edBody', e => e.innerHTML);
   ok('mixed content: ul + ol + checklist in one note', /<ul>/.test(html) && /<ol>/.test(html) && /ul class="checklist"/.test(html), html);
   // toggle first checklist item
@@ -38,7 +38,7 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   await ensureTb(); await page.selectOption('#fontSel', 'Georgia, serif'); await ensureTb(); await page.click('[data-cmd=justifyCenter]');
   html = await page.$eval('#edBody', e => e.innerHTML);
   ok('bold/underline/highlight/size/font/align applied', /<b>|font-weight|<strong>/.test(html) && /<u[ >]|underline/.test(html) && /background-color|<mark/.test(html) && /font-size/.test(html) && /Georgia/.test(html) && /text-align: ?center/.test(html), html);
-  await ensureTb(); await page.selectOption('#blockSel', 'h2'); ok('heading applied', /<h2/.test(await page.$eval('#edBody', e => e.innerHTML)));
+  await ensureTb(); await page.click('[data-cmd=h2]'); ok('heading applied', /<h2/.test(await page.$eval('#edBody', e => e.innerHTML)));
   // typing is immediate (no artificial delay): measure
   await page.keyboard.press('Control+End'); const t0 = Date.now(); await page.keyboard.type('x'.repeat(40)); ok('typing 40 chars fast (<2s incl. automation)', Date.now() - t0 < 2000);
   await page.waitForFunction(() => document.querySelector('#edStatus').textContent === '✓', null, { timeout: 4000 }).then(() => ok('autosave indicator shows Saved', true), () => ok('autosave indicator shows Saved', false));
@@ -111,7 +111,7 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   fs.writeFileSync(shots + '/empty.json', JSON.stringify({ app: 'little-notes', version: 1, notes: [], folders: [] }));
   await page.click('button:text-is("Restore (replace all)")'); await page.setInputFiles('#importFile', shots + '/empty.json'); await page.waitForSelector('#dlg[open]'); await page.click('#dlgOk');
   await page.click('button:text-is("Restore (replace all)")'); await page.setInputFiles('#importFile', file); await page.waitForSelector('#dlg[open]'); await page.click('#dlgOk');
-  await page.click('#openSidebar'); await page.click('[data-view=all]');
+  await page.evaluate(() => window.__mochiNote.go('all'));
   await page.waitForSelector('.note'); ok('restore brings notes back', await page.locator('.note', { hasText: 'Trip plan' }).count() === 1 && await page.locator('.note').count() === 2);
   await page.click('.note >> text=Trip plan'); const rhtml = await page.$eval('#edBody', e => e.innerHTML); ok('restored formatting intact', /<h2/.test(rhtml) && /ul class="checklist"/.test(rhtml) && /Georgia/.test(rhtml)); await page.click('#edBack');
 

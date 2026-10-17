@@ -1,0 +1,14 @@
+{
+  "name": "MochiNote",
+  "short_name": "MochiNote",
+  "description": "A calm, cozy, local-first notes app.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFFCF5",
+  "theme_color": "#f8f1e7",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

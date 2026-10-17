@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '8.0.0';
+  const APP_VERSION = '17.0.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -149,6 +149,10 @@
     let title = VIEW_TITLES[state.view];
     if (state.view === 'all' && state.folderId) title = state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || { name: 'All notes' }).name;
     $('#viewTitle').textContent = title;
+    const mb = $('#openSidebar'); // phones: Settings shows a back arrow instead of the menu icon
+    if (mb.dataset.menuSvg === undefined) mb.dataset.menuSvg = mb.innerHTML;
+    mb.innerHTML = settings ? svgIco('back', 24) : mb.dataset.menuSvg;
+    mb.setAttribute('aria-label', settings ? 'Back' : 'Open menu'); mb.title = settings ? 'Back' : 'Menu';
     document.title = title + ' · MochiNote';
     renderSidebar();
     if (settings) renderSettings(); else if (foldersPage) renderFoldersPage(); else renderNotes();
@@ -165,23 +169,19 @@
     });
     const sf = $('#sideFolders'); sf.textContent = '';
     const active = state.notes.filter(n => !n.trashed && !n.archived);
-    const mk = (label, id, depth, count, folder) => {
+    const mk = (label, id, count, folder) => {
       const isActive = state.view === 'all' && state.folderId === id;
-      const item = el('button', { class: 'side-item' + (isActive ? ' active' : ''), style: 'padding-left:' + (12 + depth * 16) + 'px', onclick: () => go('all', { folderId: id, tag: state.tag }) },
+      const item = el('button', { class: 'side-item' + (isActive ? ' active' : ''), onclick: () => go('all', { folderId: id, tag: state.tag }) },
         el('span', { class: 'fl-name' }, icon(svgIco('folder', 18)), label), el('span', { class: 'count', text: count || '' }));
       if (folder) onLongPress(item, () => folderSheet(folder, item));
       sf.append(item);
       if (folder && isActive) {
-        sf.append(el('div', { class: 'folder-tools', style: 'padding-left:' + (12 + depth * 16) + 'px' },
-          el('button', { onclick: () => createFolder(folder.id) }, '+ Subfolder'),
+        sf.append(el('div', { class: 'folder-tools' },
           el('button', { onclick: () => renameFolder(folder.id) }, 'Rename'),
           el('button', { class: 'danger', onclick: () => deleteFolder(folder.id) }, 'Delete')));
       }
     };
-    L.folderTree(state.folders).forEach(({ folder, depth }) => {
-      const ids = L.folderDescendants(state.folders, folder.id);
-      mk(folder.name, folder.id, depth, active.filter(n => ids.has(n.folderId)).length, folder);
-    });
+    L.folderTree(state.folders).forEach(({ folder }) => mk(folder.name, folder.id, active.filter(n => n.folderId === folder.id).length, folder));
     const st = $('#sideTags'); st.textContent = '';
     const tags = allTags();
     if (!tags.length) st.append(el('span', { class: 'info', style: 'color:var(--muted);font-size:.9rem', text: 'Type #tags in a note and they show up here.' }));
@@ -239,9 +239,8 @@
   }
 
   function folderCard(fo, i) {
-    const ids = L.folderDescendants(state.folders, fo.id);
-    const c = state.notes.filter(n => !n.trashed && !n.archived && ids.has(n.folderId)).length;
-    const fc = el('button', { class: 'folder-card f' + (i % 4), title: L.folderPath(state.folders, fo.id).join(' / '), onclick: () => go('all', { folderId: fo.id }) },
+    const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
+    const fc = el('button', { class: 'folder-card f' + (i % 4), title: fo.name, onclick: () => go('all', { folderId: fo.id }) },
       icon(ICONS.folder), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') }));
     onLongPress(fc, () => folderSheet(fo, fc));
     return fc;
@@ -250,11 +249,7 @@
     const box = $('#allFolders'); box.textContent = ''; box.className = 'folder-strip grid';
     const tree = L.folderTree(state.folders);
     if (!tree.length) { box.append(el('div', { class: 'empty', style: 'grid-column:1/-1' }, el('b', { text: 'No folders yet' }), 'Tap “+ New folder” to make one.')); return; }
-    tree.forEach(({ folder, depth }, i) => {
-      const card = folderCard(folder, i);
-      if (depth > 0) card.querySelector('.fname').textContent = L.folderPath(state.folders, folder.id).join(' / ');
-      box.append(card);
-    });
+    tree.forEach(({ folder }, i) => box.append(folderCard(folder, i)));
   }
 
   /* Structured preview for cards: keeps bullets, numbering and checklists instead of flattening to text.
@@ -274,7 +269,7 @@
         if (tag === 'UL' || tag === 'OL') {
           flush();
           const kind = tag === 'OL' ? 'ol' : ch.classList.contains('checklist') ? 'check' : 'ul';
-          let i = 0;
+          let i = tag === 'OL' ? (parseInt(ch.getAttribute('start'), 10) || 1) - 1 : 0;
           Array.from(ch.children).forEach(li => {
             if (li.tagName !== 'LI') return;
             i++;
@@ -287,7 +282,7 @@
         if (tag === 'DIV' && ch.classList.contains('callout')) {
           flush();
           const t = Array.from(ch.children).map(c => c.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' · ') || ch.textContent.replace(/\s+/g, ' ').trim();
-          if (t) lines.push({ k: 'callout', t });
+          if (t) lines.push({ k: 'callout', t, sticker: ch.getAttribute('data-sticker') || '' });
           return;
         }
         if (BLOCK.test(tag)) { flush(); walk(ch); flush(); return; }
@@ -302,7 +297,7 @@
     if (!lines.length) return null;
     const box = el('div', { class: 'n-rich' });
     lines.forEach(l => box.append(el('div', { class: 'pl pl-' + l.k + (l.done ? ' done' : '') },
-      el('span', { class: 'pl-m', 'aria-hidden': 'true', text: l.k === 'ul' ? '•' : l.k === 'ol' ? l.n + '.' : l.k === 'check' ? (l.done ? '●' : '○') : l.k === 'callout' ? '💡' : '' }),
+      el('span', { class: 'pl-m', 'aria-hidden': 'true', text: l.k === 'ul' ? '•' : l.k === 'ol' ? l.n + '.' : l.k === 'check' ? (l.done ? '●' : '○') : l.k === 'callout' ? (l.sticker || '') : '' }),
       el('span', { class: 'pl-t', text: l.t }))));
     if (more) box.append(el('div', { class: 'pl pl-more', 'aria-hidden': 'true', text: '…' }));
     return box;
@@ -389,7 +384,6 @@
   function folderSheet(f, anchor) {
     openSheet(f.name, [
       { icon: 'edit', label: 'Rename', fn: () => renameFolder(f.id) },
-      { icon: 'plus', label: 'Add subfolder', fn: () => createFolder(f.id) },
       { icon: 'trash', label: 'Delete folder', danger: true, fn: () => deleteFolder(f.id) }
     ], anchor);
   }
@@ -477,12 +471,11 @@
   }
 
   /* ---------- folders ---------- */
-  async function createFolder(parentId) {
-    const name = await dialog({ kind: 'prompt', title: parentId ? 'New subfolder' : 'New folder', placeholder: 'Folder name', ok: 'Create' });
+  async function createFolder() {
+    const name = await dialog({ kind: 'prompt', title: 'New folder', placeholder: 'Folder name', ok: 'Create' });
     if (name == null) return null;
     const nm = name.trim(); if (!nm) { toast('Folder name can’t be empty.'); return null; }
-    if (L.folderDepth(state.folders, parentId || '') >= 3 && parentId) { toast('Folders can be nested up to 3 levels.'); return null; }
-    const f = { id: L.uid(), name: nm.slice(0, 100), parentId: parentId || null, created: Date.now() };
+    const f = { id: L.uid(), name: nm.slice(0, 100), parentId: null, created: Date.now() };
     await NotesDB.put('folders', f); state.folders.push(f); render(); return f;
   }
   async function renameFolder(id) {
@@ -493,9 +486,9 @@
   }
   async function deleteFolder(id) {
     const f = folderById(id); if (!f) return;
-    const ids = L.folderDescendants(state.folders, id);
-    const count = state.notes.filter(n => ids.has(n.folderId)).length;
-    if (!await dialog({ title: 'Delete folder “' + f.name + '”?', message: 'Notes inside (' + count + ') are kept and moved to “No folder”.' + (ids.size > 1 ? '\nIts subfolders will be deleted too.' : ''), ok: 'Delete folder', danger: true })) return;
+    const ids = new Set([id]);
+    const count = state.notes.filter(n => n.folderId === id).length;
+    if (!await dialog({ title: 'Delete folder “' + f.name + '”?', message: 'Notes inside (' + count + ') are kept and moved to “No folder”.', ok: 'Delete folder', danger: true })) return;
     const moved = [];
     state.notes.forEach(n => { if (ids.has(n.folderId)) { n.folderId = null; moved.push(n); } });
     await NotesDB.putMany('notes', moved);
@@ -505,17 +498,25 @@
     toast('Folder deleted'); render();
   }
   function folderOptions() {
-    return [['', 'No folder']].concat(L.folderTree(state.folders).map(({ folder, depth }) => [folder.id, '  '.repeat(depth) + folder.name]));
+    return [['', 'No folder']].concat(L.folderTree(state.folders).map(({ folder }) => [folder.id, folder.name]));
   }
 
   /* ---------- editor ---------- */
   const ed = {};
   function setSaveStatus(s) { setStatus(s); }
+  function syncEditorViewport() {
+    const layer = $('#editorLayer'), vv = window.visualViewport;
+    if (!layer || layer.hidden) return;
+    if (!isMobile() || !vv) { layer.style.removeProperty('--vvh'); layer.style.removeProperty('--vvt'); return; }
+    layer.style.setProperty('--vvh', Math.round(vv.height) + 'px'); layer.style.setProperty('--vvt', Math.round(vv.offsetTop) + 'px');
+    if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+    requestAnimationFrame(() => NotesEditor.keepCaretVisible());
+  }
   function openEditor(id, isNew) {
     const n = noteById(id); if (!n) return;
     state.openId = id; state.dirty = false;
     if (!(history.state && history.state.kind === 'editor')) history.pushState({ kind: 'editor' }, '');
-    $('#editorLayer').hidden = false; document.body.style.overflow = 'hidden';
+    $('#editorLayer').hidden = false; document.body.style.overflow = 'hidden'; syncEditorViewport();
     $('#edTitle').value = n.title;
     NotesEditor.load(n.html); NotesEditor.keyboard(true); $('#edTitle').inputMode = 'text';
     paintEditorMeta(n); setSaveStatus(n.trashed ? 'In Trash' : 'Saved');
@@ -523,9 +524,10 @@
     NotesEditor.el().contentEditable = ro ? 'false' : 'true'; $('#edTitle').readOnly = ro;
     const isDesktop = window.matchMedia('(min-width: 900px)').matches;
     $('#toolbar').hidden = !isDesktop; // desktop: always show; mobile: hidden by default
-    const edFmt = $('#edFmt'); if (edFmt) { edFmt.hidden = ro; edFmt.setAttribute('aria-pressed', 'false'); }
+    $$('#edBar .bar-btn').forEach(b => { b.hidden = ro; b.setAttribute('aria-pressed', 'false'); }); $('#edBar').hidden = ro;
     const edFmtD = $('#edFmtDesktop'); if (edFmtD) { edFmtD.hidden = ro; edFmtD.setAttribute('aria-pressed', isDesktop && !ro ? 'true' : 'false'); }
-    setTimeout(() => { (isNew || !n.html ? $('#edTitle') : NotesEditor.el()).focus({ preventScroll: true }); }, 30);
+    // phones: opening an existing note must not pop the keyboard up (tap the text to start typing)
+    if (isDesktop || isNew) setTimeout(() => { (isNew || !n.html ? $('#edTitle') : NotesEditor.el()).focus({ preventScroll: true }); }, 30);
   }
   function paintEditorMeta(n) {
     $('#edPinLabel').textContent = n.pinned ? 'Unpin' : 'Pin';
@@ -535,7 +537,7 @@
     $('#editor').style.setProperty('--nc', n.color !== 'default' ? 'var(' + COLOR_VAR[n.color] + ')' : '');
     const tags = $('#edTags'); tags.textContent = '';
     (n.tags || []).forEach(t => tags.append(el('span', { class: 'tag', text: '#' + t })));
-    $('#edInfo').textContent = 'Edited ' + L.formatDate(n.updated);
+    $('#edInfo').textContent = 'Edited ' + L.formatDate(n.updated); $('#edMenuInfo').textContent = 'Edited ' + L.formatDate(n.updated);
     // Desktop folder select
     const fs = $('#edFolder');
     if (fs) {
@@ -593,7 +595,7 @@
     }
     state.openId = null; state.dirty = false;
     NotesEditor.hideSuggest();
-    $('#editorLayer').hidden = true; document.body.style.overflow = ''; $('#edMenu').hidden = true;
+    $('#editorLayer').hidden = true; document.body.style.overflow = ''; $('#editorLayer').style.removeProperty('--vvh'); $('#editorLayer').style.removeProperty('--vvt'); $('#edMenu').hidden = true;
     $('#globalStatus').textContent = '';
     render();
   }
@@ -626,7 +628,7 @@
   }
   async function closeEditorKeep() { // close without extra render churn when followed by another action
     state.openId = null; state.dirty = false; await state.saving;
-    $('#editorLayer').hidden = true; document.body.style.overflow = '';
+    $('#editorLayer').hidden = true; document.body.style.overflow = ''; $('#editorLayer').style.removeProperty('--vvh'); $('#editorLayer').style.removeProperty('--vvt');
     if (history.state && history.state.kind === 'editor') history.back();
   }
 
@@ -653,7 +655,7 @@
         row('Autosave', 'Save a moment after you stop typing. When off, notes save when you go back.', el('input', { type: 'checkbox', checked: p.autosave, 'aria-label': 'Autosave', onchange: e => setPref('autosave', e.target.checked) })),
         row('Animations', 'Turn off for a still interface (also follows your system setting)', el('input', { type: 'checkbox', checked: p.motion !== 'off', 'aria-label': 'Animations', onchange: e => setPref('motion', e.target.checked ? 'on' : 'off') }))),
       dataCard(),
-      el('section', { class: 'set-card about' }, el('h2', { text: 'About' }),
+      el('section', { class: 'set-card about' }, el('img', { class: 'about-logo', src: 'assets/logo.svg', alt: 'MochiNote logo', width: 72, height: 72 }), el('h2', { text: 'About' }),
         el('p', { text: 'MochiNote · version ' + APP_VERSION }),
         el('p', { text: 'A calm, cozy, local-first notes app. Your notes live only in this browser — nothing is uploaded and there is no cloud sync.' }),
         el('p', { text: 'Credits: built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or assets are used.' })));
@@ -697,6 +699,7 @@
         const res = L.validateImport(data, { sanitize: NotesEditor.sanitize });
         const msg = res.notes.length + ' note(s) and ' + res.folders.length + ' folder(s) found' + (res.skippedNotes + res.skippedFolders ? ' (' + (res.skippedNotes + res.skippedFolders) + ' damaged item(s) will be skipped)' : '') + '.\n' + (mode === 'replace' ? 'This will REPLACE everything currently in the app.' : 'They will be added to your current notes.');
         if (!await dialog({ title: mode === 'replace' ? 'Restore backup?' : 'Import backup?', message: msg, ok: mode === 'replace' ? 'Replace everything' : 'Import', danger: mode === 'replace' })) return;
+        L.flattenFolders(res.folders);
         if (mode === 'replace') {
           await NotesDB.replaceAll(res);
           state.notes = res.notes; state.folders = res.folders;
@@ -754,7 +757,7 @@
 
   function wire() {
     $$('.nav-item').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
-    $('#openSidebar').onclick = openSidebar; $('#scrim').onclick = requestCloseSidebar;
+    $('#openSidebar').onclick = () => { if (state.view === 'settings') { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); } else openSidebar(); }; $('#scrim').onclick = requestCloseSidebar;
     $('#addFolderBtn').onclick = () => createFolder(null);
     $('#newNote').onclick = createAndOpen;
     $('#emptyTrash').onclick = emptyTrash;
@@ -780,27 +783,27 @@
     $('#edBack').onclick = requestCloseEditor;
     $('#editorBackdrop').onclick = requestCloseEditor;
     // Mobile: Aa opens the format bar (bottom) and hides the keyboard; closing it brings the keyboard back
-    const edFmtMob = $('#edFmt');
-    const openFormat = () => {
-      $('#toolbar').hidden = false; if (edFmtMob) edFmtMob.setAttribute('aria-pressed', 'true');
-      $('#edTitle').inputMode = 'none'; NotesEditor.hideKeyboard();
-      if (document.activeElement === $('#edTitle')) $('#edTitle').blur();
+    // Footer icons (+ / Aa / list): each opens its own short options row above the footer; the same icon again closes it
+    const barBtns = $$('#edBar .bar-btn'); let openGroup = '';
+    const paintBar = () => barBtns.forEach(b => b.setAttribute('aria-pressed', String(!$('#toolbar').hidden && b.dataset.open === openGroup)));
+    // the bar is always above the keyboard; options open/close without touching the keyboard
+    const openFormat = grp => {
+      openGroup = grp || openGroup || 'aa'; $('#toolbar').dataset.open = openGroup; $('#toolbar').hidden = false; paintBar();
+      NotesEditor.keepCaretVisible(); setTimeout(NotesEditor.keepCaretVisible, 120); setTimeout(NotesEditor.keepCaretVisible, 300);
     };
-    const closeFormat = resume => {
-      $('#toolbar').hidden = true; if (edFmtMob) edFmtMob.setAttribute('aria-pressed', 'false');
-      $('#edTitle').inputMode = 'text'; NotesEditor.keyboard(true);
-      if (resume) NotesEditor.resumeKeyboard();
+    const closeFormat = () => {
+      $('#toolbar').hidden = true; paintBar();
+      NotesEditor.keepCaretVisible(); setTimeout(NotesEditor.keepCaretVisible, 120); setTimeout(NotesEditor.keepCaretVisible, 350);
     };
-    if (edFmtMob) edFmtMob.onclick = () => { if ($('#toolbar').hidden) openFormat(); else closeFormat(true); };
-    $('#tbClose').onclick = () => closeFormat(true);
-    // tapping the text or title to type again swaps the format bar back for the keyboard
-    $('#editor').addEventListener('pointerdown', e => {
-      if (!isMobile() || $('#toolbar').hidden) return;
-      const t = e.target, inText = NotesEditor.el().contains(t) || t === NotesEditor.el(), inTitle = t === $('#edTitle');
-      if (!inText && !inTitle) return;
-      closeFormat(false);
-      if (document.activeElement === t || document.activeElement === NotesEditor.el()) document.activeElement.blur();
+    barBtns.forEach(b => {
+      b.addEventListener('mousedown', e => e.preventDefault());
+      b.onclick = () => { if (b.hidden) return; if (!$('#toolbar').hidden && openGroup === b.dataset.open) closeFormat(); else openFormat(b.dataset.open); };
     });
+    // Phones: the editor always matches the *visible* area, so the header never scrolls away when the keyboard opens
+    const vv = window.visualViewport;
+    if (vv) { vv.addEventListener('resize', syncEditorViewport); vv.addEventListener('scroll', syncEditorViewport); }
+    window.addEventListener('orientationchange', () => setTimeout(syncEditorViewport, 250));
+    $('#tbClose').onclick = () => closeFormat();
     // Desktop: Format toggle
     const edFmtDesk = $('#edFmtDesktop');
     if (edFmtDesk) edFmtDesk.onclick = () => { const tb = $('#toolbar'); tb.hidden = !tb.hidden; edFmtDesk.setAttribute('aria-pressed', String(!tb.hidden)); };
@@ -861,6 +864,9 @@
     const ok = await NotesDB.open();
     try { state.notes = await NotesDB.getAll('notes'); state.folders = await NotesDB.getAll('folders'); }
     catch (e) { toast('Could not read saved notes: ' + e.message, 7000); }
+    // older versions allowed subfolders: lift them to the top level (their notes stay in them)
+    const lifted = L.flattenFolders(state.folders);
+    if (lifted.length) { try { await NotesDB.putMany('folders', lifted); } catch (_) {} }
     state.notes.forEach(n => { n.tags = n.tags || L.extractTags((n.title || '') + '\n' + (n.text || '')); if (!L.COLORS.includes(n.color)) n.color = 'default'; });
     if (!ok) await dialog({ title: 'Storage unavailable', message: 'Your browser is blocking local storage, so notes will only last until this tab closes. Use Settings → Export backup to keep your work.', ok: 'Got it', hideCancel: true });
     NotesDB.requestPersist();

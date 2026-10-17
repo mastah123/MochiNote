@@ -49,3 +49,4 @@ t('import skips bad items, fixes dangling refs, dupes', () => {
   assert.ok(r.folders.filter(f => f.id === 'p' || f.id === 'q').some(f => f.parentId === null));
 });
 console.log('\n' + n + ' tests passed');
+t('flattenFolders lifts subfolders to top level and reports what changed', () => { const fs = [{ id: 'a', name: 'A', parentId: null }, { id: 'b', name: 'B', parentId: 'a' }, { id: 'c', name: 'C', parentId: 'b' }]; const ch = L.flattenFolders(fs); assert.deepStrictEqual(ch.map(f => f.id), ['b', 'c']); assert.ok(fs.every(f => f.parentId === null)); assert.strictEqual(L.flattenFolders(fs).length, 0); });

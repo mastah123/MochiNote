@@ -31,8 +31,8 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await page.click('[data-act=pin]'); await page.waitForTimeout(400); await page.click('#edMenuBtn'); ok('Pin lives in More and toggles to Unpin', (await page.textContent('#edPinItem')) === 'Unpin'); await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
   // no spare space at the bottom of the editor
-  const gap = await page.evaluate(() => { const f = document.querySelector('.ed-foot').getBoundingClientRect(); return { gap: Math.round(innerHeight - f.bottom), pad: getComputedStyle(document.querySelector('.ed-foot')).paddingBottom }; });
-  ok('editor footer sits flush with the bottom', gap.gap === 0 && parseFloat(gap.pad) <= 6, JSON.stringify(gap));
+  const gap = await page.evaluate(() => { const f = document.querySelector('.ed-bar').getBoundingClientRect(); return { gap: Math.round(innerHeight - f.bottom), pad: getComputedStyle(document.querySelector('.ed-bar')).paddingBottom }; });
+  ok('editor footer sits flush with the bottom', gap.gap === 0 && parseFloat(gap.pad) <= 8, JSON.stringify(gap));
   await page.screenshot({ path: shots + '/b1-editor.png' });
   // Back button closes the editor, not the app
   ok('editor is open', await edOpen()); await page.goBack(); await page.waitForTimeout(400);

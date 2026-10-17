@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 8.0.0**
+**Version 17.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -90,6 +90,58 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v17.0.0 — MochiNote logo
+- Your logo (sage notebook with the mochi face) is now the app logo: browser-tab icon (`assets/logo.svg` plus a 32px PNG fallback), home-screen icon (`assets/icon-180.png`), and an installable-app manifest (`manifest.webmanifest`, 192 and 512px icons).
+- It replaces the placeholder mark in the sidebar header and appears at the top of Settings → About.
+- Source artwork: `assets/logo.svg`.
+
+### v16.0.0 — Thinner format row, smaller undo/redo, no Paragraph option (phone)
+- The format options row is now a single thin row (about 44px, was up to 140px); extra options scroll sideways instead of stacking.
+- The Paragraph dropdown is removed on phones: H1, H2 and H3 buttons cover it (tap the active one again for normal text).
+- Undo and Redo are smaller, sit a little further from Back and closer to each other.
+
+### v15.0.0 — Format bar rides above the keyboard, footer removed (phone)
+- The + / Aa / list icons are now their own row at the very bottom of the editor, so they sit directly above the keyboard when it is open. The old footer is gone (tags still live in the text as #hashtags and show on cards).
+- Choosing a format option no longer closes the keyboard: the note stays focused and you keep typing. The options row opens above the icon row; tap the same icon to close it. Tapping the text leaves it open.
+- No extra safe-area space under the icon row.
+
+### v14.0.0 — New note footer (phone)
+- Footer now has three icons: **+** (image, link, card), **Aa** (H1, H2, H3, bold, italic, underline, strikethrough, alignment, font, size, highlight) and **list** (bullets, numbers, checklist, indent, outdent). Tapping one opens a short row of options just above the footer (it scrolls instead of growing, so the note keeps its space); tap the same icon again to close, or tap the text to go back to typing.
+- "Edited just now" moved into the 3-dot menu; the saving icon now sits beside the 3 dots.
+- Aa removed from the top bar; the Sticker option removed from the format options on phones (stickers on cards are still chosen from the card's "+" slot). Desktop toolbar is unchanged.
+
+### v13.0.0 — Settings back icon, no auto keyboard, undo/redo in the note header (phone)
+- Settings: the menu icon at the top-left is now a back arrow (returns to where you came from).
+- Opening an existing note no longer pops up the keyboard; tap the text to start typing. A brand-new note still focuses the title.
+- Note header: Undo and Redo icons sit right of Back. They are removed from the format bar on phones. Desktop is unchanged.
+
+### v12.0.0 — Subfolders removed (phone and desktop)
+- Folders are now a single flat level: no "+ Subfolder", no "Add subfolder", no indentation.
+- Folders made in earlier versions that were nested are moved to the top level automatically; their notes stay in them, so nothing is lost.
+- Importing a backup does the same for any nested folders it contains.
+
+### v11.0.0 — Card icon with optional stickers, snug image frames (phone and desktop)
+- **Card button:** the 💡 option is now a card icon (and a "Card" label on desktop); the lightbulb is gone. The Card button is available on desktop too.
+- **Stickers are optional:** a new card starts with no sticker, only a faint dashed "+" slot. Tap the slot (or the sticker) to open the sticker picker: choose one of 28, type or paste your own, or pick "No sticker". The sticker shows on the card, in the home preview and when you copy the text. Existing cards simply lose the bulb.
+- **Sticker button in the format bar:** inserts a sticker (or any emoji you type) at the caret, anywhere in a note.
+- **Images:** the frame around a picture now hugs the picture (same shape as the image, no empty bars) and the picture is centred. Pictures are scaled down into a fixed box (200px tall on phones, 300px on desktop, narrower on desktop) and keep their shape.
+- **Adding an image adds a new line under it,** with the caret there, so you can keep typing below the picture.
+- Tests: new `tests/e2e-batch14.js`; older suites updated for the new card and image behaviour.
+
+### v10.0.0 — Typing with the keyboard and format bar (mobile only)
+- **Header stays put:** the note editor now always matches the visible screen area, so the top bar no longer scrolls out of view when the keyboard opens on a long note. (The page also asks the browser to resize for the keyboard.)
+- **Format bar acts like a keyboard:** when it opens or closes, and as you type or press Enter, the line you are on scrolls up so it stays visible above the bar or keyboard.
+- **About 5 lines of free space** under the last line of a note, so the end of a note is easy to reach, select and type at.
+- The note text and title now scroll together in one area (the header, footer and format bar stay fixed).
+- Desktop is unchanged.
+- Tests: new `tests/e2e-batch13.js` (the keyboard is simulated with a fake visual viewport — please check on a real phone).
+
+### v9.0.0 — Lists: caret in front of items, pasted lists (phone and desktop)
+- **Caret before a list item:** press Enter with the caret in front of the first item's number, bullet or checkbox of a list at the top of a note and a normal line opens above it — the list stays exactly as it was (numbers keep 1-2-3). Arrow Up from the first item does the same, so there is always a way to type above a list. In front of any other item, Enter adds an empty item and keeps one list. Enter on an empty item still leaves the list.
+- **Pasted lists become real lists:** pasted lines starting with `- `, `* `, `•`, `1.` / `1)`, `☐ ☑`, `[ ]`, `[x]` are turned into bulleted, numbered or checklist items (2+ lines in a row; a single line only on an empty line). Works for plain text and for HTML pasted from other apps whose lists arrive as plain paragraphs; real HTML lists are kept as they are. Lines that are not list items stay normal text. A numbered list pasted from "3." keeps its numbers. Undo takes a paste back out.
+- Nested lists copied from MochiNote paste back flat (indentation is not rebuilt).
+- Tests: new `tests/e2e-batch12.js`.
 
 ### v8.0.0 — One icon set, single grid/list icon, note colours, editable "Your space"
 - **Icons:** the menu (All notes, Pinned, Archive, Trash, Settings), sidebar folders, back and more (⋮) buttons, the search icon, the ⋮ menu items and the long-press menus all use the same line icons as the home screen — phone and desktop. The pin mark on cards is the same icon everywhere.

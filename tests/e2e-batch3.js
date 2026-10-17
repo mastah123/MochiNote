@@ -114,13 +114,10 @@ const NOTE_HTML = '<div>Intro line</div><ul><li>apple</li><li>pear</li></ul><ol>
   await m.evaluate(() => window.__mochiNote.go('all')); await m.waitForTimeout(250);
   await press(m, '.folder-card >> text=Work');
   ok('long-press on a folder card opens its sheet', await sheetOpen(m) && (await m.textContent('#sheetTitle')).includes('Work'));
-  ok('folder sheet has Rename / Add subfolder / Delete', JSON.stringify(await sheetItems(m)) === JSON.stringify(['Rename', 'Add subfolder', 'Delete folder']), JSON.stringify(await sheetItems(m)));
+  ok('folder sheet has Rename / Delete (no subfolders)', JSON.stringify(await sheetItems(m)) === JSON.stringify(['Rename', 'Delete folder']), JSON.stringify(await sheetItems(m)));
   ok('long-press on a folder does not open the folder', (await m.textContent('#viewTitle')) === 'All notes');
   await m.click('#sheetItems >> text=Rename'); await m.waitForSelector('#dlg[open]'); await m.fill('#dlgInput', 'Work2'); await m.click('#dlgOk'); await m.waitForTimeout(300);
   ok('Rename from the folder sheet renames it', await state(m, () => window.__mochiNote.state.folders.find(f => f.id === 'f1').name) === 'Work2');
-  await press(m, '.folder-card >> text=Work2'); await m.click('#sheetItems >> text=Add subfolder');
-  await m.waitForSelector('#dlg[open]'); await m.fill('#dlgInput', 'Sub'); await m.click('#dlgOk'); await m.waitForTimeout(300);
-  ok('Add subfolder creates a child folder', await state(m, () => window.__mochiNote.state.folders.some(f => f.name === 'Sub' && f.parentId === 'f1')));
   await press(m, '.folder-card >> text=Home'); await m.click('#sheetItems >> text=Delete folder');
   await m.waitForSelector('#dlg[open]'); await m.click('#dlgOk'); await m.waitForTimeout(300);
   ok('Delete from the folder sheet deletes it', await state(m, () => !window.__mochiNote.state.folders.some(f => f.id === 'f2')));
@@ -130,8 +127,8 @@ const NOTE_HTML = '<div>Intro line</div><ul><li>apple</li><li>pear</li></ul><ol>
 
   // sidebar folder long-press
   await m.click('#openSidebar'); await m.waitForTimeout(300);
-  await press(m, '#sideFolders .side-item >> text=Sub');
-  ok('long-press on a sidebar folder opens its sheet', await sheetOpen(m) && (await m.textContent('#sheetTitle')).includes('Sub'));
+  await press(m, '#sideFolders .side-item >> text=Work2');
+  ok('long-press on a sidebar folder opens its sheet', await sheetOpen(m) && (await m.textContent('#sheetTitle')).includes('Work2'));
   await m.keyboard.press('Escape'); await m.waitForTimeout(250);
   ok('sidebar stays open after closing the sheet', await m.locator('#sidebar.open').count() === 1 && !(await sheetOpen(m)));
   ok('sidebar no longer lists a "No folder" entry', (await m.locator('#sideFolders .side-item >> text=No folder').count()) === 0);

@@ -61,7 +61,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await press('#folderStrip .folder-card:nth-child(2)');
   c = await R('#folderStrip .folder-card:nth-child(2)'); s = await R('#sheet');
   ok('folder card: menu pops up from the folder (right column -> right aligned)', Math.abs(s.r - c.r) <= 2 && s.t >= c.b && inView(s), JSON.stringify({ c, s }));
-  ok('folder menu items', (await page.$$eval('#sheetItems button', e => e.map(x => x.lastChild.textContent.trim()))).join('|') === 'Rename|Add subfolder|Delete folder');
+  ok('folder menu items', (await page.$$eval('#sheetItems button', e => e.map(x => x.lastChild.textContent.trim()))).join('|') === 'Rename|Delete folder');
   ok('folder is highlighted', await page.locator('#folderStrip .folder-card.lp-active').count() === 1);
   await page.click('#sheetScrim', { position: { x: 5, y: 5 } }); await page.waitForTimeout(250);
   ok('tapping outside closes it', !(await page.locator('#sheetLayer').isVisible()) && await page.locator('.lp-active').count() === 0);
