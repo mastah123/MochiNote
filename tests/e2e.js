@@ -34,8 +34,8 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   ok('checklist item toggles done', await page.$eval('ul.checklist li', e => e.classList.contains('done')));
   // formatting
   await page.click('#edBody'); await page.keyboard.press('Control+Home'); await page.keyboard.down('Shift'); await page.keyboard.press('End'); await page.keyboard.up('Shift');
-  await ensureTb(); await page.click('[data-cmd=bold]'); await ensureTb(); await page.click('[data-cmd=underline]'); await ensureTb(); await page.selectOption('#hlSel', '#fde68a'); await ensureTb(); await page.selectOption('#sizeSel', '5');
-  await ensureTb(); await page.selectOption('#fontSel', 'Georgia, serif'); await ensureTb(); await page.click('[data-cmd=justifyCenter]');
+  await ensureTb(); await page.click('[data-cmd=bold]'); await ensureTb(); await page.click('[data-cmd=underline]'); await ensureTb('style'); await page.selectOption('#hlSel', '#fde68a'); await ensureTb('style'); await page.selectOption('#sizeSel', '5');
+  await ensureTb('style'); await page.selectOption('#fontSel', 'Georgia, serif'); await ensureTb('align'); await page.click('[data-cmd=justifyCenter]');
   html = await page.$eval('#edBody', e => e.innerHTML);
   ok('bold/underline/highlight/size/font/align applied', /<b>|font-weight|<strong>/.test(html) && /<u[ >]|underline/.test(html) && /background-color|<mark/.test(html) && /font-size/.test(html) && /Georgia/.test(html) && /text-align: ?center/.test(html), html);
   await ensureTb(); await page.click('[data-cmd=h2]'); ok('heading applied', /<h2/.test(await page.$eval('#edBody', e => e.innerHTML)));

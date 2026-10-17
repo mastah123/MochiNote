@@ -25,7 +25,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
     // ---- item 6: card icon ----
     await bar('plus');
     ok(L + 'Card button has the card icon, no lightbulb', await page.locator('[data-cmd=callout]').isVisible() && !/💡/.test(await page.textContent('#toolbar')) && await page.locator('[data-cmd=callout] svg').count() === 1);
-    ok(L + (label === 'phone' ? 'Sticker option is removed from the format bar' : 'Sticker button is in the bar'), label === 'phone' ? !(await page.locator('[data-cmd=sticker]').isVisible()) : await page.locator('[data-cmd=sticker]').isVisible() && await page.locator('[data-cmd=sticker] svg').count() === 1);
+    ok(L + 'Sticker option is removed from the format toolbar', !(await page.locator('[data-cmd=sticker]').isVisible()));
     await setBody('<div>Random thought</div><div>body</div>'); await caretIn('div:first-child'); await bar('plus');
     await page.click('[data-cmd=callout]'); await page.waitForTimeout(150);
     ok(L + 'Card wraps the lines with no sticker by default', /<div class="callout"><div>Random thought<\/div><\/div><div>body<\/div>/.test(await html()), await html());
@@ -68,18 +68,6 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
     if (label === 'phone') ok(L + 'the home card preview shows the card with its sticker', prev && prev.m === '🌸' && /Random thought/.test(prev.t), JSON.stringify(prev));
     else ok(L + 'desktop home card keeps its plain-text preview', await page.locator('.note .n-prev').first().isVisible());
     await page.click('.note'); await page.waitForTimeout(300);
-
-    // inline sticker from the bar (desktop only; phones no longer have this option)
-    if (label === 'desktop') {
-    await setBody('<div>hello world</div>'); await caretIn('div'); await bar();
-    await page.click('[data-cmd=sticker]'); await page.waitForTimeout(250);
-    ok(L + 'Sticker button opens the picker (insert mode)', await pop() && (await page.textContent('#stickerTitle')) === 'Insert a sticker' && !(await page.locator('#stickerNone').isVisible()));
-    await page.click('#stickerGrid .sticker[data-s="🎉"]'); await page.waitForTimeout(200);
-    ok(L + 'it inserts the sticker at the caret', (await html()) === '<div>hello world🎉</div>', await html());
-    await bar(); await page.click('[data-cmd=sticker]'); await page.waitForTimeout(200); await page.fill('#stickerInput', '🚀'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
-    ok(L + 'typing your own and pressing Enter inserts it too', (await html()) === '<div>hello world🎉🚀</div>', await html());
-
-    }
 
     // ---- item 14: images ----
     const big = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 400; const x = c.getContext('2d'); x.fillStyle = '#88aabb'; x.fillRect(0, 0, 800, 400); return c.toDataURL('image/png'); });

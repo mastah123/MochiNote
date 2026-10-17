@@ -37,7 +37,7 @@ const LISTS = '<div>Intro</div><ul><li>apple</li><li>pear</li></ul><ol><li>first
   ok('format bar is below the text area', geo.tb.top >= geo.sc.bottom - 1, JSON.stringify([geo.tb.top, geo.sc.bottom]));
   ok('options row sits just above the footer icons, footer flush with the bottom', Math.abs(geo.tb.bottom - geo.ft.top) <= 1 && Math.abs(geo.ft.bottom - geo.vh) <= 1, JSON.stringify([geo.tb.bottom, geo.ft.top, geo.ft.bottom, geo.vh]));
   ok('header still thin and on top', geo.top.height <= 48 && geo.top.top === 0);
-  ok('footer has + / Aa / list icons, Aa is shown pressed', await m.locator('#edBar .bar-btn').count() === 3 && (await m.getAttribute('#edFmt', 'aria-pressed')) === 'true');
+  ok('footer has + / Aa / align / style / list icons, Aa is shown pressed', await m.locator('#edBar .bar-btn').count() === 5 && (await m.getAttribute('#edFmt', 'aria-pressed')) === 'true');
   await m.click('#edBar [data-open=list]'); await m.waitForTimeout(150);
   ok('buttons use icons, not text, on mobile', await m.locator('[data-cmd=insertOrderedList] .t-ico').isVisible() && !(await m.locator('[data-cmd=insertOrderedList] .t-txt').isVisible()));
   const small = await m.$$eval('#toolbar button', els => els.filter(e => e.offsetParent && (e.getBoundingClientRect().width < 39 || e.getBoundingClientRect().height < 39)).map(e => e.dataset.cmd || e.id));
@@ -121,7 +121,7 @@ const LISTS = '<div>Intro</div><ul><li>apple</li><li>pear</li></ul><ol><li>first
   await newNote(d, 'Desktop'); await d.keyboard.type('hello');
   const dg = await d.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { tb: r('#toolbar'), sc: r('#edScroll') }; });
   ok('desktop: format bar still above the text', dg.tb.bottom <= dg.sc.top + 1, JSON.stringify(dg));
-  ok('desktop: toolbar visible by default with text labels', await d.locator('[data-cmd=undo] .t-txt').isVisible() && !(await d.locator('[data-cmd=undo] .t-ico').isVisible()));
+  ok('desktop: toolbar visible by default, with the same icon buttons as the phone', await d.locator('[data-cmd=bold]').isVisible() && await d.locator('[data-cmd=insertOrderedList] .t-ico').isVisible() && !(await d.locator('[data-cmd=insertOrderedList] .t-txt').isVisible()));
   ok('desktop: no close button, but the Card button is now there too', !(await d.locator('#tbClose').isVisible()) && await d.locator('[data-cmd=callout]').isVisible());
   ok('desktop: keyboard mode untouched', (await d.$eval('#edBody', e => e.inputMode)) !== 'none');
   await d.evaluate(h => { document.getElementById('edBody').innerHTML = h; }, LISTS); await selectAll(d);

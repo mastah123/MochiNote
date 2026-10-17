@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '17.0.0';
+  const APP_VERSION = '23.0.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -296,7 +296,7 @@
     const { lines, more } = previewLines(n.html, max);
     if (!lines.length) return null;
     const box = el('div', { class: 'n-rich' });
-    lines.forEach(l => box.append(el('div', { class: 'pl pl-' + l.k + (l.done ? ' done' : '') },
+    lines.forEach(l => box.append(el('div', { class: 'pl pl-' + l.k + (l.done ? ' done' : '')},
       el('span', { class: 'pl-m', 'aria-hidden': 'true', text: l.k === 'ul' ? '•' : l.k === 'ol' ? l.n + '.' : l.k === 'check' ? (l.done ? '●' : '○') : l.k === 'callout' ? (l.sticker || '') : '' }),
       el('span', { class: 'pl-t', text: l.t }))));
     if (more) box.append(el('div', { class: 'pl pl-more', 'aria-hidden': 'true', text: '…' }));
@@ -420,7 +420,7 @@
       pv ? el('div', { class: 'n-prev', text: n.title.trim() ? pv : '' }) : null,
       rich,
       (n.tags || []).length ? el('div', { class: 'n-tags' }, n.tags.slice(0, 5).map(t => el('span', { class: 'tag', text: '#' + t }))) : null,
-      el('div', { class: 'n-meta', text: (n.folderId && folderById(n.folderId) ? '📁 ' + folderById(n.folderId).name + ' · ' : '') + L.formatDate(n.updated) }));
+      el('div', { class: 'n-meta' + (n.folderId && folderById(n.folderId) ? ' has-folder' : '') }, (n.folderId && folderById(n.folderId) ? [icon(svgIco('folder', 14)), el('span', { class: 'n-fname', text: folderById(n.folderId).name }), el('span', { class: 'n-date', text: ' · ' + L.formatDate(n.updated) })] : [el('span', { class: 'n-date', text: L.formatDate(n.updated) })])));
     if (n.trashed) {
       card.append(el('div', { class: 'row-actions' },
         el('button', { onclick: () => restoreNote(n.id) }, 'Restore'),

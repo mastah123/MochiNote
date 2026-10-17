@@ -140,10 +140,10 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await seed(d); await d.waitForTimeout(300);
   ok('desktop: "All notes" title still shown', await vis(d, '#viewTitle') && (await d.textContent('#viewTitle')) === 'All notes');
   ok('desktop: search field is visible, no search icon / menu icon', await vis(d, '#search') && !(await vis(d, '#searchBtn')) && !(await vis(d, '#openSidebar')));
-  ok('desktop: Sort / Grid / List keep their text', await vis(d, '.sel-txt') && await vis(d, '#viewGrid .seg-txt') && !(await vis(d, '#viewGrid .seg-ico')));
+  ok('desktop: Sort / view toggle are icon-only (v21)', !(await vis(d, '.sel-txt')) && await vis(d, '.sel-ico') && !(await vis(d, '.seg-txt')));
   ok('desktop: no hero card, no folder header, no notes label', !(await vis(d, '#hero')) && !(await vis(d, '.folder-head')) && !(await vis(d, '#notesLabel')));
   ok('desktop: all top-level folders still shown (not limited to 2)', (await d.locator('#folderStrip .folder-card').count()) === 5 && await vis(d, '#folderStrip .folder-strip-head'));
-  ok('desktop: folder cards have no icon', !(await vis(d, '#folderStrip .f-ico')));
+  ok('desktop: folder cards show the folder icon (v21)', await vis(d, '#folderStrip .f-ico'));
   ok('desktop: header is not fixed', (await d.$eval('#headFixed', e => getComputedStyle(e).position)) === 'static');
   const dn = await d.$$eval('#notes .note', els => els.slice(0, 4).map(e => Math.round(e.getBoundingClientRect().height)));
   ok('desktop: note cards keep their natural (not fixed) height and plain preview', new Set(dn).size > 1 && await vis(d, '#notes .note .n-prev') && !(await vis(d, '#notes .note .n-rich')), JSON.stringify(dn));

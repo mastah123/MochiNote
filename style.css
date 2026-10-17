@@ -169,10 +169,21 @@ html[data-mode="dark"] .folder-card.f0 { color: var(--text); }
 .menu { position: absolute; right: 4px; top: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px; min-width: 210px; z-index: 5; display: grid; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 .menu button { border: 0; background: none; text-align: left; min-height: 44px; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 12px; }
 .menu button .ico { opacity: .8; }
-.menu-info { display: none; padding: 8px 12px 4px; margin-top: 4px; border-top: 1px solid var(--border); color: var(--muted); font-size: .8rem; }
+.menu-info { display: block; padding: 8px 12px 4px; margin-top: 4px; border-top: 1px solid var(--border); color: var(--muted); font-size: .8rem; }
 .ed-bar[hidden] { display: none !important; }
+/* the note footer only holds tags now ("Edited" lives in the ⋮ menu); undo / redo live in the header */
+.ed-foot { display: none !important; } /* tags still live in the text as #hashtags */
+.toolbar #blockSel, .toolbar [data-cmd="sticker"] { display: none; }
+.toolbar .hl { font-size: 0; gap: 0; }
+.tb-break { display: none; }
+.toolbar .hl select { font-size: .85rem; }
+.toolbar [data-cmd="undo"], .toolbar [data-cmd="redo"], .toolbar [data-cmd="redo"] + .sep { display: none; }
+#edUndo, #edRedo { width: 34px; height: 34px; border-radius: 10px; }
+#edUndo .ico, #edRedo .ico { width: 18px; height: 18px; }
+#edUndo { margin-left: 12px; }
+#edRedo { margin-left: -2px; }
 .toolbar .hd { font-weight: 700; }
-.menu-theme { display: none; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 10px; color: var(--muted); font-size: .9rem; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.menu-theme { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 10px; color: var(--muted); font-size: .9rem; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .menu-theme .swatch { width: 26px; height: 26px; }
 .menu-theme .swatch.on { border-color: var(--accent); }
 .menu .menu-theme .swatches { gap: 8px; }
@@ -198,7 +209,9 @@ html[data-mode="dark"] .folder-card.f0 { color: var(--text); }
 .save-icon-mobile { font-size: .75rem; color: var(--muted); padding: 2px 6px; min-height: 1em; flex: none; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 2px 4px; padding: 6px 8px; max-height: 38vh; overflow-y: auto; border-block: 1px solid var(--border); background: var(--surface); align-items: center; animation: fade 240ms ease both; }
 .toolbar button { flex: none; min-width: 40px; min-height: 40px; padding: 0 9px; border: 0; background: none; border-radius: 10px; white-space: nowrap; }
-.toolbar button:hover, .toolbar button.on { background: var(--accent-soft); }
+@media (hover: hover) { .toolbar button:hover { background: var(--accent-soft); } }
+.toolbar button.on, .toolbar button.on:hover { background: var(--accent); color: var(--accent-ink); }
+.toolbar button.on svg { color: inherit; }
 .toolbar select { flex: none; }
 .toolbar .hl { flex: none; display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted); }
 .toolbar .sep { width: 1px; height: 24px; background: var(--border); flex: none; margin: 0 2px; }
@@ -213,6 +226,11 @@ html[data-mode="dark"] .folder-card.f0 { color: var(--text); }
 .ed-body img { display: block; box-sizing: content-box; width: auto !important; height: auto !important; max-width: calc(100% - 12px) !important; max-height: 220px !important; padding: 6px; background: var(--surface-2); border-radius: 16px; margin: .5em auto; }
 .ed-body mark { border-radius: 4px; padding: 0 2px; }
 .ed-body .hashtag { color: var(--accent); font-weight: 500; }
+/* an aligned list item (centre / right): the bullet or number stays next to its text instead of stretching across the line */
+.ed-body li { transition: none; }
+.ed-body li[style*="text-align"] { list-style-position: inside; }
+.ed-body ul.checklist li[style*="text-align"] { padding-left: 0; }
+.ed-body ul.checklist li[style*="text-align"]::before { position: static; display: inline-block; vertical-align: -5px; margin-right: 10px; }
 /* checklist */
 .ed-body ul.checklist { list-style: none; padding-left: 0; }
 .ed-body ul.checklist { margin: .2em 0 .4em; }
@@ -269,8 +287,14 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
   .ed-title { padding: 16px 20px 4px; font-size: 1.6rem; }
   .ed-body img { max-width: min(calc(100% - 12px), 460px) !important; max-height: 300px !important; }
   .fab { right: 36px; bottom: 28px; }
-  /* desktop toolbar visible by default (JS removes hidden attr on desktop) */
-  .toolbar { display: flex; }
+  /* desktop toolbar visible by default (JS removes hidden attr on desktop): same icon buttons and functions as the phone, in one tidy row */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 14px; }
+  .toolbar .t-txt { display: none; }
+  .toolbar .t-ico { display: block; }
+  .toolbar button { min-width: 36px; min-height: 36px; padding: 0 6px; display: inline-grid; place-items: center; }
+  .toolbar select { min-height: 34px; font-size: .85rem; padding: 0 6px; }
+  .toolbar .sep { margin: 0 4px; }
+  .tb-break { display: block; flex: 0 0 100%; height: 0; } /* two tidy rows: text / insert on the second */
 }
 
 /* callout card (💡) — content styles apply everywhere so a note made on mobile reads the same on desktop */
@@ -297,10 +321,27 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 
 /* home: icon-only controls, "Your space" card, folder header and the all-folders page are mobile-only; desktop keeps the original text controls */
 .sel-ico, .seg-ico, .hero, .folder-head, .notes-label, .page-head, .f-ico, .sb-close, .hero-edit { display: none; }
+@media (min-width: 900px) {
+  /* v21: desktop home follows the mobile icons: icon-only sort, one view-toggle icon, folder icons */
+  .sel-txt, .seg-txt { display: none; }
+  .sel { position: relative; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; color: var(--muted); border-radius: 10px; }
+  .sel:hover { background: var(--accent-soft); color: var(--text); }
+  .sel-ico, .seg-ico { display: block; }
+  .sel-ico { pointer-events: none; }
+  .sel select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
+  .seg { border: 0; background: none; border-radius: 0; overflow: visible; }
+  .seg-btn { display: grid; place-items: center; width: 40px; height: 40px; min-height: 40px; padding: 0; border-radius: 10px; color: var(--text); background: none; }
+  .seg-btn:hover { background: var(--accent-soft); }
+  .seg-btn[aria-pressed="true"] { display: none; }
+  .f-ico { display: block; margin-bottom: 8px; opacity: .75; }
+  .n-meta .ico { vertical-align: -3px; margin-right: 4px; }
+}
 .note.has-actions { height: auto; }
 
 /* rich card preview (bullets / numbers / checklists) — mobile only; desktop keeps the plain-text preview */
 .n-rich { display: none; }
+.n-meta .ico { vertical-align: -2px; margin-right: 4px; }
+.n-meta .n-fname { overflow: hidden; text-overflow: ellipsis; }
 .n-rich .pl { display: flex; gap: 8px; align-items: baseline; color: var(--muted); font-size: .95rem; line-height: 1.4; }
 .n-rich .pl-m { flex: none; min-width: 1.1em; text-align: right; }
 .n-rich .pl-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -337,25 +378,18 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
   .toolbar #blockSel { display: none; }
   .toolbar .tb-head, .toolbar .sep { display: none; }
   /* footer icons: each opens only its own group of options */
-  .toolbar[data-open="plus"] > :not([data-grp="plus"]):not(input), .toolbar[data-open="aa"] > :not([data-grp="aa"]):not(input), .toolbar[data-open="list"] > :not([data-grp="list"]):not(input) { display: none !important; }
+  .toolbar[data-open="plus"] > :not([data-grp="plus"]):not(input), .toolbar[data-open="aa"] > :not([data-grp="aa"]):not(input), .toolbar[data-open="align"] > :not([data-grp="align"]):not(input), .toolbar[data-open="style"] > :not([data-grp="style"]):not(input), .toolbar[data-open="list"] > :not([data-grp="list"]):not(input) { display: none !important; }
   .toolbar [data-cmd="sticker"], .toolbar [data-cmd="undo"], .toolbar [data-cmd="redo"] { display: none; }
   .ed-foot { order: 3; }
   .ed-bar { order: 4; display: flex; align-items: center; justify-content: space-around; flex: none; border-top: 1px solid var(--border); background: var(--surface); padding: 2px 8px; }
-  .bar-btn { flex: 1; max-width: 96px; min-height: 44px; border: 0; background: none; border-radius: 12px; color: var(--text); display: grid; place-items: center; font-size: 1.05rem; font-weight: 700; }
+  .bar-btn { flex: 1; max-width: 80px; min-height: 44px; border: 0; background: none; border-radius: 12px; color: var(--text); display: grid; place-items: center; font-size: 1.05rem; font-weight: 700; }
   .bar-btn[aria-pressed="true"] { background: var(--accent-soft); }
-  .ed-foot #edInfo { display: none; }
   .ed-foot { display: none; }
-  .menu-info { display: block; }
   .tag-suggest { bottom: 56px; }
   .toolbar button { min-width: 40px; min-height: 40px; padding: 0 8px; display: inline-grid; place-items: center; }
   .toolbar .t-txt { display: none; }
   .toolbar .t-ico { display: block; }
   .toolbar select { min-height: 40px; }
-  /* undo / redo: smaller, a little away from Back, close to each other */
-  #edUndo, #edRedo { width: 34px; height: 34px; border-radius: 10px; }
-  #edUndo .ico, #edRedo .ico { width: 18px; height: 18px; }
-  #edUndo { margin-left: 12px; }
-  #edRedo { margin-left: -2px; }
 
   /* ---- mobile home: fixed header [menu ... search icon]; "Your space" card, folders and notes scroll underneath ---- */
   :root { --head-h: 60px; }
@@ -379,7 +413,6 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
   .hero { position: relative; }
   .hero-edit { display: grid; place-items: center; position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px; background: none; color: var(--muted); }
   .hero-edit:active { background: var(--accent-soft); color: var(--text); }
-  .menu-theme { display: flex; }
   .hero-title { padding-right: 36px; }
   .hero-kicker { font-size: .76rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
   .hero-title { font-size: 1.5rem; font-weight: 600; line-height: 1.22; letter-spacing: -.01em; margin: 6px 0 8px; }
@@ -436,6 +469,9 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
   .note .n-tags { flex: none; flex-wrap: nowrap; overflow: hidden; max-height: 26px; margin-top: 6px; }
   .note .n-tags .tag { flex: none; white-space: nowrap; }
   .notes.grid .note .n-meta { display: none; }
+  .notes.grid .note .n-meta.has-folder { display: flex; align-items: center; min-width: 0; padding-top: 6px; }
+  .notes.grid .note .n-meta .n-date { display: none; }
+  .notes.grid .note .n-meta .ico { flex: none; }
   .note .n-meta { flex: none; margin-top: auto; padding-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .main .notes.list .note { height: 96px; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; }
   .main .notes.list .note .n-title { display: block; white-space: nowrap; text-overflow: ellipsis; padding-right: 0; margin-bottom: 2px; }

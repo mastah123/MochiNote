@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 17.0.0**
+**Version 23.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -90,6 +90,33 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v23.0.0 — Alignment is always saved; card previews reverted
+- Left / centre / right is written as a style and an `align` attribute from any browser is converted, so alignment is kept when the note is saved and reopened.
+- Reverted the v22 card-preview changes (desktop cards keep the plain-text preview again, phone previews do not follow alignment).
+- Kept from v22: clear active highlight on format buttons, folder icon on phone grid cards.
+
+### v22.0.0 — Format highlight, card folder icon, same saved formats everywhere
+- Format buttons light up clearly while active (bold, italic, align, lists…) and tapping again turns them off; they mix freely.
+- Phone grid cards show the folder icon and name.
+- Note cards on desktop now show the same rich preview as the phone (bullets, numbers, checklists, headings, left/centre/right alignment), and the phone preview now respects alignment and headings too.
+
+### v21.0.0 — Desktop home polish
+- Desktop home now follows the phone: icon-only Sort, a single view-toggle icon, folder icons on folder cards, and an icon instead of the 📁 emoji on note cards.
+
+### v20.0.0 — Desktop format toolbar follows the phone
+- The format toolbar (same place under the header) now uses the phone's icon buttons and functions, in two tidy rows: bold / italic / underline / strikethrough, H1-H3, align left / centre / right, font / size / highlight; then bullets, numbers, checklist, outdent / indent, and card / link / image.
+- Removed on desktop, like on the phone: the Paragraph dropdown (H1-H3 replace it), the Sticker button, the toolbar's own Undo / Redo (they are in the header), and the note footer.
+- Tapping a heading button again goes back to normal text; aligned list lines keep their bullet with the text.
+
+### v19.0.0 — Desktop note top bar follows the phone
+- Note header (desktop): Back, then small Undo / Redo icons; the save status is now a small icon beside the 3 dots (the centred text "Saved" is gone).
+- The "Format" and "Pin" text buttons and the folder / colour row under the title are removed. Pin, Move to folder and the theme colours live in the ⋮ menu, which also shows "Edited …".
+- The footer no longer shows "Edited …" (it only appears when a note has tags). The format toolbar keeps its original place and text labels; its Undo / Redo moved up to the header. Layout is otherwise unchanged.
+
+### v18.0.0 — Align and Font/Size/Highlight buttons, aligned-list fix (phone)
+- Footer icon row is now **+ / Aa / align / font-size-highlight / list**. **Aa** keeps H1-H3, bold, italic, underline and strikethrough; the new **align** button holds left / centre / right; one **style** button holds font, size and highlight.
+- Fix: right-aligning (or centring) a line inside a bullet, numbered or checklist item no longer stretches the row; the bullet, number or checkbox now stays beside its text.
 
 ### v17.0.0 — MochiNote logo
 - Your logo (sage notebook with the mochi face) is now the app logo: browser-tab icon (`assets/logo.svg` plus a 32px PNG fallback), home-screen icon (`assets/icon-180.png`), and an installable-app manifest (`manifest.webmanifest`, 192 and 512px icons).

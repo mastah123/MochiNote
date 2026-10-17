@@ -104,14 +104,13 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   ok('desktop: sidebar nav uses the same line icons', (await d.locator('#nav .nav-ico svg').count()) === 5 && (await d.locator('#sideFolders .fl-name svg').count()) === 1);
   ok('desktop: search field has the line search icon', await vis(d, '.search-ico svg'));
   ok('desktop: no close button either', (await d.locator('#closeSidebar').count()) === 0);
-  ok('desktop: Grid / List keep their two labelled buttons side by side', await vis(d, '#viewGrid') && await vis(d, '#viewList') && await vis(d, '#viewGrid .seg-txt'));
+  ok('desktop: one view-toggle icon, like the phone', (await vis(d, '#viewGrid')) !== (await vis(d, '#viewList')) && !(await vis(d, '#viewList .seg-txt')));
   ok('desktop: no "Your space" card / edit button', !(await vis(d, '#hero')) && !(await vis(d, '#heroEdit')));
   await d.click('.note[aria-label="Open note Note green"]'); await d.waitForTimeout(250);
-  ok('desktop: swatch row visible, Theme row in ⋮ hidden', await vis(d, '#edColors') && (await d.locator('#edColors .swatch').count()) === 6);
+  ok('desktop: the colour row under the title is gone (theme lives in the ⋮ menu)', !(await vis(d, '#edColors')) && (await d.locator('#edColors').count()) === 0);
   await d.click('#edMenuBtn'); await d.waitForTimeout(150);
-  ok('desktop: ⋮ menu has no Theme row but has icons', !(await vis(d, '#edMenuTheme')) && (await d.locator('#edMenu [data-act] svg').count()) === 4);
-  await d.keyboard.press('Escape');
-  await d.click('#edColors .swatch[title="pink"]'); await d.waitForTimeout(800);
+  ok('desktop: ⋮ menu has the Theme row and icons', await vis(d, '#edMenuTheme') && (await d.locator('#edMenuColors .swatch').count()) === 6 && (await d.locator('#edMenu [data-act] svg').count()) === 4);
+  await d.click('#edMenuColors .swatch[title="pink"]'); await d.waitForTimeout(800); await d.keyboard.press('Escape');
   await d.click('#edBack'); await d.waitForTimeout(500);
   ok('desktop: card follows the colour picked in the row', (await bg(d, '.note[aria-label="Open note Note green"]')) === (await cssVar(d, '--c-pink')));
   await d.click('#nav [data-view=settings]'); await d.waitForTimeout(250);

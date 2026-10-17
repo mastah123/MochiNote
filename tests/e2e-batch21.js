@@ -1,0 +1,15 @@
+const { chromium } = require('playwright');
+const http=require('http'),fs=require('fs'),path=require('path');
+const M={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
+const root=path.join(__dirname,'..');
+const srv=http.createServer((q,s)=>{let p=q.url.split('?')[0];if(p==='/')p='/index.html';fs.readFile(path.join(root,p),(e,d)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{'content-type':M[path.extname(p)]||'text/plain'});s.end(d)})});
+(async()=>{await new Promise(r=>srv.listen(0,r));const url='http://localhost:'+srv.address().port+'/';
+const b=await chromium.launch({executablePath:process.env.CHROME});const pg=await b.newPage({viewport:{width:1280,height:800}});
+await pg.goto(url);await pg.waitForTimeout(600);let ok=0,bad=0;const t=(n,c)=>{c?ok++:(bad++,console.log('FAIL',n))};
+const vis=async s=>pg.evaluate(s=>{const e=document.querySelector(s);return !!e&&getComputedStyle(e).display!=='none'},s);
+t('sel text hidden',!(await vis('.sel-txt')));t('sel icon shown',await vis('.sel-ico'));
+t('seg text hidden',!(await vis('.seg-txt')));t('one seg icon',(await pg.$$eval('#viewGrid,#viewList',a=>a.filter(x=>getComputedStyle(x).display!=='none').length))===1);
+await pg.click('#viewList');await pg.waitForTimeout(200);
+t('toggle swaps',(await pg.evaluate(()=>getComputedStyle(document.querySelector('#viewGrid')).display))!=='none'&&(await pg.$$eval('#viewGrid,#viewList',a=>a.filter(x=>getComputedStyle(x).display!=='none').length))===1);
+t('no emoji folder',!(await pg.evaluate(()=>document.body.innerHTML.includes('📁'))));
+console.log(ok+' passed, '+bad+' failed');await b.close();srv.close();process.exit(bad?1:0)})();

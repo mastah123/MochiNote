@@ -39,6 +39,11 @@ const NotesEditor = (function () {
       cleanNode(ch);
       const tag = ch.tagName.toUpperCase();
       if (!KEEP.has(tag)) { while (ch.firstChild) node.insertBefore(ch.firstChild, ch); ch.remove(); return; }
+      // some browsers write alignment as an align attribute; keep it as a style so it is saved
+      if (/^(DIV|P|H[1-6]|LI|UL|OL|BLOCKQUOTE)$/.test(tag) && ch.hasAttribute('align')) {
+        const al = ch.getAttribute('align').toLowerCase();
+        if (/^(left|right|center|justify)$/.test(al) && !/text-align/i.test(ch.getAttribute('style') || '')) ch.style.textAlign = al;
+      }
       Array.from(ch.attributes).forEach(a => {
         const n = a.name.toLowerCase(), v = a.value;
         let ok = false;
@@ -98,7 +103,7 @@ const NotesEditor = (function () {
     return Array.from(body.querySelectorAll(tag)).filter(l => r.intersectsNode(l));
   }
   const changed = () => opts.onChange();
-  function exec(cmd, val) { focusBody(); const ok = document.execCommand(cmd, false, val); saveRange(); changed(); updateToolbar(); return ok; }
+  function exec(cmd, val) { focusBody(); const jf = /^justify/.test(cmd); if (jf) document.execCommand('styleWithCSS', false, true); const ok = document.execCommand(cmd, false, val); if (jf) document.execCommand('styleWithCSS', false, false); saveRange(); changed(); updateToolbar(); return ok; }
 
   function uncheck(uls) { uls.forEach(u => { u.classList.remove('checklist'); u.querySelectorAll('li.done').forEach(li => li.classList.remove('done')); if (!u.getAttribute('class')) u.removeAttribute('class'); }); }
   function toggleBullet() {
