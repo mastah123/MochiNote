@@ -146,7 +146,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   ok('desktop: folder cards show the folder icon (v21)', await vis(d, '#folderStrip .f-ico'));
   ok('desktop: header is not fixed', (await d.$eval('#headFixed', e => getComputedStyle(e).position)) === 'static');
   const dn = await d.$$eval('#notes .note', els => els.slice(0, 4).map(e => Math.round(e.getBoundingClientRect().height)));
-  ok('desktop: note cards keep their natural (not fixed) height and plain preview', new Set(dn).size > 1 && await vis(d, '#notes .note .n-prev') && !(await vis(d, '#notes .note .n-rich')), JSON.stringify(dn));
+  ok('desktop: note cards are one fixed size (v24) with the plain preview', new Set(dn).size === 1 && await vis(d, '#notes .note .n-prev') && !(await vis(d, '#notes .note .n-rich')), JSON.stringify(dn));
   ok('desktop: pinned card uses the same pin icon as phones', await vis(d, '.pin-mark .pm-ico') && !(await vis(d, '.pin-mark .pm-emoji')));
   const dc = await d.$$eval('#notes .note', els => els.slice(0, 5).map(e => Math.round(e.getBoundingClientRect().x)));
   ok('desktop: grid still auto-fills more than 2 columns', new Set(dc).size >= 3, JSON.stringify(dc));

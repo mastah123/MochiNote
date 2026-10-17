@@ -68,7 +68,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   // autosave off
   await openSB(); await page.click('[data-view=settings]'); await page.uncheck('input[aria-label=Autosave]');
   await openSB(); await page.click('[data-view=all]'); await page.click('.note >> text=In reports'); await page.click('#edBody'); await page.keyboard.type(' extra'); await page.waitForTimeout(900);
-  ok('autosave off shows unsaved state', (await page.textContent('#edStatus')) === '●'); await page.click('#edBack'); await page.waitForTimeout(300);
+  ok('autosave off shows unsaved state', (await page.getAttribute('#edStatus', 'data-state')) === 'Unsaved changes' && await page.isVisible('#edStatus')); await page.click('#edBack'); await page.waitForTimeout(300);
   await page.reload(); await page.waitForSelector('.note'); await page.click('.note >> text=In reports'); ok('manual save on Back keeps edits', (await page.$eval('#edBody', e => e.textContent)).includes('extra'));
   // desktop editor look
   await page.click('#edBack'); await page.setViewportSize({ width: 1280, height: 800 }); await page.click('.note >> text=First').catch(() => {}); await page.waitForTimeout(600); await page.screenshot({ path: shots + '/desktop-editor2.png' });

@@ -14,13 +14,14 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await d.goto(url); await d.waitForSelector('#newNote');
   const R = s => d.locator(s).first().evaluate(e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height }; });
   const vis = s => d.locator(s).first().isVisible();
+  await d.evaluate(() => { window.__mochiNote.state.prefs.autosave = false; });
   await d.click('#newNote'); await d.waitForSelector('#edBody'); await d.waitForTimeout(300);
   await d.fill('#edTitle', 'Desktop top bar'); await d.click('#edBody'); await d.keyboard.type('hello world'); await d.waitForTimeout(900);
   const back = await R('#edBack'), undo = await R('#edUndo'), redo = await R('#edRedo'), save = await R('#edStatus'), dots = await R('#edMenuBtn');
   ok('header: back, undo, redo on the left', back.r <= undo.l + 1 && undo.r <= redo.l + 4 && redo.r - back.l < 160, JSON.stringify({ back, undo, redo }));
   ok('header: undo/redo are small icons, like the phone', undo.w <= 36 && redo.w <= 36 && (await d.locator('#edUndo svg').count()) === 1);
   ok('header: save icon sits beside the 3 dots on the right', save.r <= dots.l + 1 && dots.l - save.r < 24 && dots.l > 600, JSON.stringify({ save, dots }));
-  ok('save icon shows the status', ['✓', '⟳', '●'].includes((await d.textContent('#edStatus')).trim()) && (await d.getAttribute('#edStatus', 'aria-label')).length > 0);
+  ok('save button shows its state (Autosave off)', ['Saved', 'Saving…', 'Unsaved changes'].includes(await d.getAttribute('#edStatus', 'data-state')) && (await d.getAttribute('#edStatus', 'aria-label')).length > 0);
   ok('the text save pill, Format and Pin text buttons are gone', await d.locator('#edStatusDesktop, #edFmtDesktop, #edPin').count() === 0);
   ok('the folder / colour row under the title is gone', await d.locator('#edMeta, #edFolder, #edColors').count() === 0);
   ok('the footer shows nothing when the note has no tags', !(await vis('.ed-foot')));

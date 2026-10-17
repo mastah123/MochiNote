@@ -80,7 +80,6 @@ const NotesEditor = (function () {
 
   /* ---------------- editor controller ---------------- */
   let opts = null, root = null, body = null, savedRange = null;
-  const SIZES = { '2': '0.85em', '3': '1em', '4': '1.25em', '5': '1.6em', '6': '2.1em' };
 
   const sel = () => window.getSelection();
   const inBody = n => !!(n && body && body.contains(n));
@@ -96,6 +95,8 @@ const NotesEditor = (function () {
     focusBody();
     if (savedRange) { const s = sel(); s.removeAllRanges(); s.addRange(savedRange); }
   }
+  // After a dialog or the file picker the browser may have moved the caret (often to the very start): put it back where the person was typing
+  function forceRestore(r) { focusBody(); const use = r || savedRange; if (use) { const s = sel(); s.removeAllRanges(); s.addRange(use); savedRange = use.cloneRange(); } }
   const currentRange = () => { const s = sel(); return s.rangeCount && inBody(s.anchorNode) ? s.getRangeAt(0) : null; };
   function listsInSelection(tag) {
     const r = currentRange();
@@ -246,7 +247,9 @@ const NotesEditor = (function () {
     const spans = [];
     body.querySelectorAll('font[size="7"]').forEach(f => {
       const s = document.createElement('span');
-      s.style.fontSize = SIZES[key];
+      s.style.fontSize = (Math.min(96, Math.max(8, parseInt(key, 10) || 16))) + 'px';
+      if (f.getAttribute('face')) s.style.fontFamily = f.getAttribute('face');   // keep an already chosen font
+      if (f.getAttribute('color')) s.style.color = f.getAttribute('color');
       while (f.firstChild) s.appendChild(f.firstChild);
       f.replaceWith(s); spans.push(s);
     });
@@ -260,13 +263,14 @@ const NotesEditor = (function () {
 
   async function insertLink() {
     saveRange();
-    const hadText = savedRange && !savedRange.collapsed;
+    const at = savedRange ? savedRange.cloneRange() : null;   // the dialog and its closing move the caret, so remember where it was
+    const hadText = at && !at.collapsed;
     let url = await opts.askLink();
-    if (!url) { restoreRange(); return; }
+    if (!url) { forceRestore(at); return; }
     url = url.trim();
     if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = (url.includes('@') && !url.includes('/') ? 'mailto:' : 'https://') + url;
-    if (!safeUrl(url)) { opts.toast('Only http(s) and mailto links are supported.'); restoreRange(); return; }
-    restoreRange();
+    if (!safeUrl(url)) { opts.toast('Only http(s) and mailto links are supported.'); forceRestore(at); return; }
+    forceRestore(at);
     if (hadText) document.execCommand('createLink', false, url);
     else {
       const a = document.createElement('a'); a.href = url; a.textContent = url.replace(/^(https?:\/\/|mailto:)/i, '');
@@ -283,6 +287,7 @@ const NotesEditor = (function () {
       img.src = url;
     });
   }
+  let imgAt = null;   // caret position when the picture button was pressed (the file picker moves it)
   async function attachImage(file) {
     if (!file || !/^image\/(png|jpe?g|gif|webp|bmp)/i.test(file.type)) { opts.toast('Please choose a PNG, JPG, GIF or WebP image.'); return; }
     try {
@@ -292,7 +297,7 @@ const NotesEditor = (function () {
       c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       const data = c.toDataURL('image/webp', 0.85);
-      restoreRange();
+      forceRestore(imgAt);
       document.execCommand('insertImage', false, data);
       document.execCommand('insertParagraph');          // a fresh line under the picture, so typing continues below it
       if (data.length > 1.5e6) opts.toast('Large image added — it uses a lot of local storage.');
@@ -568,7 +573,7 @@ const NotesEditor = (function () {
       else if (cmd === 'sticker') openSticker(b, 'Insert a sticker', '', s => insertSticker(s));
       else if (/^h[123]$/.test(cmd)) { const cur = (document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); exec('formatBlock', '<' + (cur === cmd ? 'p' : cmd) + '>'); }
       else if (cmd === 'link') insertLink();
-      else if (cmd === 'image') { saveRange(); root.querySelector('#imgInput').click(); }
+      else if (cmd === 'image') { saveRange(); imgAt = savedRange ? savedRange.cloneRange() : null; root.querySelector('#imgInput').click(); }
       else exec(cmd);
     });
     root.querySelectorAll('.ed-top [data-cmd]').forEach(b => {
@@ -579,6 +584,41 @@ const NotesEditor = (function () {
     root.querySelector('#blockSel').addEventListener('change', e => { const v = e.target.value; withRange(() => exec('formatBlock', '<' + v + '>'))(); });
     root.querySelector('#fontSel').addEventListener('change', e => { const v = e.target.value; if (v) withRange(() => exec('fontName', v))(); e.target.value = ''; });
     root.querySelector('#sizeSel').addEventListener('change', e => { const v = e.target.value; if (v) withRange(() => applySize(v))(); e.target.value = ''; });
+    /* font / size / highlight: drop-down menus (below the button on desktop, popping up above it on phones) */
+    (function initDropdowns() {
+      const menu = document.getElementById('ddMenu'), layer = document.getElementById('editorLayer');
+      if (!menu || !layer) return;
+      let openFor = null;
+      const close = () => { menu.hidden = true; if (openFor) { const b = openFor.querySelector('.dd-btn'); b.setAttribute('aria-expanded', 'false'); b.classList.remove('open'); } openFor = null; };
+      const pick = (wrap, val) => { const s = root.querySelector('#' + wrap.dataset.for); s.value = val; s.dispatchEvent(new Event('change')); close(); };
+      function open(wrap) {
+        const s = root.querySelector('#' + wrap.dataset.for), btn = wrap.querySelector('.dd-btn');
+        menu.textContent = '';
+        Array.from(s.options).filter(o => o.value !== '').forEach(o => {
+          const it = document.createElement('button'); it.type = 'button'; it.setAttribute('role', 'option');
+          if (wrap.id === 'ddHl') { const dot = document.createElement('span'); dot.className = 'dd-dot'; if (o.value !== 'none') dot.style.background = o.value; else dot.classList.add('none'); it.append(dot); }
+          const tx = document.createElement('span'); tx.textContent = o.textContent; if (wrap.id === 'ddFont') tx.style.fontFamily = o.value; it.append(tx);
+          it.addEventListener('mousedown', ev => ev.preventDefault());
+          it.addEventListener('click', () => pick(wrap, o.value));
+          menu.append(it);
+        });
+        menu.hidden = false; openFor = wrap; btn.setAttribute('aria-expanded', 'true'); btn.classList.add('open');
+        const L = layer.getBoundingClientRect(), r = btn.getBoundingClientRect(), up = window.matchMedia('(max-width: 899px)').matches;
+        const w = menu.offsetWidth;
+        menu.style.left = Math.round(Math.max(8, Math.min(r.left - L.left, L.width - w - 8))) + 'px';
+        if (up) { menu.style.top = 'auto'; menu.style.bottom = Math.round(L.bottom - r.top + 6) + 'px'; menu.style.maxHeight = Math.max(120, Math.min(260, r.top - L.top - 12)) + 'px'; }
+        else { menu.style.bottom = 'auto'; menu.style.top = Math.round(r.bottom - L.top + 6) + 'px'; menu.style.maxHeight = Math.max(120, Math.min(300, L.bottom - r.bottom - 14)) + 'px'; }
+      }
+      root.querySelectorAll('.dd').forEach(wrap => {
+        const btn = wrap.querySelector('.dd-btn');
+        btn.addEventListener('mousedown', ev => ev.preventDefault());
+        btn.addEventListener('click', ev => { ev.stopPropagation(); if (openFor === wrap) close(); else { close(); open(wrap); } });
+      });
+      document.addEventListener('click', ev => { if (openFor && !ev.target.closest('.dd, #ddMenu')) close(); });
+      document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && openFor) { close(); ev.stopPropagation(); } }, true);
+      window.addEventListener('resize', close);
+      root.addEventListener('click', ev => { if (openFor && ev.target.closest('#edBar')) close(); });
+    })();
     root.querySelector('#hlSel').addEventListener('change', e => {
       const v = e.target.value;
       if (v) withRange(() => { document.execCommand('styleWithCSS', false, true); exec('hiliteColor', v === 'none' ? 'transparent' : v); document.execCommand('styleWithCSS', false, false); })();

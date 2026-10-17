@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 23.0.0**
+**Version 25.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -90,6 +90,20 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v25.0.0 — Editor basics
+- Images fit the note area: they use the available width and a taller height limit, never cropped or stretched (phone and desktop).
+- Adding a link inserts it where you were typing (it used to jump back to the first line after the dialog).
+- Text sizes are in px (12–40 px).
+- A faint line under the title shows word count, when the note was created and its save state.
+- The save icon at the top right is hidden while Autosave is on; with Autosave off it appears (dot when there are unsaved changes) and pressing it saves.
+
+### v24.0.0 — Desktop right-click menus, style drop-downs, fixed grid, cleaner About
+- Right-clicking a note card or folder on desktop opens the same options as the phone long-press, at the cursor.
+- Font, Size and Highlight are drop-down menus: below the button on desktop, popping up above it on phones.
+- Desktop grid view uses fixed-size note cards.
+- Choosing a size no longer drops a font you already picked.
+- The About card is tidier: logo, name and version, tagline, and a short Storage / Built with list.
 
 ### v23.0.0 — Alignment is always saved; card previews reverted
 - Left / centre / right is written as a style and an `align` attribute from any browser is converted, so alignment is kept when the note is saved and reopened.

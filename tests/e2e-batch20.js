@@ -17,8 +17,8 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   const html = () => d.evaluate(() => NotesEditor.getHTML());
   const place = (sel, off) => d.evaluate(([sel, off]) => { const b = document.getElementById('edBody'); b.focus(); const e = b.querySelector(sel); const t = e.firstChild; const r = document.createRange(); r.setStart(t, off); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }, [sel, off]);
   await d.click('#newNote'); await d.waitForSelector('#edBody'); await d.waitForTimeout(300);
-  const items = await d.$$eval('#toolbar [data-cmd], #toolbar select', els => els.filter(e => e.offsetParent).map(e => e.dataset.cmd || e.id));
-  ok('toolbar order: text styles, H1-H3, align, font/size/highlight, lists, card/link/image', items.join(',') === 'bold,italic,underline,strikeThrough,h1,h2,h3,justifyLeft,justifyCenter,justifyRight,fontSel,sizeSel,hlSel,insertUnorderedList,insertOrderedList,checklist,outdent,indent,callout,link,image', items.join(','));
+  const items = await d.$$eval('#toolbar [data-cmd], #toolbar .dd', els => els.filter(e => e.offsetParent).map(e => e.dataset.cmd || e.id));
+  ok('toolbar order: text styles, H1-H3, align, font/size/highlight, lists, card/link/image', items.join(',') === 'bold,italic,underline,strikeThrough,h1,h2,h3,justifyLeft,justifyCenter,justifyRight,ddFont,ddSize,ddHl,insertUnorderedList,insertOrderedList,checklist,outdent,indent,callout,link,image', items.join(','));
   ok('no Paragraph dropdown, no Sticker, no Undo/Redo in the toolbar', !items.includes('blockSel') && !items.includes('sticker') && !items.includes('undo') && !items.includes('redo'));
   ok('buttons are icons (no text labels), like the phone', await d.$$eval('#toolbar button:not(.hd)', b => b.filter(x => x.offsetParent && x.querySelector('.t-txt')).every(x => getComputedStyle(x.querySelector('.t-txt')).display === 'none' && getComputedStyle(x.querySelector('.t-ico')).display !== 'none')));
   const tb = await R('#toolbar'), ed = await R('#editor');
@@ -41,7 +41,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await d.evaluate(() => { document.getElementById('edBody').innerHTML = '<div>card me</div>'; });
   await place('div', 2); await d.click('[data-cmd=callout]'); await d.waitForTimeout(150);
   ok('card works', /<div class="callout">/.test(await html()));
-  await d.selectOption('#hlSel', '#fde68a'); await d.waitForTimeout(100);
+  await d.click('#ddHl .dd-btn'); await d.click('#ddMenu button >> nth=0'); await d.waitForTimeout(100);
   ok('highlight select still there and its first option reads "Highlight"', (await d.$eval('#hlSel option[value=""]', o => o.textContent)) === 'Highlight');
   await d.screenshot({ path: shots + '/b20-desktop.png' });
   ok('no console/page errors', errs.length === 0, errs.join(' | '));

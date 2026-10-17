@@ -14,6 +14,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   const R = s => m.locator(s).first().evaluate(e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height }; });
   const vis = s => m.locator(s).first().isVisible();
   const html = () => m.evaluate(() => NotesEditor.getHTML().replace(/<br>/g, ''));
+  await m.evaluate(() => { window.__mochiNote.state.prefs.autosave = false; });
   await m.click('#newNote'); await m.waitForSelector('#edBody'); await m.waitForTimeout(300);
   await m.fill('#edTitle', 'Footer test'); await m.click('#edBody'); await m.keyboard.type('hello world'); await m.waitForTimeout(150);
 
@@ -45,7 +46,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await m.click('#edBar [data-open=aa]'); await m.evaluate(() => document.getElementById('editorLayer').style.removeProperty('--vvh')); await m.waitForTimeout(150);
   ok('options are hidden until an icon is tapped', !(await vis('#toolbar')));
   const open = g => m.click('#edBar [data-open=' + g + ']');
-  const shown = () => m.$$eval('#toolbar [data-cmd], #toolbar select, #toolbar label', els => els.filter(e => e.offsetParent).map(e => e.dataset.cmd || e.id || e.className));
+  const shown = () => m.$$eval('#toolbar [data-cmd], #toolbar .dd, #toolbar select, #toolbar label', els => els.filter(e => e.offsetParent).map(e => e.dataset.cmd || e.id || e.className));
   await open('plus'); await m.waitForTimeout(250);
   let s = await shown(); ok('+ shows image, link, card only', s.sort().join(',') === 'callout,image,link', s.join(','));
   let tb = await R('#toolbar'), br = await R('#edBar');
@@ -57,7 +58,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await open('align'); await m.waitForTimeout(200); s = await shown();
   ok('the align button has left / centre / right', s.sort().join(',') === 'justifyCenter,justifyLeft,justifyRight', s.join(','));
   await open('style'); await m.waitForTimeout(200); s = await shown();
-  ok('one button holds font, size and highlight', ['fontSel', 'sizeSel', 'hlSel'].every(c => s.includes(c)) && s.length === 4 || (['fontSel', 'sizeSel', 'hlSel'].every(c => s.includes(c))), s.join(','));
+  ok('one button holds font, size and highlight', ['ddFont', 'ddSize', 'ddHl'].every(c => s.includes(c)) && s.length === 4 || (['ddFont', 'ddSize', 'ddHl'].every(c => s.includes(c))), s.join(','));
   await open('aa'); await m.waitForTimeout(150);
   tb = await R('#toolbar'); ok('Aa options stay short (scrolls instead of growing)', tb.h <= 49 && (await R('#edScroll')).h >= 380, JSON.stringify(tb));
   await open('list'); await m.waitForTimeout(250);
@@ -104,7 +105,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   const d = await mk({ width: 1280, height: 800 });
   await d.click('#newNote'); await d.waitForSelector('#edBody'); await d.waitForTimeout(300);
   ok('desktop: no footer icon bar; the toolbar stays in place, with no Paragraph or Sticker', !(await d.isVisible('#edBar')) && await d.isVisible('#toolbar') && !(await d.isVisible('#toolbar [data-cmd=sticker]')) && !(await d.isVisible('#blockSel')));
-  ok('desktop: H1-H3 and indent buttons are there; save icon sits in the header', await d.isVisible('[data-cmd=h1]') && await d.isVisible('[data-cmd=indent]') && await d.isVisible('#edStatus'));
+  ok('desktop: H1-H3 and indent buttons are there; save icon sits in the header', await d.isVisible('[data-cmd=h1]') && await d.isVisible('[data-cmd=indent]') && await d.locator('#edStatus').count() === 1);
   ok('desktop: "Edited" is no longer in the footer', !(await d.isVisible('#edInfo')));
   await d.click('#edMenuBtn'); ok('desktop: the menu shows "Edited …"', (await d.textContent('#edMenuInfo')).startsWith('Edited ') && await d.isVisible('#edMenuInfo'));
   ok('no console/page errors', errs.length === 0, errs.join(' | '));

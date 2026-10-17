@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '23.0.0';
+  const APP_VERSION = '25.0.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -77,14 +77,27 @@
     const t = $('#toast'); t.textContent = msg; t.hidden = false;
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms || 3200);
   }
-  const SAVE_ICONS = { '': '', 'Saving…': '⟳', 'Saved': '✓', 'Unsaved changes': '●', 'Not saved': '!' };
+  let curStatus = '';
+  function countWords() { const b = NotesEditor.el(); const t = b ? (b.innerText || b.textContent || '') : ''; return (t.match(/\S+/g) || []).length; }
+  function paintInfoLine() {
+    const m = $('#edNoteInfo'); if (!m || !state.openId) return;
+    const n = noteById(state.openId); if (!n) return;
+    const fmt = ts => new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const w = countWords();
+    const st = curStatus === 'Saved' ? 'Saved ' + new Date(n.updated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : curStatus;
+    m.textContent = [w + (w === 1 ? ' word' : ' words'), 'Created ' + fmt(n.created || n.updated), st].filter(Boolean).join(' · ');
+  }
   function setStatus(msg) {
-    // Mobile: show icon in footer
-    const mobileEl = $('#edStatus');
-    if (mobileEl) { mobileEl.textContent = SAVE_ICONS[msg] !== undefined ? SAVE_ICONS[msg] : msg; mobileEl.title = msg; mobileEl.setAttribute('aria-label', msg); }
-    // Desktop: show text in header
-    const desktopEl = $('#edStatusDesktop');
-    if (desktopEl) desktopEl.textContent = msg;
+    curStatus = msg;
+    // the save button only exists when Autosave is off; pressing it saves
+    const b = $('#edStatus');
+    if (b) {
+      b.hidden = !!state.prefs.autosave || msg === 'In Trash';
+      b.dataset.state = msg; b.classList.toggle('dirty', msg === 'Unsaved changes' || msg === 'Not saved');
+      const lbl = msg === 'Unsaved changes' || msg === 'Not saved' ? 'Save now' : msg === 'Saving…' ? 'Saving…' : 'Saved';
+      b.title = lbl; b.setAttribute('aria-label', lbl);
+    }
+    paintInfoLine();
   }
 
   // Promise-based dialog: kind 'confirm' | 'prompt' | 'select'
@@ -305,6 +318,7 @@
 
   /* ---------- long-press (mobile) + action sheet ---------- */
   const isMobile = () => window.matchMedia('(max-width: 899px)').matches;
+  let ctxPoint = null; // desktop right-click: the menu opens at the cursor
   function onLongPress(node, handler) {
     let timer = null, sx = 0, sy = 0;
     const cancel = () => { clearTimeout(timer); timer = null; };
@@ -319,7 +333,7 @@
     });
     node.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => node.addEventListener(t, cancel));
-    node.addEventListener('contextmenu', e => { if (isMobile()) e.preventDefault(); });
+    node.addEventListener('contextmenu', e => { e.preventDefault(); if (!isMobile()) { ctxPoint = { x: e.clientX, y: e.clientY }; handler(); } });
     // swallow the click that follows a long press so it doesn't also open the note / folder
     node.addEventListener('click', e => { if (node._lp) { node._lp = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   }
@@ -334,8 +348,8 @@
     sheet.style.left = sheet.style.top = '0px';
     const w = sheet.offsetWidth, h = sheet.offsetHeight;
     if (!anchor || !anchor.isConnected) { sheet.style.left = Math.round((vw - w) / 2) + 'px'; sheet.style.top = Math.round((vh - h) / 2) + 'px'; sheet.style.transformOrigin = '50% 50%'; return; }
-    const r = anchor.getBoundingClientRect(), gap = 8;
-    const rightSide = r.left + r.width / 2 > vw / 2 && r.width < vw * 0.8;
+    const r = ctxPoint ? { left: ctxPoint.x, right: ctxPoint.x, top: ctxPoint.y, bottom: ctxPoint.y, width: 0, height: 0 } : anchor.getBoundingClientRect(), gap = ctxPoint ? 2 : 8;
+    const rightSide = !ctxPoint && r.left + r.width / 2 > vw / 2 && r.width < vw * 0.8;
     let left = rightSide ? r.right - w : r.left;
     left = Math.max(M, Math.min(left, vw - w - M));
     const below = vh - r.bottom - gap - M, above = r.top - gap - M;
@@ -359,7 +373,7 @@
     history.pushState({ kind: 'sheet' }, '');
     const first = $('button', box); if (first) first.focus({ preventScroll: true });
   }
-  function hideSheet() { $('#sheetLayer').hidden = true; if (sheetAnchor) { sheetAnchor.classList.remove('lp-active'); sheetAnchor = null; } }
+  function hideSheet() { ctxPoint = null; $('#sheetLayer').hidden = true; if (sheetAnchor) { sheetAnchor.classList.remove('lp-active'); sheetAnchor = null; } }
   // Closing goes through history.back() so the entry opening pushed is removed again; the chosen
   // action runs once the popstate arrives and history is back on the real screen.
   function requestCloseSheet(fn) {
@@ -538,6 +552,7 @@
     const tags = $('#edTags'); tags.textContent = '';
     (n.tags || []).forEach(t => tags.append(el('span', { class: 'tag', text: '#' + t })));
     $('#edInfo').textContent = 'Edited ' + L.formatDate(n.updated); $('#edMenuInfo').textContent = 'Edited ' + L.formatDate(n.updated);
+    paintInfoLine();
     // Desktop folder select
     const fs = $('#edFolder');
     if (fs) {
@@ -655,10 +670,14 @@
         row('Autosave', 'Save a moment after you stop typing. When off, notes save when you go back.', el('input', { type: 'checkbox', checked: p.autosave, 'aria-label': 'Autosave', onchange: e => setPref('autosave', e.target.checked) })),
         row('Animations', 'Turn off for a still interface (also follows your system setting)', el('input', { type: 'checkbox', checked: p.motion !== 'off', 'aria-label': 'Animations', onchange: e => setPref('motion', e.target.checked ? 'on' : 'off') }))),
       dataCard(),
-      el('section', { class: 'set-card about' }, el('img', { class: 'about-logo', src: 'assets/logo.svg', alt: 'MochiNote logo', width: 72, height: 72 }), el('h2', { text: 'About' }),
-        el('p', { text: 'MochiNote · version ' + APP_VERSION }),
-        el('p', { text: 'A calm, cozy, local-first notes app. Your notes live only in this browser — nothing is uploaded and there is no cloud sync.' }),
-        el('p', { text: 'Credits: built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or assets are used.' })));
+      el('section', { class: 'set-card about' },
+        el('img', { class: 'about-logo', src: 'assets/logo.svg', alt: 'MochiNote logo', width: 72, height: 72 }),
+        el('h2', { text: 'About' }),
+        el('p', { class: 'about-name', text: 'MochiNote · version ' + APP_VERSION }),
+        el('p', { class: 'about-tag', text: 'A calm, cozy notes app that keeps everything on your device.' }),
+        el('dl', { class: 'about-list' },
+          el('div', {}, el('dt', { text: 'Storage' }), el('dd', { text: 'Only in this browser. No uploads, no cloud sync.' })),
+          el('div', {}, el('dt', { text: 'Built with' }), el('dd', { text: 'Plain HTML, CSS and JavaScript. No third-party libraries, fonts or assets.' })))));
     storageInfo();
   }
   function dataCard() {
@@ -781,6 +800,7 @@
 
     // editor chrome
     $('#edBack').onclick = requestCloseEditor;
+    $('#edStatus').onclick = () => { if (state.dirty) saveOpen(); else toast('Saved'); };
     $('#editorBackdrop').onclick = requestCloseEditor;
     // Mobile: Aa opens the format bar (bottom) and hides the keyboard; closing it brings the keyboard back
     // Footer icons (+ / Aa / list): each opens its own short options row above the footer; the same icon again closes it

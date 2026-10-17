@@ -34,14 +34,14 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   ok('checklist item toggles done', await page.$eval('ul.checklist li', e => e.classList.contains('done')));
   // formatting
   await page.click('#edBody'); await page.keyboard.press('Control+Home'); await page.keyboard.down('Shift'); await page.keyboard.press('End'); await page.keyboard.up('Shift');
-  await ensureTb(); await page.click('[data-cmd=bold]'); await ensureTb(); await page.click('[data-cmd=underline]'); await ensureTb('style'); await page.selectOption('#hlSel', '#fde68a'); await ensureTb('style'); await page.selectOption('#sizeSel', '5');
-  await ensureTb('style'); await page.selectOption('#fontSel', 'Georgia, serif'); await ensureTb('align'); await page.click('[data-cmd=justifyCenter]');
+  await ensureTb(); await page.click('[data-cmd=bold]'); await ensureTb(); await page.click('[data-cmd=underline]'); await ensureTb('style'); await page.click('#ddHl .dd-btn'); await page.click('#ddMenu button >> nth=0'); await ensureTb('style'); await page.click('#ddSize .dd-btn'); await page.click('#ddMenu button >> nth=3');
+  await ensureTb('style'); await page.click('#ddFont .dd-btn'); await page.click('#ddMenu button >> nth=0'); await ensureTb('align'); await page.click('[data-cmd=justifyCenter]');
   html = await page.$eval('#edBody', e => e.innerHTML);
   ok('bold/underline/highlight/size/font/align applied', /<b>|font-weight|<strong>/.test(html) && /<u[ >]|underline/.test(html) && /background-color|<mark/.test(html) && /font-size/.test(html) && /Georgia/.test(html) && /text-align: ?center/.test(html), html);
   await ensureTb(); await page.click('[data-cmd=h2]'); ok('heading applied', /<h2/.test(await page.$eval('#edBody', e => e.innerHTML)));
   // typing is immediate (no artificial delay): measure
   await page.keyboard.press('Control+End'); const t0 = Date.now(); await page.keyboard.type('x'.repeat(40)); ok('typing 40 chars fast (<2s incl. automation)', Date.now() - t0 < 2000);
-  await page.waitForFunction(() => document.querySelector('#edStatus').textContent === '✓', null, { timeout: 4000 }).then(() => ok('autosave indicator shows Saved', true), () => ok('autosave indicator shows Saved', false));
+  await page.waitForFunction(() => /Saved/.test(document.querySelector('#edNoteInfo').textContent), null, { timeout: 4000 }).then(() => ok('autosave indicator shows Saved', true), () => ok('autosave indicator shows Saved', false));
   const savedHtml = await page.$eval('#edBody', e => e.innerHTML);
   await page.screenshot({ path: shots + '/editor-mobile.png' });
   // reload persistence

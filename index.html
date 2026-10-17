@@ -124,6 +124,7 @@
   <!-- Editor sheet -->
   <div class="editor-layer" id="editorLayer" hidden>
     <div class="editor-backdrop" id="editorBackdrop"></div>
+    <div class="dd-menu" id="ddMenu" role="listbox" hidden></div>
     <article class="editor" id="editor" role="dialog" aria-modal="true" aria-label="Note editor">
       <header class="ed-top">
         <button class="icon-btn" id="edBack" aria-label="Back"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
@@ -131,7 +132,7 @@
         <button class="icon-btn" id="edRedo" data-cmd="redo" aria-label="Redo" title="Redo"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
         <!-- flexible space: pushes the save icon and the menu to the right -->
         <span class="ed-top-spacer"></span>
-        <span class="save-icon-mobile" id="edStatus" role="status" aria-live="polite"></span>
+        <button type="button" class="icon-btn save-btn" id="edStatus" hidden aria-label="Save" title="Save"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/></svg><span class="save-dot" aria-hidden="true"></span></button>
         <div class="ed-actions">
           <button class="icon-btn" id="edMenuBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg></button>
           <div class="menu" id="edMenu" hidden>
@@ -168,22 +169,27 @@
         <button data-grp="align" data-cmd="justifyCenter" title="Align center" aria-label="Align center"><span class="t-txt">Center</span><svg class="t-ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg></button>
         <button data-grp="align" data-cmd="justifyRight" title="Align right" aria-label="Align right"><span class="t-txt">Right</span><svg class="t-ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg></button>
         <span class="sep"></span>
-        <select data-grp="style" id="fontSel" aria-label="Font">
+        <div class="dd" data-grp="style" id="ddFont" data-for="fontSel"><button type="button" class="dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Font"><span class="dd-l">Font</span><svg class="dd-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div><div class="dd" data-grp="style" id="ddSize" data-for="sizeSel"><button type="button" class="dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Size"><span class="dd-l">Size</span><svg class="dd-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div><div class="dd" data-grp="style" id="ddHl" data-for="hlSel"><button type="button" class="dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Highlight"><span class="dd-l">Highlight</span><svg class="dd-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div>
+        <select hidden id="fontSel" aria-label="Font">
           <option value="">Font</option>
           <option value="Georgia, serif">Serif</option>
           <option value="system-ui, sans-serif">Sans</option>
           <option value="'Courier New', monospace">Mono</option>
           <option value="'Comic Sans MS', 'Trebuchet MS', cursive">Playful</option>
         </select>
-        <select data-grp="style" id="sizeSel" aria-label="Font size">
+        <select hidden id="sizeSel" aria-label="Font size">
           <option value="">Size</option>
-          <option value="2">Small</option>
-          <option value="3">Normal</option>
-          <option value="4">Large</option>
-          <option value="5">XL</option>
-          <option value="6">XXL</option>
+          <option value="12">12 px</option>
+          <option value="14">14 px</option>
+          <option value="16">16 px</option>
+          <option value="18">18 px</option>
+          <option value="20">20 px</option>
+          <option value="24">24 px</option>
+          <option value="28">28 px</option>
+          <option value="32">32 px</option>
+          <option value="40">40 px</option>
         </select>
-        <label data-grp="style" class="hl" title="Highlight text">
+        <label hidden class="hl" title="Highlight text">
           <select id="hlSel" aria-label="Highlight color">
             <option value="">Highlight</option>
             <option value="#fde68a">Yellow</option>
@@ -209,6 +215,7 @@
 
       <div class="ed-scroll" id="edScroll">
         <input id="edTitle" class="ed-title" placeholder="Title" aria-label="Note title" maxlength="200">
+        <div class="ed-note-info" id="edNoteInfo" role="status" aria-live="polite"></div>
         <div id="edBody" class="ed-body" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note content" spellcheck="true" data-placeholder="Start writing… use #tags anywhere"></div>
       </div>
       <div class="tag-suggest" id="tagSuggest" hidden></div>

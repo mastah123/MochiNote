@@ -9,7 +9,7 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await new Promise(r => srv.listen(0, r));
   const browser = await chromium.launch({ executablePath: process.env.CHROME });
   const url = 'http://localhost:' + srv.address().port + '/'; const errs = [];
-  for (const [label, vp, maxH] of [['phone', { width: 390, height: 844 }, 200], ['desktop', { width: 1280, height: 800 }, 300]]) {
+  for (const [label, vp, maxH] of [['phone', { width: 390, height: 844 }, 520], ['desktop', { width: 1280, height: 800 }, 520]]) {
     const page = await (await browser.newContext({ viewport: vp, deviceScaleFactor: 2 })).newPage();
     page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
     await page.goto(url); await page.waitForSelector('#newNote');
