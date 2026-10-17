@@ -43,8 +43,8 @@ const NotesEditor = (function () {
         const n = a.name.toLowerCase(), v = a.value;
         let ok = false;
         if (n === 'style') { const c = cleanStyle(v); if (c) { ch.setAttribute('style', c); ok = true; } }
-        else if (n === 'class' && (tag === 'UL' || tag === 'LI')) {
-          const c = v.split(/\s+/).filter(x => (tag === 'UL' && x === 'checklist') || (tag === 'LI' && x === 'done'));
+        else if (n === 'class' && (tag === 'UL' || tag === 'LI' || tag === 'DIV')) {
+          const c = v.split(/\s+/).filter(x => (tag === 'UL' && x === 'checklist') || (tag === 'LI' && x === 'done') || (tag === 'DIV' && x === 'callout'));
           if (c.length) { ch.setAttribute('class', c.join(' ')); ok = true; }
         }
         else if (tag === 'A' && n === 'href') { const u = safeUrl(v); if (u) { ch.setAttribute('href', u); ok = true; } }
@@ -120,6 +120,114 @@ const NotesEditor = (function () {
     }
     changed(); updateToolbar();
   }
+
+  /* ---------- callout card (💡): a <div class="callout"> holding ordinary block children ---------- */
+  const calloutOf = n => { const el = n && (n.nodeType === 1 ? n : n.parentElement); const c = el && el.closest && el.closest('.callout'); return c && body.contains(c) ? c : null; };
+  const topBlock = n => { while (n && n.parentNode !== body) n = n.parentNode; return n; };
+  const INLINE = /^(B|STRONG|I|EM|U|S|STRIKE|DEL|A|SPAN|FONT|MARK|IMG|BR)$/;
+  function caretIn(node, atEnd) {
+    const r = document.createRange(); r.selectNodeContents(node); r.collapse(!atEnd);
+    sel().removeAllRanges(); sel().addRange(r); saveRange();
+  }
+  function toggleCallout() {
+    focusBody();
+    const r = currentRange(); if (!r) { caretIn(body, true); return toggleCallout(); }
+    const existing = calloutOf(r.startContainer);
+    if (existing) {                       // unwrap: the children become normal blocks again
+      const kids = Array.from(existing.childNodes), last = kids[kids.length - 1];
+      kids.forEach(k => existing.parentNode.insertBefore(k, existing)); existing.remove();
+      if (last) caretIn(last, true);
+      changed(); updateToolbar(); return;
+    }
+    const first = topBlock(r.startContainer), lastB = topBlock(r.endContainer);
+    const card = document.createElement('div'); card.className = 'callout';
+    if (!first || first === body) {       // empty note
+      const d = document.createElement('div'); d.appendChild(document.createElement('br')); card.appendChild(d); body.appendChild(card);
+      caretIn(d, false); changed(); updateToolbar(); return;
+    }
+    const run = []; for (let n = first; n; n = n.nextSibling) { run.push(n); if (n === lastB) break; }
+    body.insertBefore(card, first);
+    let inlineWrap = null;
+    run.forEach(n => {
+      const isInline = n.nodeType === 3 || (n.nodeType === 1 && INLINE.test(n.tagName));
+      if (isInline) { if (!inlineWrap) { inlineWrap = document.createElement('div'); card.appendChild(inlineWrap); } inlineWrap.appendChild(n); }
+      else { inlineWrap = null; card.appendChild(n); }
+    });
+    if (!card.firstChild) { const d = document.createElement('div'); d.appendChild(document.createElement('br')); card.appendChild(d); }
+    caretIn(card.lastChild, true); changed(); updateToolbar();
+  }
+  // Enter on an empty last line of a callout leaves the card (otherwise you could never type below it).
+  function maybeExitCallout(e) {
+    const r = currentRange(); if (!r || !r.collapsed) return false;
+    const card = calloutOf(r.startContainer); if (!card || card.children.length < 2) return false;
+    const line = card.lastElementChild;
+    if (!line || line.textContent.trim() !== '' || line.querySelector('img,ul,ol') || !line.contains(r.startContainer) && line !== r.startContainer) return false;
+    e.preventDefault(); line.remove();
+    const d = document.createElement('div'); d.appendChild(document.createElement('br'));
+    card.parentNode.insertBefore(d, card.nextSibling); caretIn(d, false); changed(); return true;
+  }
+
+  /* ---------- copy / cut: plain text keeps list numbering, bullets and checkboxes (mobile only) ---------- */
+  const isMobileView = () => window.matchMedia('(max-width: 899px)').matches;
+  function rangeToText(range) {
+    const lines = []; let buf = '';
+    const part = t => { let v = t.nodeValue; if (t === range.endContainer) v = v.slice(0, range.endOffset); if (t === range.startContainer) v = v.slice(range.startOffset); return v; };
+    const flush = () => { const t = buf.replace(/\s+/g, ' ').trim(); if (t) lines.push(t); buf = ''; };
+    const BLOCK = /^(DIV|P|H[1-6]|BLOCKQUOTE)$/;
+    const list = (el, depth) => {
+      let i = 0; const ordered = el.tagName === 'OL', check = el.classList.contains('checklist');
+      Array.from(el.children).forEach(li => {
+        if (li.tagName !== 'LI') return; i++;
+        if (!range.intersectsNode(li)) return;
+        const marker = ordered ? i + '. ' : check ? (li.classList.contains('done') ? '☑ ' : '☐ ') : '• ';
+        buf = ''; Array.from(li.childNodes).forEach(c => { if (c.nodeType === 1 && /^(UL|OL)$/.test(c.tagName)) return; inline(c); });
+        const t = buf.replace(/\s+/g, ' ').trim(); buf = ''; lines.push('  '.repeat(depth) + marker + t);
+        Array.from(li.children).forEach(c => { if (/^(UL|OL)$/.test(c.tagName)) list(c, depth + 1); });
+      });
+    };
+    const inline = n => {
+      if (!range.intersectsNode(n)) return;
+      if (n.nodeType === 3) { buf += part(n); return; }
+      if (n.nodeType !== 1 || n.tagName === 'IMG') return;
+      if (n.tagName === 'BR') { flush(); return; }
+      Array.from(n.childNodes).forEach(inline);
+    };
+    (function walk(node, inCallout) {
+      Array.from(node.childNodes).forEach(ch => {
+        if (!range.intersectsNode(ch)) return;
+        if (ch.nodeType === 3) { buf += part(ch); return; }
+        if (ch.nodeType !== 1 || ch.tagName === 'IMG') return;
+        const tag = ch.tagName;
+        if (tag === 'BR') { flush(); return; }
+        if (tag === 'UL' || tag === 'OL') { flush(); list(ch, 0); return; }
+        if (BLOCK.test(tag)) {
+          flush();
+          if (ch.classList.contains('callout')) { const n0 = lines.length; walk(ch, true); flush(); if (lines.length > n0) lines[n0] = '💡 ' + lines[n0]; }
+          else { walk(ch, false); flush(); }
+          return;
+        }
+        walk(ch, inCallout);
+      });
+    })(body, false);
+    flush();
+    return lines.join('\n');
+  }
+  function onCopyCut(e) {
+    if (!isMobileView()) return;
+    const r = currentRange(); if (!r || r.collapsed || !e.clipboardData) return;
+    const wrap = document.createElement('div'); wrap.appendChild(r.cloneContents());
+    e.clipboardData.setData('text/plain', rangeToText(r));
+    e.clipboardData.setData('text/html', wrap.innerHTML);
+    e.preventDefault();
+    if (e.type === 'cut') { document.execCommand('delete'); changed(); }
+  }
+
+  /* ---------- on-screen keyboard control (mobile format bar) ---------- */
+  // inputmode="none" lets us keep focus/selection in the note without the keyboard popping up, so the
+  // format bar can take the keyboard's place and buttons still act on the selected text.
+  function keyboard(on) { if (body) body.inputMode = on ? 'text' : 'none'; }
+  function hideKeyboard() { saveRange(); keyboard(false); if (document.activeElement === body) body.blur(); }
+  function resumeKeyboard() { keyboard(true); if (document.activeElement === body) body.blur(); restoreRange(); }
 
   function applySize(key) {
     const r = currentRange();
@@ -222,6 +330,7 @@ const NotesEditor = (function () {
         if (cmd === 'insertUnorderedList') on = listsInSelection('ul').some(u => !u.classList.contains('checklist'));
         if (cmd === 'insertOrderedList') on = listsInSelection('ol').length > 0;
         if (cmd === 'checklist') on = listsInSelection('ul').some(u => u.classList.contains('checklist'));
+        if (cmd === 'callout') { const r0 = currentRange(); on = !!(r0 && calloutOf(r0.startContainer)); }
       }
       b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
@@ -263,6 +372,7 @@ const NotesEditor = (function () {
   }
 
   function onKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { maybeExitCallout(e); return; }
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
     const k = e.key.toLowerCase();
@@ -282,6 +392,7 @@ const NotesEditor = (function () {
       if (cmd === 'insertUnorderedList') toggleBullet();
       else if (cmd === 'insertOrderedList') toggleNumbered();
       else if (cmd === 'checklist') toggleChecklist();
+      else if (cmd === 'callout') toggleCallout();
       else if (cmd === 'link') insertLink();
       else if (cmd === 'image') { saveRange(); root.querySelector('#imgInput').click(); }
       else exec(cmd);
@@ -301,6 +412,8 @@ const NotesEditor = (function () {
     root.addEventListener('input', e => { if (e.target === body) onBodyInput(e); });
     root.addEventListener('click', e => { if (e.target.closest && body.contains(e.target)) onBodyClick(e); });
     root.addEventListener('paste', e => { if (e.target === body || body.contains(e.target)) onPaste(e); });
+    root.addEventListener('copy', e => { if (e.target === body || inBody(e.target)) onCopyCut(e); });
+    root.addEventListener('cut', e => { if (e.target === body || inBody(e.target)) onCopyCut(e); });
     root.addEventListener('keydown', e => { if (e.target === body) onKeydown(e); });
     root.addEventListener('keyup', e => { if (e.target === body) { updateToolbar(); if (e.key.startsWith('Arrow')) hideSuggest(); } });
     root.addEventListener('focusout', e => { if (e.target === body) setTimeout(() => { if (!opts.suggestEl.matches(':hover')) hideSuggest(); }, 150); });
@@ -317,5 +430,5 @@ const NotesEditor = (function () {
     return body;
   }
 
-  return { init, load, sanitize, hideSuggest, getHTML: () => sanitize(body.innerHTML), el: () => body, focus: () => focusBody(), updateToolbar };
+  return { init, load, sanitize, hideSuggest, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), el: () => body, focus: () => focusBody(), updateToolbar };
 })();

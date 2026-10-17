@@ -11,6 +11,9 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   await new Promise(r => srv.listen(0, r));
   const browser = await chromium.launch({ executablePath: process.env.CHROME });
   const page = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage(); const errs = [];
+  // Format bar is bottom-docked on phones and closes when you tap into the text: reopen it when a test needs it.
+  const ensureTb = async () => { if (!(await page.locator('#toolbar').isVisible()) && (await page.locator('#edFmt').isVisible())) await page.click('#edFmt'); };
+
   page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await page.goto('http://localhost:' + srv.address().port + '/'); await page.waitForSelector('#newNote');
   const openSB = async () => { if (!(await page.$eval('#sidebar', e => e.classList.contains('open')))) await page.click('#openSidebar'); };
@@ -19,8 +22,8 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   await page.click('#newNote'); await page.fill('#edTitle', 'First'); await page.click('#edBody'); await page.keyboard.type('hello #projectx'); await page.click('#edBack'); await page.waitForTimeout(300);
   await page.click('#newNote'); await page.click('#edFmt'); await page.click('#edBody');
   // undo / redo
-  await page.keyboard.type('one two'); await page.click('[data-cmd=undo]'); const afterUndo = await page.$eval('#edBody', e => e.textContent);
-  ok('undo removes typed text', afterUndo !== 'one two', afterUndo); await page.click('[data-cmd=redo]'); ok('redo restores it', (await page.$eval('#edBody', e => e.textContent)) === 'one two');
+  await page.keyboard.type('one two'); await ensureTb(); await page.click('[data-cmd=undo]'); const afterUndo = await page.$eval('#edBody', e => e.textContent);
+  ok('undo removes typed text', afterUndo !== 'one two', afterUndo); await ensureTb(); await page.click('[data-cmd=redo]'); ok('redo restores it', (await page.$eval('#edBody', e => e.textContent)) === 'one two');
   // tag autocomplete
   await page.keyboard.press('Enter'); await page.keyboard.type('#proj');
   await page.waitForSelector('#tagSuggest:not([hidden])'); ok('tag suggestion appears', (await page.textContent('#tagSuggest')).includes('#projectx'));
@@ -30,12 +33,12 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   await page.keyboard.type('#ProjectX'); await page.waitForTimeout(700);
   ok('#ProjectX and #projectx are one tag', (await page.$$eval('#edTags .tag', e => e.map(x => x.textContent))).filter(t => t === '#projectx').length === 1, JSON.stringify(await page.$$eval('#edTags .tag', e => e.map(x => x.textContent))) + ' status=' + await page.textContent('#edStatus'));
   // link
-  await page.keyboard.press('Enter'); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'example.com'); await page.click('#dlgOk');
+  await page.keyboard.press('Enter'); await ensureTb(); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'example.com'); await page.click('#dlgOk');
   ok('link inserted (https added, safe attrs)', /<a href="https:\/\/example\.com"[^>]*rel="noopener noreferrer"/.test(await body()) || /<a href="https:\/\/example\.com"/.test(await body()), await body());
-  await page.keyboard.press('Enter'); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'javascript:alert(1)'); await page.click('#dlgOk');
+  await page.keyboard.press('Enter'); await ensureTb(); await page.click('[data-cmd=link]'); await page.fill('#dlgInput', 'javascript:alert(1)'); await page.click('#dlgOk');
   ok('javascript: links rejected', !/javascript:/i.test(await body()));
   // image
-  await page.click('[data-cmd=image]'); await page.setInputFiles('#imgInput', { name: 't.png', mimeType: 'image/png', buffer: PNG }); await page.waitForSelector('#edBody img', { timeout: 5000 });
+  await ensureTb(); await page.click('[data-cmd=image]'); await page.setInputFiles('#imgInput', { name: 't.png', mimeType: 'image/png', buffer: PNG }); await page.waitForSelector('#edBody img', { timeout: 5000 });
   ok('image attached as data URL', /<img src="data:image\//.test(await body()));
   // sanitizer on paste-like injection
   const clean = await page.evaluate(() => NotesEditor.sanitize('<p onclick="x()">a<script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:alert(1)">l</a></p>'));

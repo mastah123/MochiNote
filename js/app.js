@@ -4,9 +4,9 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '4.0.0';
   const PREFS_KEY = 'mochinote:prefs';
-  const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', pinnedFirst: true, fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
+  const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', pinnedFirst: true, folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
   const FONTS = [['', 'Default (sans)'], ['Georgia, serif', 'Serif'], ["'Courier New', monospace", 'Mono'], ["'Comic Sans MS', 'Trebuchet MS', cursive", 'Playful']];
   const COLOR_VAR = { default: '--c-default', yellow: '--c-yellow', green: '--c-green', blue: '--c-blue', pink: '--c-pink', lilac: '--c-lilac' };
@@ -23,6 +23,7 @@
     const p = state.prefs;
     if (!L.SORTS.includes(p.sort)) p.sort = 'edited';
     if (p.view !== 'grid' && p.view !== 'list') p.view = 'grid';
+    if (p.folderView !== 'grid' && p.folderView !== 'list') p.folderView = 'grid';
     p.fontSize = Math.min(28, Math.max(12, Number(p.fontSize) || 16));
   }
   function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); } catch (_) {} }
@@ -49,6 +50,11 @@
     kids.flat().forEach(k => { if (k != null) n.append(k.nodeType ? k : document.createTextNode(k)); });
     return n;
   }
+  const ICONS = {
+    pin: '<svg class="pm-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>',
+    folder: '<svg class="f-ico" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>'
+  };
+  const icon = svg => { const t = document.createElement('template'); t.innerHTML = svg; return t.content.firstChild.cloneNode(true); };
   let toastTimer;
   function toast(msg, ms) {
     const t = $('#toast'); t.textContent = msg; t.hidden = false;
@@ -104,7 +110,7 @@
   }
 
   /* ---------- navigation + rendering ---------- */
-  const VIEW_TITLES = { all: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings' };
+  const VIEW_TITLES = { all: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Folders' };
 
   function go(view, opts) {
     if (state.openId) closeEditor();
@@ -117,15 +123,17 @@
   }
 
   function render() {
-    const settings = state.view === 'settings';
-    $('#notesView').hidden = settings; $('#settingsView').hidden = !settings;
-    $('#newNote').hidden = settings || state.view === 'trash';
+    const settings = state.view === 'settings', foldersPage = state.view === 'folders';
+    $('#notesView').hidden = settings || foldersPage; $('#settingsView').hidden = !settings; $('#foldersView').hidden = !foldersPage;
+    $('#homeHead').hidden = settings || foldersPage;
+    $('#main').dataset.view = state.view;
+    $('#newNote').hidden = settings || foldersPage || state.view === 'trash';
     let title = VIEW_TITLES[state.view];
     if (state.view === 'all' && state.folderId) title = state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || { name: 'All notes' }).name;
     $('#viewTitle').textContent = title;
     document.title = title + ' · MochiNote';
     renderSidebar();
-    if (settings) renderSettings(); else renderNotes();
+    if (settings) renderSettings(); else if (foldersPage) renderFoldersPage(); else renderNotes();
   }
 
   function renderSidebar() {
@@ -141,8 +149,10 @@
     const active = state.notes.filter(n => !n.trashed && !n.archived);
     const mk = (label, id, depth, count, folder) => {
       const isActive = state.view === 'all' && state.folderId === id;
-      sf.append(el('button', { class: 'side-item' + (isActive ? ' active' : ''), style: 'padding-left:' + (12 + depth * 16) + 'px', onclick: () => go('all', { folderId: id, tag: state.tag }) },
-        el('span', { class: 'fl-name', text: '📁 ' + label }), el('span', { class: 'count', text: count || '' })));
+      const item = el('button', { class: 'side-item' + (isActive ? ' active' : ''), style: 'padding-left:' + (12 + depth * 16) + 'px', onclick: () => go('all', { folderId: id, tag: state.tag }) },
+        el('span', { class: 'fl-name', text: '📁 ' + label }), el('span', { class: 'count', text: count || '' }));
+      if (folder) onLongPress(item, () => folderSheet(folder));
+      sf.append(item);
       if (folder && isActive) {
         sf.append(el('div', { class: 'folder-tools', style: 'padding-left:' + (12 + depth * 16) + 'px' },
           el('button', { onclick: () => createFolder(folder.id) }, '+ Subfolder'),
@@ -174,18 +184,25 @@
     const f = $('#filters'); f.textContent = '';
     if (state.folderId) f.append(el('button', { class: 'pill', onclick: () => go('all', { folderId: null, tag: state.tag }) }, 'Folder: ', el('b', { text: state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || {}).name }), ' ✕'));
     if (state.tag) f.append(el('button', { class: 'pill', onclick: () => go('all', { tag: null, folderId: state.folderId }) }, 'Tag: ', el('b', { text: '#' + state.tag }), ' ✕'));
-    // folder cards on All notes (like the reference design)
+    // labels + "Your space" card (phones; desktop hides them in CSS)
+    const plainHome = state.view === 'all' && !state.folderId && !state.tag && !state.query;
+    $('#hero').hidden = !plainHome;
+    $('#notesLabel').textContent = state.view === 'all' && !state.folderId
+      ? (state.tag ? '#' + state.tag : state.query ? 'Results' : p.sort === 'edited' ? 'Recent notes' : 'Notes')
+      : $('#viewTitle').textContent;
+    // folder cards on All notes: phones show 2 (grid) or 4 (list) with "Show all"; desktop shows them all as before
     const strip = $('#folderStrip'); strip.textContent = '';
     const top = state.folders.filter(x => !x.parentId).sort((a, b) => (a.created || 0) - (b.created || 0));
-    if (state.view === 'all' && !state.folderId && !state.query && !state.tag && top.length) {
-      strip.append(el('div', { class: 'folder-strip-head' }, el('span', { text: '📁 Folders' })));
-      top.forEach((fo, i) => {
-        const ids = L.folderDescendants(state.folders, fo.id);
-        const c = state.notes.filter(n => !n.trashed && !n.archived && ids.has(n.folderId)).length;
-        strip.append(el('button', { class: 'folder-card f' + (i % 4), onclick: () => go('all', { folderId: fo.id }) }, el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') })));
-      });
+    const mobile = isMobile(), fview = mobile ? p.folderView : 'grid';
+    const showFolders = plainHome && top.length > 0;
+    strip.className = 'folder-strip ' + fview;
+    if (showFolders) {
+      if (!mobile) strip.append(el('div', { class: 'folder-strip-head' }, el('span', { text: '📁 Folders' })));
+      top.slice(0, mobile ? (fview === 'list' ? 4 : 2) : top.length).forEach((fo, i) => strip.append(folderCard(fo, i)));
     }
     strip.hidden = !strip.childNodes.length;
+    $('#folderSection').hidden = !showFolders;
+    $('#fvGrid').setAttribute('aria-pressed', p.folderView === 'grid'); $('#fvList').setAttribute('aria-pressed', p.folderView === 'list');
     $('#trashBar').hidden = state.view !== 'trash' || !state.notes.some(n => n.trashed);
 
     const list = currentList(), box = $('#notes');
@@ -203,14 +220,160 @@
     }
   }
 
+  function folderCard(fo, i) {
+    const ids = L.folderDescendants(state.folders, fo.id);
+    const c = state.notes.filter(n => !n.trashed && !n.archived && ids.has(n.folderId)).length;
+    const fc = el('button', { class: 'folder-card f' + (i % 4), title: L.folderPath(state.folders, fo.id).join(' / '), onclick: () => go('all', { folderId: fo.id }) },
+      icon(ICONS.folder), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') }));
+    onLongPress(fc, () => folderSheet(fo));
+    return fc;
+  }
+  function renderFoldersPage() {
+    const box = $('#allFolders'); box.textContent = ''; box.className = 'folder-strip grid';
+    const tree = L.folderTree(state.folders);
+    if (!tree.length) { box.append(el('div', { class: 'empty', style: 'grid-column:1/-1' }, el('b', { text: 'No folders yet' }), 'Tap “+ New folder” to make one.')); return; }
+    tree.forEach(({ folder, depth }, i) => {
+      const card = folderCard(folder, i);
+      if (depth > 0) card.querySelector('.fname').textContent = L.folderPath(state.folders, folder.id).join(' / ');
+      box.append(card);
+    });
+  }
+
+  /* Structured preview for cards: keeps bullets, numbering and checklists instead of flattening to text.
+     Note HTML is already sanitized; DOMParser never runs scripts or loads images. */
+  function previewLines(html, max) {
+    const doc = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html');
+    const lines = []; let buf = '';
+    const flush = () => { const t = buf.replace(/\s+/g, ' ').trim(); if (t) lines.push({ k: 'p', t }); buf = ''; };
+    const BLOCK = /^(DIV|P|H[1-6]|BLOCKQUOTE)$/;
+    (function walk(node) {
+      Array.from(node.childNodes).forEach(ch => {
+        if (ch.nodeType === 3) { buf += ch.textContent; return; }
+        if (ch.nodeType !== 1) return;
+        const tag = ch.tagName;
+        if (tag === 'IMG') return;
+        if (tag === 'BR') { flush(); return; }
+        if (tag === 'UL' || tag === 'OL') {
+          flush();
+          const kind = tag === 'OL' ? 'ol' : ch.classList.contains('checklist') ? 'check' : 'ul';
+          let i = 0;
+          Array.from(ch.children).forEach(li => {
+            if (li.tagName !== 'LI') return;
+            i++;
+            const c = li.cloneNode(true); c.querySelectorAll('ul,ol').forEach(x => x.remove());
+            const t = c.textContent.replace(/\s+/g, ' ').trim();
+            if (t) lines.push({ k: kind, t, n: i, done: li.classList.contains('done') });
+          });
+          return;
+        }
+        if (tag === 'DIV' && ch.classList.contains('callout')) {
+          flush();
+          const t = Array.from(ch.children).map(c => c.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' · ') || ch.textContent.replace(/\s+/g, ' ').trim();
+          if (t) lines.push({ k: 'callout', t });
+          return;
+        }
+        if (BLOCK.test(tag)) { flush(); walk(ch); flush(); return; }
+        walk(ch);
+      });
+    })(doc.body);
+    flush();
+    return { lines: lines.slice(0, max), more: lines.length > max };
+  }
+  function richPreview(n, max) {
+    const { lines, more } = previewLines(n.html, max);
+    if (!lines.length) return null;
+    const box = el('div', { class: 'n-rich' });
+    lines.forEach(l => box.append(el('div', { class: 'pl pl-' + l.k + (l.done ? ' done' : '') },
+      el('span', { class: 'pl-m', 'aria-hidden': 'true', text: l.k === 'ul' ? '•' : l.k === 'ol' ? l.n + '.' : l.k === 'check' ? (l.done ? '●' : '○') : l.k === 'callout' ? '💡' : '' }),
+      el('span', { class: 'pl-t', text: l.t }))));
+    if (more) box.append(el('div', { class: 'pl pl-more', 'aria-hidden': 'true', text: '…' }));
+    return box;
+  }
+
+  /* ---------- long-press (mobile) + action sheet ---------- */
+  const isMobile = () => window.matchMedia('(max-width: 899px)').matches;
+  function onLongPress(node, handler) {
+    let timer = null, sx = 0, sy = 0;
+    const cancel = () => { clearTimeout(timer); timer = null; };
+    node.addEventListener('pointerdown', e => {
+      if (!isMobile() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      sx = e.clientX; sy = e.clientY; cancel();
+      timer = setTimeout(() => {
+        timer = null; node._lp = true; setTimeout(() => { node._lp = false; }, 600);
+        if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+        handler();
+      }, 480);
+    });
+    node.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => node.addEventListener(t, cancel));
+    node.addEventListener('contextmenu', e => { if (isMobile()) e.preventDefault(); });
+    // swallow the click that follows a long press so it doesn't also open the note / folder
+    node.addEventListener('click', e => { if (node._lp) { node._lp = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  }
+
+  let sheetPending = null;
+  const sheetIsOpen = () => !$('#sheetLayer').hidden;
+  function openSheet(title, items) {
+    const box = $('#sheetItems'); box.textContent = '';
+    $('#sheetTitle').textContent = title;
+    items.forEach(it => box.append(el('button', { class: it.danger ? 'danger' : false, onclick: () => requestCloseSheet(it.fn) },
+      el('span', { class: 's-ico', 'aria-hidden': 'true', text: it.icon || '' }), it.label)));
+    $('#sheetLayer').hidden = false;
+    history.pushState({ kind: 'sheet' }, '');
+    const first = $('button', box); if (first) first.focus({ preventScroll: true });
+  }
+  function hideSheet() { $('#sheetLayer').hidden = true; }
+  // Closing goes through history.back() so the entry opening pushed is removed again; the chosen
+  // action runs once the popstate arrives and history is back on the real screen.
+  function requestCloseSheet(fn) {
+    sheetPending = fn || null;
+    if (history.state && history.state.kind === 'sheet') history.back();
+    else { hideSheet(); const f = sheetPending; sheetPending = null; if (f) f(); }
+  }
+
+  function noteSheet(n) {
+    const items = [];
+    if (n.trashed) {
+      items.push({ icon: '↩', label: 'Restore', fn: () => restoreNote(n.id) });
+      items.push({ icon: '✕', label: 'Delete forever', danger: true, fn: () => deleteForever(n.id) });
+    } else {
+      if (!n.archived) items.push({ icon: '📌', label: n.pinned ? 'Unpin' : 'Pin', fn: () => togglePin(n.id) });
+      items.push({ icon: '📁', label: 'Move to folder…', fn: () => moveNoteDialog(n.id) });
+      items.push({ icon: '🗄', label: n.archived ? 'Unarchive' : 'Archive', fn: () => archiveNote(n.id, !n.archived) });
+      items.push({ icon: '🗑', label: 'Move to Trash', danger: true, fn: () => trashNote(n.id) });
+    }
+    openSheet(n.title.trim() || L.makePreview(n.text, 40) || 'Untitled', items);
+  }
+  function folderSheet(f) {
+    openSheet('📁 ' + f.name, [
+      { icon: '✎', label: 'Rename', fn: () => renameFolder(f.id) },
+      { icon: '＋', label: 'Add subfolder', fn: () => createFolder(f.id) },
+      { icon: '🗑', label: 'Delete folder', danger: true, fn: () => deleteFolder(f.id) }
+    ]);
+  }
+  async function togglePin(id) {
+    const n = noteById(id); if (!n) return;
+    await patchNote(n, { pinned: !n.pinned }); toast(n.pinned ? 'Pinned' : 'Unpinned'); render();
+  }
+  async function moveNoteDialog(id) {
+    const n = noteById(id); if (!n) return;
+    const v = await dialog({ kind: 'select', title: 'Move to folder', options: folderOptions().concat([['__new__', '＋ New folder…']]), value: n.folderId || '', ok: 'Move' });
+    if (v == null) return;
+    let target = v || null;
+    if (v === '__new__') { const f = await createFolder(null); if (!f) return; target = f.id; }
+    await patchNote(n, { folderId: target }); toast('Moved'); render();
+  }
+
   function noteCard(n) {
     const pv = L.makePreview(n.text, 220);
+    const rich = n.title.trim() ? richPreview(n, 4) : null;
     const card = el('article', { class: 'note', style: n.color !== 'default' ? '--nc:var(' + COLOR_VAR[n.color] + ')' : false, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
       onclick: e => { if (!e.target.closest('.row-actions')) openEditor(n.id); },
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
-      n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned', text: '📌' }) : null,
+      n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned' }, el('span', { class: 'pm-emoji', text: '📌' }), icon(ICONS.pin)) : null,
       el('div', { class: 'n-title', text: n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled') }),
       pv ? el('div', { class: 'n-prev', text: n.title.trim() ? pv : '' }) : null,
+      rich,
       (n.tags || []).length ? el('div', { class: 'n-tags' }, n.tags.slice(0, 5).map(t => el('span', { class: 'tag', text: '#' + t }))) : null,
       el('div', { class: 'n-meta', text: (n.folderId && folderById(n.folderId) ? '📁 ' + folderById(n.folderId).name + ' · ' : '') + L.formatDate(n.updated) }));
     if (n.trashed) {
@@ -220,6 +383,8 @@
     } else if (n.archived && state.view === 'archive') {
       card.append(el('div', { class: 'row-actions' }, el('button', { onclick: () => archiveNote(n.id, false) }, 'Restore to notes')));
     }
+    if (card.querySelector('.row-actions')) card.classList.add('has-actions');
+    onLongPress(card, () => noteSheet(n));
     return card;
   }
 
@@ -301,7 +466,7 @@
     if (!(history.state && history.state.kind === 'editor')) history.pushState({ kind: 'editor' }, '');
     $('#editorLayer').hidden = false; document.body.style.overflow = 'hidden';
     $('#edTitle').value = n.title;
-    NotesEditor.load(n.html);
+    NotesEditor.load(n.html); NotesEditor.keyboard(true); $('#edTitle').inputMode = 'text';
     paintEditorMeta(n); setSaveStatus(n.trashed ? 'In Trash' : 'Saved');
     const ro = n.trashed;
     NotesEditor.el().contentEditable = ro ? 'false' : 'true'; $('#edTitle').readOnly = ro;
@@ -519,11 +684,25 @@
   function requestCloseEditor() { if (history.state && history.state.kind === 'editor') history.back(); else closeEditor(); }
   window.addEventListener('popstate', e => {
     const s = e.state;
+    if (sheetIsOpen() && !(s && s.kind === 'sheet')) { hideSheet(); const f = sheetPending; sheetPending = null; if (f) f(); return; }
     if (state.openId) { closeEditor(); return; }
     if (sidebarIsOpen() && !(s && s.kind === 'sidebar')) { closeSidebar(); return; }
     if (s && s.kind === 'view') { state.view = s.view; state.folderId = s.folderId; state.tag = s.tag; closeSidebar(); render(); }
-    else if (s && s.kind === 'editor') history.replaceState(viewState(), '');   // forward into a closed editor
+    else if (s && (s.kind === 'editor' || s.kind === 'sheet')) history.replaceState(viewState(), '');   // forward into a closed editor / sheet
   });
+
+  /* phones: the header shows a search icon; tapping it opens the field, the ✕ clears and closes it */
+  function openSearch() {
+    $('#headFixed').classList.add('searching'); const b = $('#searchBtn'); b.setAttribute('aria-expanded', 'true'); b.setAttribute('aria-label', 'Close search'); b.title = 'Close search';
+    $('#search').focus();
+  }
+  function closeSearch() {
+    const had = state.query !== '';
+    $('#search').value = ''; state.query = '';
+    $('#headFixed').classList.remove('searching'); const b = $('#searchBtn'); b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-label', 'Search'); b.title = 'Search';
+    if (had) renderNotes();
+  }
+  const focusSearch = () => { if (isMobile()) openSearch(); else $('#search').focus(); };
 
   function wire() {
     $$('.nav-item').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
@@ -531,6 +710,13 @@
     $('#addFolderBtn').onclick = () => createFolder(null);
     $('#newNote').onclick = createAndOpen;
     $('#emptyTrash').onclick = emptyTrash;
+    $('#sheetScrim').onclick = () => requestCloseSheet();
+    $('#showAllFolders').onclick = () => go('folders');
+    $('#foldersBack').onclick = () => { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); };
+    $('#foldersNew').onclick = () => createFolder(null);
+    $('#fvGrid').onclick = () => { setPref('folderView', 'grid'); renderNotes(); };
+    $('#fvList').onclick = () => { setPref('folderView', 'list'); renderNotes(); };
+    $('#searchBtn').onclick = () => { if ($('#headFixed').classList.contains('searching')) closeSearch(); else openSearch(); };
     let st; $('#search').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => { state.query = e.target.value; renderNotes(); }, 80); });
     $('#sortSelect').onchange = e => { setPref('sort', e.target.value); renderNotes(); };
     $('#pinnedFirst').onchange = e => { setPref('pinnedFirst', e.target.checked); renderNotes(); };
@@ -541,9 +727,28 @@
     // editor chrome
     $('#edBack').onclick = requestCloseEditor;
     $('#editorBackdrop').onclick = requestCloseEditor;
-    // Mobile: Aa toggle
+    // Mobile: Aa opens the format bar (bottom) and hides the keyboard; closing it brings the keyboard back
     const edFmtMob = $('#edFmt');
-    if (edFmtMob) edFmtMob.onclick = () => { const tb = $('#toolbar'); tb.hidden = !tb.hidden; edFmtMob.setAttribute('aria-pressed', String(!tb.hidden)); };
+    const openFormat = () => {
+      $('#toolbar').hidden = false; if (edFmtMob) edFmtMob.setAttribute('aria-pressed', 'true');
+      $('#edTitle').inputMode = 'none'; NotesEditor.hideKeyboard();
+      if (document.activeElement === $('#edTitle')) $('#edTitle').blur();
+    };
+    const closeFormat = resume => {
+      $('#toolbar').hidden = true; if (edFmtMob) edFmtMob.setAttribute('aria-pressed', 'false');
+      $('#edTitle').inputMode = 'text'; NotesEditor.keyboard(true);
+      if (resume) NotesEditor.resumeKeyboard();
+    };
+    if (edFmtMob) edFmtMob.onclick = () => { if ($('#toolbar').hidden) openFormat(); else closeFormat(true); };
+    $('#tbClose').onclick = () => closeFormat(true);
+    // tapping the text or title to type again swaps the format bar back for the keyboard
+    $('#editor').addEventListener('pointerdown', e => {
+      if (!isMobile() || $('#toolbar').hidden) return;
+      const t = e.target, inText = NotesEditor.el().contains(t) || t === NotesEditor.el(), inTitle = t === $('#edTitle');
+      if (!inText && !inTitle) return;
+      closeFormat(false);
+      if (document.activeElement === t || document.activeElement === NotesEditor.el()) document.activeElement.blur();
+    });
     // Desktop: Format toggle
     const edFmtDesk = $('#edFmtDesktop');
     if (edFmtDesk) edFmtDesk.onclick = () => { const tb = $('#toolbar'); tb.hidden = !tb.hidden; edFmtDesk.setAttribute('aria-pressed', String(!tb.hidden)); };
@@ -575,19 +780,21 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         if ($('#dlg').open) return;
+        if (sheetIsOpen()) { requestCloseSheet(); return; }
+        if (!state.openId && $('#headFixed').classList.contains('searching')) { closeSearch(); return; }
         if (!$('#edMenu').hidden) { $('#edMenu').hidden = true; return; }
         if (state.openId) requestCloseEditor(); else requestCloseSidebar();
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && state.openId) { e.preventDefault(); state.dirty = true; saveOpen(); }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !state.openId) { e.preventDefault(); if (state.view === 'settings') go('all'); $('#search').focus(); }
-      if (e.key === '/' && !state.openId && !/input|textarea|select/i.test(e.target.tagName) && !e.target.isContentEditable) { e.preventDefault(); $('#search').focus(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !state.openId) { e.preventDefault(); if (state.view === 'settings' || state.view === 'folders') go('all'); focusSearch(); }
+      if (e.key === '/' && !state.openId && !/input|textarea|select/i.test(e.target.tagName) && !e.target.isContentEditable) { e.preventDefault(); focusSearch(); }
     });
     // data-loss protection: flush on hide/close, warn if a save is pending
     const flush = () => { if (state.openId && state.dirty) saveOpen(); };
     document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
     window.addEventListener('pagehide', flush);
     window.addEventListener('beforeunload', e => { if (state.openId && state.dirty) { flush(); e.preventDefault(); e.returnValue = ''; } });
-    window.matchMedia && window.matchMedia('(min-width: 900px)').addEventListener && window.matchMedia('(min-width: 900px)').addEventListener('change', closeSidebar);
+    window.matchMedia && window.matchMedia('(min-width: 900px)').addEventListener && window.matchMedia('(min-width: 900px)').addEventListener('change', () => { closeSidebar(); if (!isMobile() && state.view === 'folders') go('all'); else render(); });
   }
 
   /* ---------- boot ---------- */

@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 1.0.0**
+**Version 4.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -47,7 +47,7 @@ js/logic.js       pure helpers: tags, search/filter, sorting, import validation 
 js/db.js          IndexedDB wrapper (notes + folders), with an in-memory fallback
 js/editor.js      contenteditable editor, toolbar, checklists, sanitizer, tag suggestions
 js/app.js         UI controller: state, rendering, folders, settings, backup
-tests/            logic.test.js (Node), e2e.js and e2e-extra.js (Playwright)
+tests/            logic.test.js (Node), e2e*.js (Playwright)
 ```
 
 `logic.js` and `db.js` have no UI dependencies, which keeps the app easy to wrap later as a browser extension
@@ -90,6 +90,54 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v4.0.0 — New mobile home (mobile only; desktop unchanged)
+- **Fixed top bar:** menu icon on the left, search icon on the right. "All notes" is gone from home. Tap the search icon to open the search field (✕ or Esc closes and restores the home).
+- **"Your space" card** at the top of home.
+- **Folders section:** shows 2 folders (grid) or 4 (list, 2 columns × 2 rows). **Show all** sits right of the "Folders" label and opens a separate Folders page listing every folder (Back arrow or phone Back returns home).
+- **Independent views:** folders and notes each have their own grid/list toggle; the folder choice is remembered.
+- **Recent notes row:** sort and grid/list are icon only and stay pinned under the fixed header, so only folders and notes scroll.
+- **Fixed-size note cards:** 2 columns in grid view, fixed-height rows in list view; long words and tags are clipped so nothing overflows or scrolls sideways. Pinned cards show a pin icon.
+- "Pinned first" and "Last 7 days" are hidden on phones for now (removed on all screens in a later version).
+- Tests: new `tests/e2e-batch6.js`.
+
+### v3.0.0 — Bottom format bar, 💡 callout cards, copy keeps numbering (mobile only)
+
+**Mobile (≤ 899px)**
+- **Format bar moved to the bottom** (just above the footer) with a **✕ close button** and clean line icons
+  (undo, redo, bullets, numbering, checklist, alignment, link, image). Every control is at least 44px and wraps instead of scrolling off screen.
+- **Opening Format hides the on-screen keyboard** so the bar can take its place. Format buttons still act on the text you selected.
+  Closing the bar (✕ or Aa), or tapping into the text or title, brings the keyboard back. This works by setting `inputmode="none"` on the
+  note while the bar is open, so it needs no extra libraries.
+- **💡 Callout card** as a Format option (the lightbulb button). Tap it to turn the current line(s) into an editable rounded card;
+  tap it again to turn it back into normal text. Press Enter inside to add lines (the first line of a multi-line card is the bold title) and
+  press Enter on an empty last line to leave the card. Cards show with 💡 in the note list previews and render the same on desktop.
+- **Copy / cut keeps list numbering**: select-all (or any selection) and copy now produces plain text with `1. 2. 3.`, `•` bullets and
+  `☐ / ☑` checkboxes (nested lists are indented, callouts start with 💡) plus the rich HTML version. Partial selections keep the real item numbers.
+
+**Desktop (≥ 900px)** — unchanged: toolbar on top with text labels, no callout button, normal browser copy. Callouts made on mobile still display correctly.
+
+**Under the hood**
+- New `tests/e2e-batch4.js` (40 checks, mobile + desktop). The older browser tests reopen the format bar before using it,
+  because on phones it now closes when you tap into the text.
+
+### v2.0.0 — Long-press menus and richer cards (mobile only)
+
+**Mobile (≤ 899px)**
+- **Long-press a note card** to open a bottom action sheet: Pin / Unpin, Move to folder…, Archive / Unarchive, Move to Trash.
+  In Trash the sheet offers Restore and Delete forever. A normal tap still opens the note.
+- **Long-press a folder** (on the home folder cards or in the menu list) to Rename, Add subfolder or Delete it.
+  The existing inline folder buttons in the menu are still there.
+- The sheet closes with a tap outside it, Esc, or the phone's Back button (Back only closes the sheet, it never leaves the app).
+  Dragging your finger before the press finishes cancels it, so scrolling never triggers a menu.
+- **Note cards now show real structure**: bullets (•), numbering (1. 2. 3.) and checklists (○ / ● with struck-through done items)
+  instead of flattening everything to one run of text. Cards show the first four lines plus "…".
+- New note button stays fixed and floating (unchanged, covered by tests).
+
+**Desktop (≥ 900px)** — unchanged: plain-text card previews, no long-press menus.
+
+**Under the hood**
+- New `tests/e2e-batch3.js` (44 checks, mobile + desktop). Version shown in Settings → About is now 2.0.0.
 
 ### v1.0.0 — Initial release (MochiNote)
 

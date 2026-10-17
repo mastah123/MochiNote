@@ -11,6 +11,13 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined });
   const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, acceptDownloads: true });
   const page = await ctx.newPage(); const errs = [];
+  // Format bar is bottom-docked on phones and closes when you tap into the text: reopen it when a test needs it.
+  const ensureTb = async () => { if (!(await page.locator('#toolbar').isVisible()) && (await page.locator('#edFmt').isVisible())) await page.click('#edFmt'); };
+  // Phones: search is behind the header icon, and 'Pinned first' / 'Last 7 days' no longer have visible controls (removed in a later batch).
+  const openSearch = async () => { if (!(await page.locator('#search').isVisible())) await page.click('#searchBtn'); };
+  const setPinnedFirst = v => page.evaluate(x => { const c = document.getElementById('pinnedFirst'); c.checked = x; c.dispatchEvent(new Event('change')); }, v);
+
+
   page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await page.goto(url); await page.waitForSelector('#newNote');
 
@@ -18,9 +25,9 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   await page.click('#newNote'); await page.click('#edFmt'); await page.fill('#edTitle', 'Trip plan');
   await page.click('#edBody');
   await page.keyboard.type('Intro paragraph with #Travel and #ideas');
-  await page.keyboard.press('Enter'); await page.click('[data-cmd=insertUnorderedList]'); await page.keyboard.type('bullet one'); await page.keyboard.press('Enter'); await page.keyboard.type('bullet two'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
-  await page.click('[data-cmd=insertOrderedList]'); await page.keyboard.type('first'); await page.keyboard.press('Enter'); await page.keyboard.type('second'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
-  await page.click('[data-cmd=checklist]'); await page.keyboard.type('pack bags'); await page.keyboard.press('Enter'); await page.keyboard.type('book hotel');
+  await page.keyboard.press('Enter'); await ensureTb(); await page.click('[data-cmd=insertUnorderedList]'); await page.keyboard.type('bullet one'); await page.keyboard.press('Enter'); await page.keyboard.type('bullet two'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+  await ensureTb(); await page.click('[data-cmd=insertOrderedList]'); await page.keyboard.type('first'); await page.keyboard.press('Enter'); await page.keyboard.type('second'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+  await ensureTb(); await page.click('[data-cmd=checklist]'); await page.keyboard.type('pack bags'); await page.keyboard.press('Enter'); await page.keyboard.type('book hotel');
   let html = await page.$eval('#edBody', e => e.innerHTML);
   ok('mixed content: ul + ol + checklist in one note', /<ul>/.test(html) && /<ol>/.test(html) && /ul class="checklist"/.test(html), html);
   // toggle first checklist item
@@ -28,11 +35,11 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   ok('checklist item toggles done', await page.$eval('ul.checklist li', e => e.classList.contains('done')));
   // formatting
   await page.click('#edBody'); await page.keyboard.press('Control+Home'); await page.keyboard.down('Shift'); await page.keyboard.press('End'); await page.keyboard.up('Shift');
-  await page.click('[data-cmd=bold]'); await page.click('[data-cmd=underline]'); await page.selectOption('#hlSel', '#fde68a'); await page.selectOption('#sizeSel', '5');
-  await page.selectOption('#fontSel', 'Georgia, serif'); await page.click('[data-cmd=justifyCenter]');
+  await ensureTb(); await page.click('[data-cmd=bold]'); await ensureTb(); await page.click('[data-cmd=underline]'); await ensureTb(); await page.selectOption('#hlSel', '#fde68a'); await ensureTb(); await page.selectOption('#sizeSel', '5');
+  await ensureTb(); await page.selectOption('#fontSel', 'Georgia, serif'); await ensureTb(); await page.click('[data-cmd=justifyCenter]');
   html = await page.$eval('#edBody', e => e.innerHTML);
   ok('bold/underline/highlight/size/font/align applied', /<b>|font-weight|<strong>/.test(html) && /<u[ >]|underline/.test(html) && /background-color|<mark/.test(html) && /font-size/.test(html) && /Georgia/.test(html) && /text-align: ?center/.test(html), html);
-  await page.selectOption('#blockSel', 'h2'); ok('heading applied', /<h2/.test(await page.$eval('#edBody', e => e.innerHTML)));
+  await ensureTb(); await page.selectOption('#blockSel', 'h2'); ok('heading applied', /<h2/.test(await page.$eval('#edBody', e => e.innerHTML)));
   // typing is immediate (no artificial delay): measure
   await page.keyboard.press('Control+End'); const t0 = Date.now(); await page.keyboard.type('x'.repeat(40)); ok('typing 40 chars fast (<2s incl. automation)', Date.now() - t0 < 2000);
   await page.waitForFunction(() => document.querySelector('#edStatus').textContent === '✓', null, { timeout: 4000 }).then(() => ok('autosave indicator shows Saved', true), () => ok('autosave indicator shows Saved', false));
@@ -58,12 +65,12 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   // second + third note for search/sort
   for (const [title, body] of [['Alpha groceries', 'milk and eggs #food'], ['Zebra', 'stripes']]) { await page.click('#newNote'); await page.fill('#edTitle', title); await page.click('#edBody'); await page.keyboard.type(body); await page.click('#edBack'); }
   const titles = async () => page.$$eval('.note .n-title', e => e.map(x => x.textContent));
-  await page.waitForTimeout(100); await page.fill('#search', 'eggs'); await page.waitForTimeout(200); ok('search body', (await titles()).join() === 'Alpha groceries');
-  await page.fill('#search', '#travel'); await page.waitForTimeout(200); ok('search hashtag', (await titles()).join() === 'Trip plan');
-  await page.fill('#search', 'projects'); await page.waitForTimeout(200); ok('search folder name', (await titles()).join() === 'Trip plan');
-  await page.fill('#search', 'zeb'); await page.waitForTimeout(200); ok('search title', (await titles()).join() === 'Zebra');
-  await page.fill('#search', ''); await page.waitForTimeout(200);
-  await page.uncheck('#pinnedFirst');
+  await page.waitForTimeout(100); await openSearch(); await page.fill('#search', 'eggs'); await page.waitForTimeout(200); ok('search body', (await titles()).join() === 'Alpha groceries');
+  await openSearch(); await page.fill('#search', '#travel'); await page.waitForTimeout(200); ok('search hashtag', (await titles()).join() === 'Trip plan');
+  await openSearch(); await page.fill('#search', 'projects'); await page.waitForTimeout(200); ok('search folder name', (await titles()).join() === 'Trip plan');
+  await openSearch(); await page.fill('#search', 'zeb'); await page.waitForTimeout(200); ok('search title', (await titles()).join() === 'Zebra');
+  await openSearch(); await page.fill('#search', ''); await page.waitForTimeout(200);
+  await setPinnedFirst(false);
   await page.selectOption('#sortSelect', 'title-asc'); ok('sort A-Z', (await titles()).join() === 'Alpha groceries,Trip plan,Zebra');
   await page.selectOption('#sortSelect', 'title-desc'); ok('sort Z-A', (await titles()).join() === 'Zebra,Trip plan,Alpha groceries');
   await page.selectOption('#sortSelect', 'created-asc'); ok('sort created oldest', (await titles()).join() === 'Trip plan,Alpha groceries,Zebra');
@@ -77,7 +84,7 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
 
   // pin/archive/trash/restore/delete
   await page.click('.note >> text=Zebra'); await page.click('#edMenuBtn'); await page.click('[data-act=pin]'); await page.waitForTimeout(300); await page.click('#edBack');
-  await page.check('#pinnedFirst'); ok('pinned first', (await titles())[0] === 'Zebra');
+  await setPinnedFirst(true); ok('pinned first', (await titles())[0] === 'Zebra');
   await page.click('#openSidebar'); await page.click('[data-view=pinned]'); ok('pinned view', (await titles()).join() === 'Zebra');
   await page.click('#openSidebar'); await page.click('[data-view=all]');
   await page.click('.note >> text=Zebra'); await page.click('#edMenuBtn'); await page.click('[data-act=archive]');
