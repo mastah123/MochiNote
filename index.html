@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en" data-theme="cream" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f8f1e7">
+<title>MochiNote</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23c68a2e%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27white%27%3E%E2%9C%8E%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- Sidebar / navigation -->
+  <aside class="sidebar" id="sidebar" aria-label="Navigation">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">✎</span>
+      <span class="brand-name">MochiNote</span>
+      <button class="btn-text only-mobile" id="closeSidebar" aria-label="Close menu">Close</button>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="nav-item" data-view="all"><span class="nav-ico">▤</span>All notes<span class="count" data-count="all"></span></button>
+      <button class="nav-item" data-view="pinned"><span class="nav-ico">📌</span>Pinned<span class="count" data-count="pinned"></span></button>
+      <button class="nav-item" data-view="archive"><span class="nav-ico">🗄</span>Archive<span class="count" data-count="archive"></span></button>
+      <button class="nav-item" data-view="trash"><span class="nav-ico">🗑</span>Trash<span class="count" data-count="trash"></span></button>
+      <button class="nav-item" data-view="settings"><span class="nav-ico">⚙</span>Settings</button>
+    </nav>
+    <div class="side-section">
+      <div class="side-head"><span>Folders</span><button class="btn-text" id="addFolderBtn">+ New folder</button></div>
+      <div id="sideFolders" class="side-list"></div>
+    </div>
+    <div class="side-section">
+      <div class="side-head"><span>Tags</span></div>
+      <div id="sideTags" class="side-list tags-list"></div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <!-- Main -->
+  <main class="main" id="main">
+    <header class="topbar">
+      <button class="btn-text only-mobile" id="openSidebar" aria-label="Open menu">☰ Menu</button>
+      <h1 class="view-title" id="viewTitle">All notes</h1>
+      <span class="save-pill" id="globalStatus" role="status" aria-live="polite"></span>
+    </header>
+
+    <section id="notesView">
+      <div class="search-wrap">
+        <span class="search-ico" aria-hidden="true">🔍</span>
+        <input type="search" id="search" placeholder="Search notes, words, #tags..." aria-label="Search notes" autocomplete="off">
+      </div>
+
+      <div class="controls">
+        <label class="sel"><span>Sort</span>
+          <select id="sortSelect" aria-label="Sort notes">
+            <option value="edited">Recently edited</option>
+            <option value="created-desc">Created: newest</option>
+            <option value="created-asc">Created: oldest</option>
+            <option value="title-asc">Title A–Z</option>
+            <option value="title-desc">Title Z–A</option>
+          </select>
+        </label>
+        <label class="chk"><input type="checkbox" id="pinnedFirst"> Pinned first</label>
+        <label class="chk"><input type="checkbox" id="recentOnly"> Last 7 days</label>
+        <div class="seg" role="group" aria-label="View">
+          <button id="viewGrid" class="seg-btn" aria-pressed="true">Grid</button>
+          <button id="viewList" class="seg-btn" aria-pressed="false">List</button>
+        </div>
+      </div>
+
+      <div class="filters" id="filters"></div>
+
+      <div id="folderStrip" class="folder-strip"></div>
+      <div id="trashBar" class="trash-bar" hidden>
+        <span>Notes in Trash can be restored or deleted forever.</span>
+        <button class="btn-danger" id="emptyTrash">Empty Trash</button>
+      </div>
+      <div id="notes" class="notes grid" aria-live="polite"></div>
+      <div id="empty" class="empty" hidden></div>
+    </section>
+
+    <section id="settingsView" hidden></section>
+  </main>
+
+  <button class="fab" id="newNote"><span aria-hidden="true">+</span> New note</button>
+
+  <!-- Editor sheet -->
+  <div class="editor-layer" id="editorLayer" hidden>
+    <div class="editor-backdrop" id="editorBackdrop"></div>
+    <article class="editor" id="editor" role="dialog" aria-modal="true" aria-label="Note editor">
+      <header class="ed-top">
+        <button class="icon-btn" id="edBack" aria-label="Back">←</button>
+        <!-- Desktop: text save pill centered -->
+        <span class="save-pill desktop-only" id="edStatusDesktop" role="status" aria-live="polite"></span>
+        <!-- Desktop: format + pin buttons -->
+        <button class="btn-text desktop-only" id="edFmtDesktop" aria-pressed="false" aria-label="Formatting" title="Formatting">Format</button>
+        <button class="btn-text desktop-only" id="edPin" aria-label="Pin note">Pin</button>
+        <!-- Mobile: Aa format button + flexible space -->
+        <span class="ed-top-spacer mobile-only"></span>
+        <button class="icon-btn txt mobile-only" id="edFmt" aria-pressed="false" aria-label="Formatting" title="Formatting">Aa</button>
+        <div class="ed-actions">
+          <button class="icon-btn" id="edMenuBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false">⋮</button>
+          <div class="menu" id="edMenu" hidden>
+            <button data-act="pin" id="edPinItem">Pin</button>
+            <button data-act="move">Move to folder…</button>
+            <button data-act="archive">Archive</button>
+            <button data-act="delete" class="danger">Move to Trash</button>
+          </div>
+        </div>
+      </header>
+      <!-- Desktop meta row: folder selector + color swatches -->
+      <div class="ed-meta desktop-only" id="edMeta">
+        <select id="edFolder" aria-label="Folder"></select>
+        <div id="edColors" class="swatches"></div>
+      </div>
+      <div class="toolbar" id="toolbar" role="toolbar" aria-label="Formatting">
+        <button data-cmd="undo" title="Undo (Ctrl+Z)">Undo</button>
+        <button data-cmd="redo" title="Redo (Ctrl+Y)">Redo</button>
+        <span class="sep"></span>
+        <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+        <button data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+        <span class="sep"></span>
+        <select id="blockSel" aria-label="Paragraph style">
+          <option value="p">Paragraph</option>
+          <option value="h1">Heading 1</option>
+          <option value="h2">Heading 2</option>
+          <option value="h3">Heading 3</option>
+        </select>
+        <button data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
+        <button data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+        <button data-cmd="checklist" title="Checklist">☑ Checklist</button>
+        <span class="sep"></span>
+        <button data-cmd="justifyLeft" title="Align left">Left</button>
+        <button data-cmd="justifyCenter" title="Align center">Center</button>
+        <button data-cmd="justifyRight" title="Align right">Right</button>
+        <span class="sep"></span>
+        <select id="fontSel" aria-label="Font">
+          <option value="">Font</option>
+          <option value="Georgia, serif">Serif</option>
+          <option value="system-ui, sans-serif">Sans</option>
+          <option value="'Courier New', monospace">Mono</option>
+          <option value="'Comic Sans MS', 'Trebuchet MS', cursive">Playful</option>
+        </select>
+        <select id="sizeSel" aria-label="Font size">
+          <option value="">Size</option>
+          <option value="2">Small</option>
+          <option value="3">Normal</option>
+          <option value="4">Large</option>
+          <option value="5">XL</option>
+          <option value="6">XXL</option>
+        </select>
+        <label class="hl" title="Highlight text">Highlight
+          <select id="hlSel" aria-label="Highlight color">
+            <option value="">Choose…</option>
+            <option value="#fde68a">Yellow</option>
+            <option value="#bbf7d0">Green</option>
+            <option value="#fbcfe8">Pink</option>
+            <option value="#bfdbfe">Blue</option>
+            <option value="none">Remove</option>
+          </select>
+        </label>
+        <span class="sep"></span>
+        <button data-cmd="link" title="Insert link">Link</button>
+        <button data-cmd="image" title="Attach image">Image</button>
+        <input type="file" id="imgInput" accept="image/*" hidden>
+      </div>
+
+      <div class="ed-scroll" id="edScroll">
+        <input id="edTitle" class="ed-title" placeholder="Title" aria-label="Note title" maxlength="200">
+        <div id="edBody" class="ed-body" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note content" spellcheck="true" data-placeholder="Start writing… use #tags anywhere"></div>
+      </div>
+      <div class="tag-suggest" id="tagSuggest" hidden></div>
+      <footer class="ed-foot">
+        <span class="save-icon-mobile mobile-only" id="edStatus" role="status" aria-live="polite"></span>
+        <div id="edTags" class="tags"></div>
+        <span id="edInfo" class="info"></span>
+      </footer>
+    </article>
+  </div>
+
+  <!-- Generic dialog -->
+  <dialog id="dlg" class="dlg">
+    <form method="dialog" id="dlgForm">
+      <h2 id="dlgTitle"></h2>
+      <p id="dlgMsg"></p>
+      <input id="dlgInput" hidden>
+      <select id="dlgSelect" hidden></select>
+      <div class="dlg-btns">
+        <button value="cancel" class="btn-ghost" id="dlgCancel">Cancel</button>
+        <button value="ok" class="btn-primary" id="dlgOk">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</div>
+
+<script src="js/logic.js"></script>
+<script src="js/db.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

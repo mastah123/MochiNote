@@ -1,0 +1,613 @@
+/* app.js — UI controller: state, rendering, folders, tags, settings, backup. */
+(function () {
+  'use strict';
+  const L = NotesLogic;
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const APP_VERSION = '1.0.0';
+  const PREFS_KEY = 'mochinote:prefs';
+  const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', pinnedFirst: true, fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
+  const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
+  const FONTS = [['', 'Default (sans)'], ['Georgia, serif', 'Serif'], ["'Courier New', monospace", 'Mono'], ["'Comic Sans MS', 'Trebuchet MS', cursive", 'Playful']];
+  const COLOR_VAR = { default: '--c-default', yellow: '--c-yellow', green: '--c-green', blue: '--c-blue', pink: '--c-pink', lilac: '--c-lilac' };
+
+  const state = {
+    notes: [], folders: [], prefs: Object.assign({}, DEFAULT_PREFS),
+    view: 'all', folderId: null, tag: null, query: '', recentOnly: false,
+    openId: null, dirty: false, saveTimer: null, saving: Promise.resolve()
+  };
+
+  /* ---------- preferences (localStorage, with fallback) ---------- */
+  function loadPrefs() {
+    try { const raw = localStorage.getItem(PREFS_KEY); if (raw) Object.assign(state.prefs, JSON.parse(raw)); } catch (_) {}
+    const p = state.prefs;
+    if (!L.SORTS.includes(p.sort)) p.sort = 'edited';
+    if (p.view !== 'grid' && p.view !== 'list') p.view = 'grid';
+    p.fontSize = Math.min(28, Math.max(12, Number(p.fontSize) || 16));
+  }
+  function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); } catch (_) {} }
+  function applyPrefs() {
+    const p = state.prefs, h = document.documentElement;
+    h.dataset.theme = p.theme; h.dataset.mode = p.mode; h.dataset.motion = p.motion;
+    h.style.setProperty('--editor-size', p.fontSize + 'px');
+    h.style.setProperty('--editor-font', p.fontFamily || 'var(--font)');
+    const meta = $('meta[name=theme-color]');
+    if (meta) meta.content = getComputedStyle(h).getPropertyValue('--bg').trim() || '#f8f1e7';
+  }
+  function setPref(k, v) { state.prefs[k] = v; savePrefs(); applyPrefs(); }
+
+  /* ---------- helpers ---------- */
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => {
+      if (v === false || v == null) return;
+      if (k === 'class') n.className = v;
+      else if (k === 'text') n.textContent = v;
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? '' : v);
+    });
+    kids.flat().forEach(k => { if (k != null) n.append(k.nodeType ? k : document.createTextNode(k)); });
+    return n;
+  }
+  let toastTimer;
+  function toast(msg, ms) {
+    const t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, ms || 3200);
+  }
+  const SAVE_ICONS = { '': '', 'Saving…': '⟳', 'Saved': '✓', 'Unsaved changes': '●', 'Not saved': '!' };
+  function setStatus(msg) {
+    // Mobile: show icon in footer
+    const mobileEl = $('#edStatus');
+    if (mobileEl) { mobileEl.textContent = SAVE_ICONS[msg] !== undefined ? SAVE_ICONS[msg] : msg; mobileEl.title = msg; mobileEl.setAttribute('aria-label', msg); }
+    // Desktop: show text in header
+    const desktopEl = $('#edStatusDesktop');
+    if (desktopEl) desktopEl.textContent = msg;
+  }
+
+  // Promise-based dialog: kind 'confirm' | 'prompt' | 'select'
+  function dialog(o) {
+    return new Promise(resolve => {
+      const d = $('#dlg'), inp = $('#dlgInput'), sel = $('#dlgSelect');
+      $('#dlgTitle').textContent = o.title || ''; $('#dlgMsg').textContent = o.message || '';
+      $('#dlgMsg').hidden = !o.message;
+      inp.hidden = o.kind !== 'prompt'; sel.hidden = o.kind !== 'select';
+      inp.value = o.value || ''; inp.placeholder = o.placeholder || '';
+      sel.textContent = '';
+      (o.options || []).forEach(([v, label]) => sel.append(el('option', { value: v, text: label })));
+      if (o.kind === 'select') sel.value = o.value == null ? '' : o.value;
+      $('#dlgCancel').hidden = o.hideCancel === true;
+      const ok = $('#dlgOk'); ok.textContent = o.ok || 'OK'; ok.className = o.danger ? 'btn-danger' : 'btn-primary';
+      const done = () => {
+        d.removeEventListener('close', done);
+        if (d.returnValue !== 'ok') return resolve(null);
+        resolve(o.kind === 'prompt' ? inp.value : o.kind === 'select' ? sel.value : true);
+      };
+      d.addEventListener('close', done);
+      d.returnValue = '';
+      if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+      if (o.kind === 'prompt') { inp.focus(); inp.select(); }
+    });
+  }
+
+  /* ---------- data ---------- */
+  const noteById = id => state.notes.find(n => n.id === id);
+  const folderById = id => state.folders.find(f => f.id === id);
+  async function persistNote(n) { await NotesDB.put('notes', n); }
+  function allTags() {
+    const m = new Map();
+    state.notes.filter(n => !n.trashed).forEach(n => (n.tags || []).forEach(t => m.set(t, (m.get(t) || 0) + 1)));
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+  function newNote(extra) {
+    const now = Date.now();
+    return Object.assign({ id: L.uid(), title: '', html: '', text: '', tags: [], folderId: null, color: 'default', pinned: false, archived: false, trashed: false, trashedAt: null, created: now, updated: now }, extra);
+  }
+
+  /* ---------- navigation + rendering ---------- */
+  const VIEW_TITLES = { all: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings' };
+
+  function go(view, opts) {
+    if (state.openId) closeEditor();
+    state.view = view; opts = opts || {};
+    state.folderId = opts.folderId !== undefined ? opts.folderId : (view === 'all' ? state.folderId : null);
+    state.tag = opts.tag !== undefined ? opts.tag : (view === 'all' ? state.tag : null);
+    if (view !== 'all' && opts.folderId === undefined) state.folderId = null;
+    closeSidebar(); render(); pushView();
+    window.scrollTo(0, 0);
+  }
+
+  function render() {
+    const settings = state.view === 'settings';
+    $('#notesView').hidden = settings; $('#settingsView').hidden = !settings;
+    $('#newNote').hidden = settings || state.view === 'trash';
+    let title = VIEW_TITLES[state.view];
+    if (state.view === 'all' && state.folderId) title = state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || { name: 'All notes' }).name;
+    $('#viewTitle').textContent = title;
+    document.title = title + ' · MochiNote';
+    renderSidebar();
+    if (settings) renderSettings(); else renderNotes();
+  }
+
+  function renderSidebar() {
+    $$('.nav-item').forEach(b => {
+      const v = b.dataset.view;
+      b.classList.toggle('active', v === state.view && !(v === 'all' && (state.folderId || state.tag)));
+      if (v !== 'settings') {
+        const c = L.filterNotes(state.notes, state.folders, { view: v }).length;
+        $('[data-count]', b).textContent = c ? c : '';
+      }
+    });
+    const sf = $('#sideFolders'); sf.textContent = '';
+    const active = state.notes.filter(n => !n.trashed && !n.archived);
+    const mk = (label, id, depth, count, folder) => {
+      const isActive = state.view === 'all' && state.folderId === id;
+      sf.append(el('button', { class: 'side-item' + (isActive ? ' active' : ''), style: 'padding-left:' + (12 + depth * 16) + 'px', onclick: () => go('all', { folderId: id, tag: state.tag }) },
+        el('span', { class: 'fl-name', text: '📁 ' + label }), el('span', { class: 'count', text: count || '' })));
+      if (folder && isActive) {
+        sf.append(el('div', { class: 'folder-tools', style: 'padding-left:' + (12 + depth * 16) + 'px' },
+          el('button', { onclick: () => createFolder(folder.id) }, '+ Subfolder'),
+          el('button', { onclick: () => renameFolder(folder.id) }, 'Rename'),
+          el('button', { class: 'danger', onclick: () => deleteFolder(folder.id) }, 'Delete')));
+      }
+    };
+    mk('No folder', L.NO_FOLDER, 0, active.filter(n => !n.folderId).length, null);
+    L.folderTree(state.folders).forEach(({ folder, depth }) => {
+      const ids = L.folderDescendants(state.folders, folder.id);
+      mk(folder.name, folder.id, depth, active.filter(n => ids.has(n.folderId)).length, folder);
+    });
+    const st = $('#sideTags'); st.textContent = '';
+    const tags = allTags();
+    if (!tags.length) st.append(el('span', { class: 'info', style: 'color:var(--muted);font-size:.9rem', text: 'Type #tags in a note and they show up here.' }));
+    tags.forEach(([t, c]) => st.append(el('button', { class: 'tag' + (state.tag === t ? ' active' : ''), onclick: () => go('all', { tag: state.tag === t ? null : t, folderId: state.folderId }) }, '#' + t + ' ' + c)));
+  }
+
+  function currentList() {
+    const list = L.filterNotes(state.notes, state.folders, { view: state.view, folderId: state.folderId, tag: state.tag, query: state.query, recentOnly: state.recentOnly });
+    return L.sortNotes(list, state.prefs.sort, state.prefs.pinnedFirst && state.view !== 'trash');
+  }
+
+  function renderNotes() {
+    const p = state.prefs;
+    $('#sortSelect').value = p.sort; $('#pinnedFirst').checked = p.pinnedFirst; $('#recentOnly').checked = state.recentOnly;
+    $('#viewGrid').setAttribute('aria-pressed', p.view === 'grid'); $('#viewList').setAttribute('aria-pressed', p.view === 'list');
+    // filter pills
+    const f = $('#filters'); f.textContent = '';
+    if (state.folderId) f.append(el('button', { class: 'pill', onclick: () => go('all', { folderId: null, tag: state.tag }) }, 'Folder: ', el('b', { text: state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || {}).name }), ' ✕'));
+    if (state.tag) f.append(el('button', { class: 'pill', onclick: () => go('all', { tag: null, folderId: state.folderId }) }, 'Tag: ', el('b', { text: '#' + state.tag }), ' ✕'));
+    // folder cards on All notes (like the reference design)
+    const strip = $('#folderStrip'); strip.textContent = '';
+    const top = state.folders.filter(x => !x.parentId).sort((a, b) => (a.created || 0) - (b.created || 0));
+    if (state.view === 'all' && !state.folderId && !state.query && !state.tag && top.length) {
+      strip.append(el('div', { class: 'folder-strip-head' }, el('span', { text: '📁 Folders' })));
+      top.forEach((fo, i) => {
+        const ids = L.folderDescendants(state.folders, fo.id);
+        const c = state.notes.filter(n => !n.trashed && !n.archived && ids.has(n.folderId)).length;
+        strip.append(el('button', { class: 'folder-card f' + (i % 4), onclick: () => go('all', { folderId: fo.id }) }, el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') })));
+      });
+    }
+    strip.hidden = !strip.childNodes.length;
+    $('#trashBar').hidden = state.view !== 'trash' || !state.notes.some(n => n.trashed);
+
+    const list = currentList(), box = $('#notes');
+    box.className = 'notes ' + p.view; box.textContent = '';
+    const frag = document.createDocumentFragment();
+    list.forEach(n => frag.append(noteCard(n)));
+    box.append(frag);
+    const empty = $('#empty'); empty.hidden = list.length > 0;
+    if (!list.length) {
+      const msgs = {
+        all: state.query || state.tag || state.folderId ? ['Nothing matches', 'Try a different search or clear a filter.'] : ['No notes yet', 'Tap “New note” to write your first one.'],
+        pinned: ['No pinned notes', 'Pin a note to keep it handy.'], archive: ['Archive is empty', 'Archived notes live here.'], trash: ['Trash is empty', 'Deleted notes wait here until you remove them.']
+      };
+      const m = msgs[state.view]; empty.textContent = ''; empty.append(el('b', { text: m[0] }), m[1]);
+    }
+  }
+
+  function noteCard(n) {
+    const pv = L.makePreview(n.text, 220);
+    const card = el('article', { class: 'note', style: n.color !== 'default' ? '--nc:var(' + COLOR_VAR[n.color] + ')' : false, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
+      onclick: e => { if (!e.target.closest('.row-actions')) openEditor(n.id); },
+      onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
+      n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned', text: '📌' }) : null,
+      el('div', { class: 'n-title', text: n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled') }),
+      pv ? el('div', { class: 'n-prev', text: n.title.trim() ? pv : '' }) : null,
+      (n.tags || []).length ? el('div', { class: 'n-tags' }, n.tags.slice(0, 5).map(t => el('span', { class: 'tag', text: '#' + t }))) : null,
+      el('div', { class: 'n-meta', text: (n.folderId && folderById(n.folderId) ? '📁 ' + folderById(n.folderId).name + ' · ' : '') + L.formatDate(n.updated) }));
+    if (n.trashed) {
+      card.append(el('div', { class: 'row-actions' },
+        el('button', { onclick: () => restoreNote(n.id) }, 'Restore'),
+        el('button', { class: 'btn-danger', style: 'border-color:var(--danger);color:var(--danger)', onclick: () => deleteForever(n.id) }, 'Delete forever')));
+    } else if (n.archived && state.view === 'archive') {
+      card.append(el('div', { class: 'row-actions' }, el('button', { onclick: () => archiveNote(n.id, false) }, 'Restore to notes')));
+    }
+    return card;
+  }
+
+  /* ---------- note actions ---------- */
+  async function patchNote(n, patch, touch) {
+    Object.assign(n, patch);
+    if (touch !== false) n.updated = Date.now();
+    await persistNote(n);
+  }
+  async function archiveNote(id, on) {
+    const n = noteById(id); if (!n) return;
+    await patchNote(n, { archived: on, pinned: on ? false : n.pinned });
+    toast(on ? 'Archived' : 'Restored from archive'); render();
+  }
+  async function trashNote(id) {
+    const n = noteById(id); if (!n) return;
+    await patchNote(n, { trashed: true, trashedAt: Date.now(), pinned: false }, false);
+    toast('Moved to Trash'); render();
+  }
+  async function restoreNote(id) {
+    const n = noteById(id); if (!n) return;
+    await patchNote(n, { trashed: false, trashedAt: null }, false);
+    toast('Note restored'); render();
+  }
+  async function deleteForever(id) {
+    const n = noteById(id); if (!n) return;
+    if (!await dialog({ title: 'Delete forever?', message: 'This note will be permanently deleted. This cannot be undone.', ok: 'Delete forever', danger: true })) return;
+    await NotesDB.remove('notes', id);
+    state.notes = state.notes.filter(x => x.id !== id);
+    toast('Deleted permanently'); render();
+  }
+  async function emptyTrash() {
+    const ids = state.notes.filter(n => n.trashed).map(n => n.id);
+    if (!ids.length) return;
+    if (!await dialog({ title: 'Empty Trash?', message: ids.length + ' note(s) will be permanently deleted. This cannot be undone.', ok: 'Empty Trash', danger: true })) return;
+    await NotesDB.removeMany('notes', ids);
+    state.notes = state.notes.filter(n => !n.trashed);
+    toast('Trash emptied'); render();
+  }
+
+  /* ---------- folders ---------- */
+  async function createFolder(parentId) {
+    const name = await dialog({ kind: 'prompt', title: parentId ? 'New subfolder' : 'New folder', placeholder: 'Folder name', ok: 'Create' });
+    if (name == null) return null;
+    const nm = name.trim(); if (!nm) { toast('Folder name can’t be empty.'); return null; }
+    if (L.folderDepth(state.folders, parentId || '') >= 3 && parentId) { toast('Folders can be nested up to 3 levels.'); return null; }
+    const f = { id: L.uid(), name: nm.slice(0, 100), parentId: parentId || null, created: Date.now() };
+    await NotesDB.put('folders', f); state.folders.push(f); render(); return f;
+  }
+  async function renameFolder(id) {
+    const f = folderById(id); if (!f) return;
+    const name = await dialog({ kind: 'prompt', title: 'Rename folder', value: f.name, ok: 'Rename' });
+    if (name == null || !name.trim()) return;
+    f.name = name.trim().slice(0, 100); await NotesDB.put('folders', f); render();
+  }
+  async function deleteFolder(id) {
+    const f = folderById(id); if (!f) return;
+    const ids = L.folderDescendants(state.folders, id);
+    const count = state.notes.filter(n => ids.has(n.folderId)).length;
+    if (!await dialog({ title: 'Delete folder “' + f.name + '”?', message: 'Notes inside (' + count + ') are kept and moved to “No folder”.' + (ids.size > 1 ? '\nIts subfolders will be deleted too.' : ''), ok: 'Delete folder', danger: true })) return;
+    const moved = [];
+    state.notes.forEach(n => { if (ids.has(n.folderId)) { n.folderId = null; moved.push(n); } });
+    await NotesDB.putMany('notes', moved);
+    await NotesDB.removeMany('folders', Array.from(ids));
+    state.folders = state.folders.filter(x => !ids.has(x.id));
+    if (state.folderId && ids.has(state.folderId)) state.folderId = null;
+    toast('Folder deleted'); render();
+  }
+  function folderOptions() {
+    return [['', 'No folder']].concat(L.folderTree(state.folders).map(({ folder, depth }) => [folder.id, '  '.repeat(depth) + folder.name]));
+  }
+
+  /* ---------- editor ---------- */
+  const ed = {};
+  function setSaveStatus(s) { setStatus(s); }
+  function openEditor(id, isNew) {
+    const n = noteById(id); if (!n) return;
+    state.openId = id; state.dirty = false;
+    if (!(history.state && history.state.kind === 'editor')) history.pushState({ kind: 'editor' }, '');
+    $('#editorLayer').hidden = false; document.body.style.overflow = 'hidden';
+    $('#edTitle').value = n.title;
+    NotesEditor.load(n.html);
+    paintEditorMeta(n); setSaveStatus(n.trashed ? 'In Trash' : 'Saved');
+    const ro = n.trashed;
+    NotesEditor.el().contentEditable = ro ? 'false' : 'true'; $('#edTitle').readOnly = ro;
+    const isDesktop = window.matchMedia('(min-width: 900px)').matches;
+    $('#toolbar').hidden = !isDesktop; // desktop: always show; mobile: hidden by default
+    const edFmt = $('#edFmt'); if (edFmt) { edFmt.hidden = ro; edFmt.setAttribute('aria-pressed', 'false'); }
+    const edFmtD = $('#edFmtDesktop'); if (edFmtD) { edFmtD.hidden = ro; edFmtD.setAttribute('aria-pressed', isDesktop && !ro ? 'true' : 'false'); }
+    setTimeout(() => { (isNew || !n.html ? $('#edTitle') : NotesEditor.el()).focus({ preventScroll: true }); }, 30);
+  }
+  function paintEditorMeta(n) {
+    $('#edPinItem').textContent = n.pinned ? 'Unpin' : 'Pin';
+    // Desktop pin button
+    const pinBtn = $('#edPin'); if (pinBtn) pinBtn.textContent = n.pinned ? 'Unpin' : 'Pin';
+    $('#editor').classList.toggle('nc', n.color !== 'default');
+    $('#editor').style.setProperty('--nc', n.color !== 'default' ? 'var(' + COLOR_VAR[n.color] + ')' : '');
+    const tags = $('#edTags'); tags.textContent = '';
+    (n.tags || []).forEach(t => tags.append(el('span', { class: 'tag', text: '#' + t })));
+    $('#edInfo').textContent = 'Edited ' + L.formatDate(n.updated);
+    // Desktop folder select
+    const fs = $('#edFolder');
+    if (fs) {
+      fs.textContent = '';
+      folderOptions().forEach(([v, label]) => fs.append(el('option', { value: v, text: label, selected: (n.folderId || '') === v })));
+      fs.value = n.folderId || '';
+    }
+    // Desktop color swatches
+    const sw = $('#edColors');
+    if (sw) {
+      sw.textContent = '';
+      L.COLORS.forEach(c => {
+        const btn = el('button', { class: 'swatch' + (n.color === c ? ' on' : ''), style: 'background:var(' + COLOR_VAR[c] + ')', title: c, 'aria-label': c + ' color',
+          onclick: () => {
+            n.color = c; state.dirty = true;
+            paintEditorMeta(n);
+          }
+        });
+        sw.append(btn);
+      });
+    }
+  }
+  function collect(n) {
+    const html = NotesEditor.getHTML(), title = $('#edTitle').value.slice(0, 200);
+    const text = L.htmlToText(html);
+    n.title = title; n.html = html; n.text = text;
+    n.tags = L.extractTags(title + '\n' + text);
+  }
+  function markDirty() {
+    if (!state.openId) return;
+    state.dirty = true;
+    if (state.prefs.autosave) { setSaveStatus('Saving…'); clearTimeout(state.saveTimer); state.saveTimer = setTimeout(saveOpen, 500); }
+    else setSaveStatus('Unsaved changes');
+  }
+  function saveOpen() {
+    clearTimeout(state.saveTimer);
+    const n = noteById(state.openId);
+    if (!n || !state.dirty || n.trashed) return state.saving;
+    collect(n); n.updated = Date.now(); state.dirty = false;
+    const snapshot = JSON.parse(JSON.stringify(n));
+    state.saving = state.saving.then(() => NotesDB.put('notes', snapshot)).then(() => {
+      if (state.openId === n.id) { setSaveStatus(state.dirty ? 'Saving…' : 'Saved'); paintEditorMeta(n); }
+    }).catch(err => { state.dirty = true; setSaveStatus('Not saved'); toast('Could not save: ' + (err && err.message ? err.message : 'storage error') + '. Export a backup to be safe.', 6000); });
+    return state.saving;
+  }
+  async function closeEditor() {
+    if (!state.openId) return;
+    clearTimeout(state.saveTimer);
+    const n = noteById(state.openId);
+    if (n && !n.trashed) {
+      // Discard completely empty new notes instead of cluttering the list.
+      collect(n);
+      if (!n.title.trim() && !n.text.trim() && !/<img/i.test(n.html)) {
+        state.openId = null; state.dirty = false;
+        await state.saving; await NotesDB.remove('notes', n.id);
+        state.notes = state.notes.filter(x => x.id !== n.id);
+      } else { state.dirty = true; await saveOpen(); }
+    }
+    state.openId = null; state.dirty = false;
+    NotesEditor.hideSuggest();
+    $('#editorLayer').hidden = true; document.body.style.overflow = ''; $('#edMenu').hidden = true;
+    $('#globalStatus').textContent = '';
+    render();
+  }
+  async function createAndOpen() {
+    const extra = {};
+    if (state.folderId && state.folderId !== L.NO_FOLDER) extra.folderId = state.folderId;
+    const n = newNote(extra);
+    if (state.tag) { n.html = '<p>#' + state.tag + ' </p>'; n.text = '#' + state.tag; n.tags = [state.tag]; }
+    state.notes.push(n);
+    try { await persistNote(n); } catch (e) { toast('Could not create note: ' + e.message); }
+    openEditor(n.id, true);
+  }
+
+  async function editorMenu(act) {
+    $('#edMenu').hidden = true; $('#edMenuBtn').setAttribute('aria-expanded', 'false');
+    const n = noteById(state.openId); if (!n) return;
+    if (act === 'archive') { state.dirty = true; await saveOpen(); await closeEditorKeep(); await archiveNote(n.id, !n.archived); }
+    else if (act === 'delete') {
+      if (!await dialog({ title: 'Move to Trash?', message: 'You can restore it from Trash later.', ok: 'Move to Trash', danger: true })) return;
+      state.dirty = true; await saveOpen(); await closeEditorKeep(); await trashNote(n.id);
+    } else if (act === 'move') {
+      const v = await dialog({ kind: 'select', title: 'Move to folder', options: folderOptions().concat([['__new__', '＋ New folder…']]), value: n.folderId || '', ok: 'Move' });
+      if (v == null) return;
+      let target = v || null;
+      if (v === '__new__') { const f = await createFolder(null); if (!f) return; target = f.id; }
+      n.folderId = target; state.dirty = true; await saveOpen(); toast('Moved');
+    } else if (act === 'pin') {
+      n.pinned = !n.pinned; state.dirty = true; await saveOpen(); paintEditorMeta(n);
+    }
+  }
+  async function closeEditorKeep() { // close without extra render churn when followed by another action
+    state.openId = null; state.dirty = false; await state.saving;
+    $('#editorLayer').hidden = true; document.body.style.overflow = '';
+    if (history.state && history.state.kind === 'editor') history.back();
+  }
+
+  /* ---------- settings screen ---------- */
+  function row(label, hint, control) {
+    return el('div', { class: 'set-row' }, el('div', {}, el('span', { text: label }), hint ? el('small', { text: hint }) : null), control);
+  }
+  function sel(options, value, onchange, label) {
+    const s = el('select', { 'aria-label': label, onchange: e => onchange(e.target.value) });
+    options.forEach(([v, l]) => s.append(el('option', { value: v, text: l, selected: v === value })));
+    s.value = value; return s;
+  }
+  function renderSettings() {
+    const p = state.prefs, root = $('#settingsView'); root.textContent = '';
+    const themeBtns = el('div', { class: 'theme-grid' }, THEMES.map(([id, dot, name]) => el('button', { class: 'theme-btn', 'aria-pressed': p.theme === id, onclick: () => { setPref('theme', id); renderSettings(); } }, el('span', { class: 'theme-dot', style: '--d:' + dot }), name)));
+    root.append(
+      el('section', { class: 'set-card' }, el('h2', { text: 'Appearance' }),
+        row('Mode', 'Light or dark', sel([['light', 'Light'], ['dark', 'Dark']], p.mode, v => { setPref('mode', v); renderSettings(); }, 'Mode')),
+        el('div', { class: 'set-row', style: 'display:block' }, el('div', { text: 'Theme', style: 'margin-bottom:8px' }), themeBtns)),
+      el('section', { class: 'set-card' }, el('h2', { text: 'Editor' }),
+        row('Default font', 'Only affects text without its own font — existing formatting is kept', sel(FONTS, p.fontFamily, v => setPref('fontFamily', v), 'Default font')),
+        row('Default font size', 'In pixels (12–28)', el('input', { type: 'number', min: 12, max: 28, value: p.fontSize, 'aria-label': 'Default font size', onchange: e => { const v = Math.min(28, Math.max(12, Number(e.target.value) || 16)); e.target.value = v; setPref('fontSize', v); } }))),
+      el('section', { class: 'set-card' }, el('h2', { text: 'Behavior' }),
+        row('Autosave', 'Save a moment after you stop typing. When off, notes save when you go back.', el('input', { type: 'checkbox', checked: p.autosave, 'aria-label': 'Autosave', onchange: e => setPref('autosave', e.target.checked) })),
+        row('Animations', 'Turn off for a still interface (also follows your system setting)', el('input', { type: 'checkbox', checked: p.motion !== 'off', 'aria-label': 'Animations', onchange: e => setPref('motion', e.target.checked ? 'on' : 'off') }))),
+      dataCard(),
+      el('section', { class: 'set-card about' }, el('h2', { text: 'About' }),
+        el('p', { text: 'MochiNote · version ' + APP_VERSION }),
+        el('p', { text: 'A calm, cozy, local-first notes app. Your notes live only in this browser — nothing is uploaded and there is no cloud sync.' }),
+        el('p', { text: 'Credits: built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or assets are used.' })));
+    storageInfo();
+  }
+  function dataCard() {
+    const lb = state.prefs.lastBackup;
+    return el('section', { class: 'set-card' }, el('h2', { text: 'Data management' }),
+      el('div', { class: 'set-row', style: 'display:block' }, el('p', { id: 'storageInfo', style: 'margin:0 0 8px;color:var(--muted)', text: 'Checking storage…' }),
+        el('p', { style: 'margin:0 0 12px;color:var(--muted)', text: lb ? 'Last backup exported: ' + new Date(lb).toLocaleString() : 'No backup exported yet.' }),
+        el('div', { class: 'btn-row' },
+          el('button', { class: 'btn-primary', onclick: exportBackup }, 'Export backup'),
+          el('button', { class: 'btn-ghost', onclick: () => importBackup('merge') }, 'Import (merge)'),
+          el('button', { class: 'btn-ghost', onclick: () => importBackup('replace') }, 'Restore (replace all)'))),
+      el('input', { type: 'file', id: 'importFile', accept: 'application/json,.json', hidden: true }));
+  }
+  async function storageInfo() {
+    const e = await NotesDB.estimate(); const t = $('#storageInfo'); if (!t) return;
+    let msg = NotesDB.isPersistent() ? 'Stored in this browser (IndexedDB).' : '⚠ Browser storage is unavailable — notes will be lost when you close this tab. Export a backup often.';
+    if (e && e.quota) msg += ' Using ' + (e.usage / 1048576).toFixed(1) + ' MB of about ' + Math.round(e.quota / 1048576) + ' MB available.';
+    msg += ' Clearing site data deletes your notes — export backups regularly.';
+    t.textContent = msg;
+  }
+
+  /* ---------- backup ---------- */
+  function exportBackup() {
+    const data = { app: 'little-notes', version: 1, exportedAt: new Date().toISOString(), notes: state.notes, folders: state.folders, settings: { theme: state.prefs.theme, mode: state.prefs.mode, fontFamily: state.prefs.fontFamily, fontSize: state.prefs.fontSize } };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = el('a', { href: URL.createObjectURL(blob), download: 'mochinote-backup-' + new Date().toISOString().slice(0, 10) + '.json' });
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    state.prefs.lastBackup = Date.now(); savePrefs(); toast('Backup downloaded (' + state.notes.length + ' notes)');
+    if (state.view === 'settings') renderSettings();
+  }
+  function importBackup(mode) {
+    const inp = $('#importFile'); inp.value = '';
+    inp.onchange = async () => {
+      const file = inp.files[0]; if (!file) return;
+      try {
+        if (file.size > 100 * 1048576) throw new Error('That file is too large to be a backup.');
+        let data; try { data = JSON.parse(await file.text()); } catch (_) { throw new Error('That file is not valid JSON.'); }
+        const res = L.validateImport(data, { sanitize: NotesEditor.sanitize });
+        const msg = res.notes.length + ' note(s) and ' + res.folders.length + ' folder(s) found' + (res.skippedNotes + res.skippedFolders ? ' (' + (res.skippedNotes + res.skippedFolders) + ' damaged item(s) will be skipped)' : '') + '.\n' + (mode === 'replace' ? 'This will REPLACE everything currently in the app.' : 'They will be added to your current notes.');
+        if (!await dialog({ title: mode === 'replace' ? 'Restore backup?' : 'Import backup?', message: msg, ok: mode === 'replace' ? 'Replace everything' : 'Import', danger: mode === 'replace' })) return;
+        if (mode === 'replace') {
+          await NotesDB.replaceAll(res);
+          state.notes = res.notes; state.folders = res.folders;
+        } else {
+          const nIds = new Set(state.notes.map(n => n.id)), fIds = new Set(state.folders.map(f => f.id)), remap = new Map();
+          res.folders.forEach(f => { if (fIds.has(f.id)) { const nid = L.uid(); remap.set(f.id, nid); f.id = nid; } });
+          res.folders.forEach(f => { if (f.parentId && remap.has(f.parentId)) f.parentId = remap.get(f.parentId); });
+          res.notes.forEach(n => { if (nIds.has(n.id)) n.id = L.uid(); if (n.folderId && remap.has(n.folderId)) n.folderId = remap.get(n.folderId); });
+          await NotesDB.putMany('folders', res.folders); await NotesDB.putMany('notes', res.notes);
+          state.notes = state.notes.concat(res.notes); state.folders = state.folders.concat(res.folders);
+        }
+        toast('Imported ' + res.notes.length + ' note(s)'); render();
+      } catch (e) { await dialog({ title: 'Import failed', message: e.message || 'Unknown error', ok: 'OK', hideCancel: true }); }
+    };
+    inp.click();
+  }
+
+  /* ---------- wiring ---------- */
+  /* Browser/Android Back: each screen the user can "go back" from is a history entry
+     (view/filter changes, the open menu, the open editor), so Back returns to the previous
+     page instead of leaving the app. */
+  const viewState = () => ({ kind: 'view', view: state.view, folderId: state.folderId, tag: state.tag });
+  const sameView = (a, b) => a && b && a.kind === 'view' && b.kind === 'view' && a.view === b.view && a.folderId === b.folderId && a.tag === b.tag;
+  function pushView() {
+    const cur = history.state, vs = viewState();
+    if (cur && cur.kind === 'sidebar') history.replaceState(vs, '');
+    else if (!sameView(cur, vs)) history.pushState(vs, '');
+  }
+  const sidebarIsOpen = () => $('#sidebar').classList.contains('open');
+  function openSidebar() { if (sidebarIsOpen()) return; history.pushState({ kind: 'sidebar' }, ''); $('#sidebar').classList.add('open'); $('#scrim').classList.add('show'); }
+  function closeSidebar() { $('#sidebar').classList.remove('open'); $('#scrim').classList.remove('show'); }
+  function requestCloseSidebar() { if (history.state && history.state.kind === 'sidebar') history.back(); else closeSidebar(); }
+  function requestCloseEditor() { if (history.state && history.state.kind === 'editor') history.back(); else closeEditor(); }
+  window.addEventListener('popstate', e => {
+    const s = e.state;
+    if (state.openId) { closeEditor(); return; }
+    if (sidebarIsOpen() && !(s && s.kind === 'sidebar')) { closeSidebar(); return; }
+    if (s && s.kind === 'view') { state.view = s.view; state.folderId = s.folderId; state.tag = s.tag; closeSidebar(); render(); }
+    else if (s && s.kind === 'editor') history.replaceState(viewState(), '');   // forward into a closed editor
+  });
+
+  function wire() {
+    $$('.nav-item').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
+    $('#openSidebar').onclick = openSidebar; $('#closeSidebar').onclick = requestCloseSidebar; $('#scrim').onclick = requestCloseSidebar;
+    $('#addFolderBtn').onclick = () => createFolder(null);
+    $('#newNote').onclick = createAndOpen;
+    $('#emptyTrash').onclick = emptyTrash;
+    let st; $('#search').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => { state.query = e.target.value; renderNotes(); }, 80); });
+    $('#sortSelect').onchange = e => { setPref('sort', e.target.value); renderNotes(); };
+    $('#pinnedFirst').onchange = e => { setPref('pinnedFirst', e.target.checked); renderNotes(); };
+    $('#recentOnly').onchange = e => { state.recentOnly = e.target.checked; renderNotes(); };
+    $('#viewGrid').onclick = () => { setPref('view', 'grid'); renderNotes(); };
+    $('#viewList').onclick = () => { setPref('view', 'list'); renderNotes(); };
+
+    // editor chrome
+    $('#edBack').onclick = requestCloseEditor;
+    $('#editorBackdrop').onclick = requestCloseEditor;
+    // Mobile: Aa toggle
+    const edFmtMob = $('#edFmt');
+    if (edFmtMob) edFmtMob.onclick = () => { const tb = $('#toolbar'); tb.hidden = !tb.hidden; edFmtMob.setAttribute('aria-pressed', String(!tb.hidden)); };
+    // Desktop: Format toggle
+    const edFmtDesk = $('#edFmtDesktop');
+    if (edFmtDesk) edFmtDesk.onclick = () => { const tb = $('#toolbar'); tb.hidden = !tb.hidden; edFmtDesk.setAttribute('aria-pressed', String(!tb.hidden)); };
+    // Desktop: Pin button
+    const edPinBtn = $('#edPin');
+    if (edPinBtn) edPinBtn.onclick = () => editorMenu('pin');
+    // Desktop: folder select
+    const edFolderSel = $('#edFolder');
+    if (edFolderSel) edFolderSel.onchange = async e => {
+      const n = noteById(state.openId); if (!n) return;
+      const v = e.target.value;
+      if (v === '__new__') { const f = await createFolder(null); if (!f) { e.target.value = n.folderId || ''; return; } n.folderId = f.id; }
+      else n.folderId = v || null;
+      state.dirty = true; await saveOpen(); toast('Moved');
+    };
+    $('#edTitle').addEventListener('input', markDirty);
+    $('#edMenuBtn').onclick = e => { e.stopPropagation(); const m = $('#edMenu'); m.hidden = !m.hidden; $('#edMenuBtn').setAttribute('aria-expanded', !m.hidden); };
+    $('#edMenu').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) editorMenu(b.dataset.act); });
+    document.addEventListener('click', e => { if (!e.target.closest('#edMenu, #edMenuBtn')) $('#edMenu').hidden = true; });
+
+    NotesEditor.init({
+      root: $('#editor'), body: $('#edBody'), suggestEl: $('#tagSuggest'),
+      onChange: markDirty, toast,
+      getKnownTags: () => allTags().map(t => t[0]),
+      askLink: () => dialog({ kind: 'prompt', title: 'Insert link', placeholder: 'https://example.com', ok: 'Add link' })
+    });
+
+    // keyboard
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if ($('#dlg').open) return;
+        if (!$('#edMenu').hidden) { $('#edMenu').hidden = true; return; }
+        if (state.openId) requestCloseEditor(); else requestCloseSidebar();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && state.openId) { e.preventDefault(); state.dirty = true; saveOpen(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !state.openId) { e.preventDefault(); if (state.view === 'settings') go('all'); $('#search').focus(); }
+      if (e.key === '/' && !state.openId && !/input|textarea|select/i.test(e.target.tagName) && !e.target.isContentEditable) { e.preventDefault(); $('#search').focus(); }
+    });
+    // data-loss protection: flush on hide/close, warn if a save is pending
+    const flush = () => { if (state.openId && state.dirty) saveOpen(); };
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', e => { if (state.openId && state.dirty) { flush(); e.preventDefault(); e.returnValue = ''; } });
+    window.matchMedia && window.matchMedia('(min-width: 900px)').addEventListener && window.matchMedia('(min-width: 900px)').addEventListener('change', closeSidebar);
+  }
+
+  /* ---------- boot ---------- */
+  async function purgeOldTrash() {
+    const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+    const old = state.notes.filter(n => n.trashed && n.trashedAt && n.trashedAt < cutoff);
+    if (!old.length) return;
+    // Trash is kept until the user empties it; we only mention notes that have been there a while.
+  }
+  async function boot() {
+    loadPrefs(); applyPrefs(); wire(); history.replaceState(viewState(), '');
+    const ok = await NotesDB.open();
+    try { state.notes = await NotesDB.getAll('notes'); state.folders = await NotesDB.getAll('folders'); }
+    catch (e) { toast('Could not read saved notes: ' + e.message, 7000); }
+    state.notes.forEach(n => { n.tags = n.tags || L.extractTags((n.title || '') + '\n' + (n.text || '')); if (!L.COLORS.includes(n.color)) n.color = 'default'; });
+    if (!ok) await dialog({ title: 'Storage unavailable', message: 'Your browser is blocking local storage, so notes will only last until this tab closes. Use Settings → Export backup to keep your work.', ok: 'Got it', hideCancel: true });
+    NotesDB.requestPersist();
+    render();
+  }
+  boot();
+  window.__mochiNote = { state, go, render };
+  window.__littleNotes = window.__mochiNote; // backwards compat
+})();
