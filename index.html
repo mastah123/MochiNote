@@ -16,14 +16,13 @@
     <div class="brand">
       <span class="logo" aria-hidden="true">✎</span>
       <span class="brand-name">MochiNote</span>
-      <button class="btn-text only-mobile" id="closeSidebar" aria-label="Close menu">Close</button>
     </div>
     <nav class="nav" id="nav">
-      <button class="nav-item" data-view="all"><span class="nav-ico">▤</span>All notes<span class="count" data-count="all"></span></button>
-      <button class="nav-item" data-view="pinned"><span class="nav-ico">📌</span>Pinned<span class="count" data-count="pinned"></span></button>
-      <button class="nav-item" data-view="archive"><span class="nav-ico">🗄</span>Archive<span class="count" data-count="archive"></span></button>
-      <button class="nav-item" data-view="trash"><span class="nav-ico">🗑</span>Trash<span class="count" data-count="trash"></span></button>
-      <button class="nav-item" data-view="settings"><span class="nav-ico">⚙</span>Settings</button>
+      <button class="nav-item" data-view="all"><span class="nav-ico"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></span>All notes<span class="count" data-count="all"></span></button>
+      <button class="nav-item" data-view="pinned"><span class="nav-ico"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z"/><path d="M12 14v6"/></svg></span>Pinned<span class="count" data-count="pinned"></span></button>
+      <button class="nav-item" data-view="archive"><span class="nav-ico"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5M10 12.5h4"/></svg></span>Archive<span class="count" data-count="archive"></span></button>
+      <button class="nav-item" data-view="trash"><span class="nav-ico"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></span>Trash<span class="count" data-count="trash"></span></button>
+      <button class="nav-item" data-view="settings"><span class="nav-ico"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></span>Settings</button>
     </nav>
     <div class="side-section">
       <div class="side-head"><span>Folders</span><button class="btn-text" id="addFolderBtn">+ New folder</button></div>
@@ -47,7 +46,7 @@
 
       <div class="home-head" id="homeHead">
         <div class="search-wrap">
-          <span class="search-ico" aria-hidden="true">🔍</span>
+          <span class="search-ico" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span>
           <input type="search" id="search" placeholder="Search notes, words, #tags..." aria-label="Search notes" autocomplete="off">
         </div>
         <button class="icon-btn only-mobile" id="searchBtn" aria-label="Search" aria-expanded="false" title="Search">
@@ -59,9 +58,10 @@
 
     <section id="notesView">
       <div class="hero" id="hero" hidden>
+        <button class="hero-edit" id="heroEdit" aria-label="Edit this card" title="Edit"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>
         <div class="hero-kicker">Your space</div>
-        <div class="hero-title">A little bit of everything <span aria-hidden="true">☁️</span></div>
-        <div class="hero-sub">Ideas, reminders &amp; random thoughts.</div>
+        <div class="hero-title" id="heroTitle">A little bit of everything ☁️</div>
+        <div class="hero-sub" id="heroSub">Ideas, reminders &amp; random thoughts.</div>
       </div>
 
       <div class="controls">
@@ -76,8 +76,6 @@
             <option value="title-desc">Title Z–A</option>
           </select>
         </label>
-        <label class="chk"><input type="checkbox" id="pinnedFirst"> Pinned first</label>
-        <label class="chk"><input type="checkbox" id="recentOnly"> Last 7 days</label>
         <div class="seg" role="group" aria-label="Notes view">
           <button id="viewGrid" class="seg-btn" aria-pressed="true" aria-label="Notes as grid" title="Grid view"><span class="seg-txt">Grid</span><svg class="seg-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button>
           <button id="viewList" class="seg-btn" aria-pressed="false" aria-label="Notes as list" title="List view"><span class="seg-txt">List</span><svg class="seg-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".8"/><circle cx="4.5" cy="12" r=".8"/><circle cx="4.5" cy="18" r=".8"/></svg></button>
@@ -108,7 +106,7 @@
 
     <section id="foldersView" hidden>
       <div class="page-head">
-        <button class="icon-btn" id="foldersBack" aria-label="Back">←</button>
+        <button class="icon-btn" id="foldersBack" aria-label="Back"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
         <h2>Folders</h2>
         <button class="btn-text" id="foldersNew">+ New folder</button>
       </div>
@@ -125,7 +123,7 @@
     <div class="editor-backdrop" id="editorBackdrop"></div>
     <article class="editor" id="editor" role="dialog" aria-modal="true" aria-label="Note editor">
       <header class="ed-top">
-        <button class="icon-btn" id="edBack" aria-label="Back">←</button>
+        <button class="icon-btn" id="edBack" aria-label="Back"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
         <!-- Desktop: text save pill centered -->
         <span class="save-pill desktop-only" id="edStatusDesktop" role="status" aria-live="polite"></span>
         <!-- Desktop: format + pin buttons -->
@@ -135,12 +133,13 @@
         <span class="ed-top-spacer mobile-only"></span>
         <button class="icon-btn txt mobile-only" id="edFmt" aria-pressed="false" aria-label="Formatting" title="Formatting">Aa</button>
         <div class="ed-actions">
-          <button class="icon-btn" id="edMenuBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false">⋮</button>
+          <button class="icon-btn" id="edMenuBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg></button>
           <div class="menu" id="edMenu" hidden>
-            <button data-act="pin" id="edPinItem">Pin</button>
-            <button data-act="move">Move to folder…</button>
-            <button data-act="archive">Archive</button>
-            <button data-act="delete" class="danger">Move to Trash</button>
+            <div class="menu-theme" id="edMenuTheme" role="group" aria-label="Note theme"><span>Theme</span><div id="edMenuColors" class="swatches"></div></div>
+            <button data-act="pin" id="edPinItem"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z"/><path d="M12 14v6"/></svg><span id="edPinLabel">Pin</span></button>
+            <button data-act="move"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg><span>Move to folder…</span></button>
+            <button data-act="archive"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5M10 12.5h4"/></svg><span>Archive</span></button>
+            <button data-act="delete" class="danger"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg><span>Move to Trash</span></button>
           </div>
         </div>
       </header>
@@ -234,6 +233,7 @@
       <h2 id="dlgTitle"></h2>
       <p id="dlgMsg"></p>
       <input id="dlgInput" hidden>
+      <input id="dlgInput2" hidden>
       <select id="dlgSelect" hidden></select>
       <div class="dlg-btns">
         <button value="cancel" class="btn-ghost" id="dlgCancel">Cancel</button>

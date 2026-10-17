@@ -134,8 +134,7 @@ const NOTE_HTML = '<div>Intro line</div><ul><li>apple</li><li>pear</li></ul><ol>
   ok('long-press on a sidebar folder opens its sheet', await sheetOpen(m) && (await m.textContent('#sheetTitle')).includes('Sub'));
   await m.keyboard.press('Escape'); await m.waitForTimeout(250);
   ok('sidebar stays open after closing the sheet', await m.locator('#sidebar.open').count() === 1 && !(await sheetOpen(m)));
-  await press(m, '#sideFolders .side-item >> text=No folder');
-  ok('"No folder" has no long-press menu', !(await sheetOpen(m)));
+  ok('sidebar no longer lists a "No folder" entry', (await m.locator('#sideFolders .side-item >> text=No folder').count()) === 0);
 
   /* ---------------- desktop unchanged ---------------- */
   const d = await open({ width: 1280, height: 800 });

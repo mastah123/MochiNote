@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 4.0.0**
+**Version 8.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -91,6 +91,31 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 
 ## Changelog
 
+### v8.0.0 — One icon set, single grid/list icon, note colours, editable "Your space"
+- **Icons:** the menu (All notes, Pinned, Archive, Trash, Settings), sidebar folders, back and more (⋮) buttons, the search icon, the ⋮ menu items and the long-press menus all use the same line icons as the home screen — phone and desktop. The pin mark on cards is the same icon everywhere.
+- **Grid/list (phone):** one icon that shows the view you would switch to; tap it to switch. Folders and notes keep their own toggle.
+- **Menu:** the Close button is removed (tap outside, or use the phone Back button).
+- **Note colours on home cards:** cards show their note's colour in every theme. On phones the colour (Theme) is picked from the ⋮ menu inside a note (desktop keeps the swatch row).
+- **"Your space" card:** has an edit (pencil) button, and long-pressing it opens a popup with Edit / Reset to default. The title and subtitle are saved in your preferences; leaving a field empty restores the default.
+- Tests: new `tests/e2e-batch11.js`; older suites updated for the removed close button and the new icons.
+
+### v7.0.0 — Long-press menus pop up from the pressed item (mobile only)
+- Long-pressing a note, folder or sidebar folder now opens a small popup menu **next to the pressed item** instead of a bottom sheet. It opens below the item when there is room, otherwise above, and lines up with the item's left or right edge. It always stays on screen and pops out from the item.
+- The pressed item is highlighted while the menu is open. Tapping outside, Esc or the phone Back button closes it. The menu choices are unchanged.
+- Tests: new `tests/e2e-batch10.js`.
+
+### v6.0.0 — Editor: no sideways scroll, checklist fix, fixed image size (phone and desktop)
+- **No horizontal overflow in notes:** the header stays fixed on top and the note area only scrolls up and down. Long words, links and images are wrapped or clipped instead of pushing the page sideways.
+- **Checklist fixed:** items no longer use a flex layout, which split bold/italic text into separate columns and made rows jump. Each item is now a normal text row with the circle placed beside it, so mixed formatting, wrapping and empty items stay stable. Tapping the circle still ticks it.
+- **Images have a fixed display size:** 200px tall on phones, 300px tall (up to 460px wide) on desktop. The whole picture is shown (not cropped) and every image takes the same space.
+- Tests: new `tests/e2e-batch9.js`.
+
+### v5.0.0 — Simpler controls (phone and desktop)
+- **Pinned notes are always first**, in every sort order. The "Pinned first" checkbox is removed.
+- **"Last 7 days" filter removed.**
+- **"No folder" removed from the menu.** It is still a choice when you move a note ("Move to…"), and deleting a folder still leaves its notes unfiled.
+- Tests: new `tests/e2e-batch7.js`; older suites updated for the removed controls.
+
 ### v4.0.0 — New mobile home (mobile only; desktop unchanged)
 - **Fixed top bar:** menu icon on the left, search icon on the right. "All notes" is gone from home. Tap the search icon to open the search field (✕ or Esc closes and restores the home).
 - **"Your space" card** at the top of home.
@@ -98,7 +123,7 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 - **Independent views:** folders and notes each have their own grid/list toggle; the folder choice is remembered.
 - **Recent notes row:** sort and grid/list are icon only and stay pinned under the fixed header, so only folders and notes scroll.
 - **Fixed-size note cards:** 2 columns in grid view, fixed-height rows in list view; long words and tags are clipped so nothing overflows or scrolls sideways. Pinned cards show a pin icon.
-- "Pinned first" and "Last 7 days" are hidden on phones for now (removed on all screens in a later version).
+- "Pinned first" and "Last 7 days" were hidden on phones (fully removed in v5.0.0).
 - Tests: new `tests/e2e-batch6.js`.
 
 ### v3.0.0 — Bottom format bar, 💡 callout cards, copy keeps numbering (mobile only)

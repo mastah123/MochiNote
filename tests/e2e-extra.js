@@ -58,7 +58,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
   await openSB(); ok('folder renamed', await page.locator('#sideFolders button:has-text("Job")').count() === 1);
   await openSB(); await page.click('.folder-tools button:text-is("Delete")'); await page.click('#dlgOk'); await page.waitForTimeout(300);
   await openSB(); await page.click('[data-view=all]'); await page.waitForTimeout(250);
-  await openSB(); ok('deleting folder keeps its notes (moved to no folder)', await page.locator('.note', { hasText: 'In reports' }).count() === 1 && await page.locator('#sideFolders button:has-text("Job")').count() === 0); await page.click('#closeSidebar');
+  await openSB(); ok('deleting folder keeps its notes (moved to no folder)', await page.locator('.note', { hasText: 'In reports' }).count() === 1 && await page.locator('#sideFolders button:has-text("Job")').count() === 0); await page.evaluate(() => document.getElementById('scrim').click());
   // animations setting
   await openSB(); await page.click('[data-view=settings]'); await page.uncheck('input[aria-label=Animations]');
   ok('animations setting applies', await page.evaluate(() => document.documentElement.dataset.motion) === 'off'); await page.reload();

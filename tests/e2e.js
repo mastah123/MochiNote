@@ -13,9 +13,8 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   const page = await ctx.newPage(); const errs = [];
   // Format bar is bottom-docked on phones and closes when you tap into the text: reopen it when a test needs it.
   const ensureTb = async () => { if (!(await page.locator('#toolbar').isVisible()) && (await page.locator('#edFmt').isVisible())) await page.click('#edFmt'); };
-  // Phones: search is behind the header icon, and 'Pinned first' / 'Last 7 days' no longer have visible controls (removed in a later batch).
+  // Phones: search is behind the header icon.
   const openSearch = async () => { if (!(await page.locator('#search').isVisible())) await page.click('#searchBtn'); };
-  const setPinnedFirst = v => page.evaluate(x => { const c = document.getElementById('pinnedFirst'); c.checked = x; c.dispatchEvent(new Event('change')); }, v);
 
 
   page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
@@ -58,7 +57,7 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   await page.click('#openSidebar'); await page.click('#addFolderBtn'); await page.fill('#dlgInput', 'Projects'); await page.click('#dlgOk');
   await page.click('#addFolderBtn'); await page.fill('#dlgInput', 'Personal'); await page.click('#dlgOk');
   ok('folders created', await page.locator('#sideFolders .side-item', { hasText: 'Projects' }).count() >= 1);
-  await page.click('#closeSidebar');
+  await page.evaluate(() => document.getElementById('scrim').click());
   await page.click('.note'); await page.click('#edMenuBtn'); await page.click('[data-act=move]'); await page.selectOption('#dlgSelect', { label: 'Projects' }); await page.click('#dlgOk'); await page.waitForSelector('#dlg', { state: 'hidden' }); await page.waitForTimeout(150);
   await page.click('#edBack'); await page.waitForSelector('#editorLayer', { state: 'hidden' }); await page.waitForSelector('.folder-card'); await settle(page);
   const fc = await page.$$eval('.folder-card', e => e.map(x => x.textContent)); ok('folder card shows 1 note', fc.some(x => x === 'Projects1 note'), JSON.stringify(fc));
@@ -70,7 +69,6 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
   await openSearch(); await page.fill('#search', 'projects'); await page.waitForTimeout(200); ok('search folder name', (await titles()).join() === 'Trip plan');
   await openSearch(); await page.fill('#search', 'zeb'); await page.waitForTimeout(200); ok('search title', (await titles()).join() === 'Zebra');
   await openSearch(); await page.fill('#search', ''); await page.waitForTimeout(200);
-  await setPinnedFirst(false);
   await page.selectOption('#sortSelect', 'title-asc'); ok('sort A-Z', (await titles()).join() === 'Alpha groceries,Trip plan,Zebra');
   await page.selectOption('#sortSelect', 'title-desc'); ok('sort Z-A', (await titles()).join() === 'Zebra,Trip plan,Alpha groceries');
   await page.selectOption('#sortSelect', 'created-asc'); ok('sort created oldest', (await titles()).join() === 'Trip plan,Alpha groceries,Zebra');
@@ -84,7 +82,7 @@ const results = []; const ok = (n, c, extra) => { results.push([n, !!c]); consol
 
   // pin/archive/trash/restore/delete
   await page.click('.note >> text=Zebra'); await page.click('#edMenuBtn'); await page.click('[data-act=pin]'); await page.waitForTimeout(300); await page.click('#edBack');
-  await setPinnedFirst(true); ok('pinned first', (await titles())[0] === 'Zebra');
+  ok('pinned first', (await titles())[0] === 'Zebra');
   await page.click('#openSidebar'); await page.click('[data-view=pinned]'); ok('pinned view', (await titles()).join() === 'Zebra');
   await page.click('#openSidebar'); await page.click('[data-view=all]');
   await page.click('.note >> text=Zebra'); await page.click('#edMenuBtn'); await page.click('[data-act=archive]');

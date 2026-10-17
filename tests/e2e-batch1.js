@@ -24,10 +24,10 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   for (let i = 0; i < 6; i++) { await page.keyboard.type('abc'); seen.add(await pos()); await page.waitForTimeout(120); }
   await page.waitForTimeout(700); seen.add(await pos()); ok('header buttons never move while Saving…/Saved', seen.size === 1, [...seen].join(' / '));
   // More menu contents
-  await page.click('#edMenuBtn'); const items = await page.$$eval('#edMenu button', e => e.map(x => x.textContent));
-  ok('More = ⋮ icon', (await page.textContent('#edMenuBtn')).trim() === '⋮');
+  await page.click('#edMenuBtn'); const items = await page.$$eval('#edMenu [data-act]', e => e.map(x => x.textContent.trim()));
+  ok('More = ⋮ icon', (await page.textContent('#edMenuBtn')).trim() === '' && await page.locator('#edMenuBtn svg').count() === 1);
   ok('More has Pin, Move, Archive, Trash only', items.join('|') === 'Pin|Move to folder…|Archive|Move to Trash', items.join('|'));
-  ok('no folder dropdown / colour swatches in note', await page.locator('#edFolder:visible, #edColors:visible, .swatch:visible').count() === 0);
+  ok('no folder dropdown / colour row under the title (colours now live in the ⋮ menu)', await page.locator('#edFolder:visible, #edColors:visible, #edMeta:visible').count() === 0);
   await page.click('[data-act=pin]'); await page.waitForTimeout(400); await page.click('#edMenuBtn'); ok('Pin lives in More and toggles to Unpin', (await page.textContent('#edPinItem')) === 'Unpin'); await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
   // no spare space at the bottom of the editor

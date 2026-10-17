@@ -79,8 +79,8 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await m.selectOption('#sortSelect', 'title-asc'); await m.waitForTimeout(200);
   ok('changing sort re-orders and relabels ("Notes")', (await m.textContent('#notesLabel')) === 'Notes' && (await titles(m))[0] === 'Pinned idea', (await titles(m)).slice(0, 4).join('|'));
   await m.selectOption('#sortSelect', 'edited'); await m.waitForTimeout(150);
-  ok('grid / list are icons (no text)', await vis(m, '#viewGrid .seg-ico') && !(await vis(m, '#viewGrid .seg-txt')) && await vis(m, '#viewList .seg-ico'));
-  ok('pinned-first / last-7-days checkboxes are not shown on phones', !(await vis(m, '#pinnedFirst')) && !(await vis(m, '#recentOnly')));
+  ok('grid / list is one icon (shows the view you would switch to), no text', !(await vis(m, '#viewGrid')) && await vis(m, '#viewList .seg-ico') && !(await vis(m, '#viewList .seg-txt')));
+  ok('pinned-first / last-7-days controls are gone', (await m.locator('#pinnedFirst, #recentOnly').count()) === 0);
 
   // fixed header + sticky notes row; only content scrolls
   await m.evaluate(() => window.scrollTo(0, 900)); await m.waitForTimeout(250);
@@ -141,14 +141,14 @@ const results = []; const ok = (n, c, x) => { results.push(!!c); console.log((c 
   await seed(d); await d.waitForTimeout(300);
   ok('desktop: "All notes" title still shown', await vis(d, '#viewTitle') && (await d.textContent('#viewTitle')) === 'All notes');
   ok('desktop: search field is visible, no search icon / menu icon', await vis(d, '#search') && !(await vis(d, '#searchBtn')) && !(await vis(d, '#openSidebar')));
-  ok('desktop: Sort / Grid / List keep their text, checkboxes still there', await vis(d, '.sel-txt') && await vis(d, '#viewGrid .seg-txt') && !(await vis(d, '#viewGrid .seg-ico')) && await vis(d, '#pinnedFirst') && await vis(d, '#recentOnly'));
+  ok('desktop: Sort / Grid / List keep their text', await vis(d, '.sel-txt') && await vis(d, '#viewGrid .seg-txt') && !(await vis(d, '#viewGrid .seg-ico')));
   ok('desktop: no hero card, no folder header, no notes label', !(await vis(d, '#hero')) && !(await vis(d, '.folder-head')) && !(await vis(d, '#notesLabel')));
   ok('desktop: all top-level folders still shown (not limited to 2)', (await d.locator('#folderStrip .folder-card').count()) === 5 && await vis(d, '#folderStrip .folder-strip-head'));
   ok('desktop: folder cards have no icon', !(await vis(d, '#folderStrip .f-ico')));
   ok('desktop: header is not fixed', (await d.$eval('#headFixed', e => getComputedStyle(e).position)) === 'static');
   const dn = await d.$$eval('#notes .note', els => els.slice(0, 4).map(e => Math.round(e.getBoundingClientRect().height)));
   ok('desktop: note cards keep their natural (not fixed) height and plain preview', new Set(dn).size > 1 && await vis(d, '#notes .note .n-prev') && !(await vis(d, '#notes .note .n-rich')), JSON.stringify(dn));
-  ok('desktop: pinned card keeps the 📌 emoji', await vis(d, '.pin-mark .pm-emoji') && !(await vis(d, '.pin-mark .pm-ico')));
+  ok('desktop: pinned card uses the same pin icon as phones', await vis(d, '.pin-mark .pm-ico') && !(await vis(d, '.pin-mark .pm-emoji')));
   const dc = await d.$$eval('#notes .note', els => els.slice(0, 5).map(e => Math.round(e.getBoundingClientRect().x)));
   ok('desktop: grid still auto-fills more than 2 columns', new Set(dc).size >= 3, JSON.stringify(dc));
 
