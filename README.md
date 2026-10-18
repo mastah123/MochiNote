@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 27.0.0**
+**Version 28.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -90,6 +90,12 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v28.0.0 — Fixes and ordering
+- Pressing Enter inside a link card no longer duplicates it; it starts a new line under the card (also works with phone keyboards).
+- “+” options are now Image, Link, Card, Prompt, Code.
+- List options are now Numbered, Bulleted, Outdent/Indent (nested), Checklist.
+- Checklist: rounded square checkbox with a check mark; the drag handle sits inside the row next to the box so it is easy to grab; a bullet or numbered list inside a checklist item no longer picks up checkbox styling; nested checklists get handles and × too.
 
 ### v27.0.0 — Code, prompt and link cards
 - New **Code** and **Prompt** cards under “+”: a card you type or paste into, with a copy icon in its top-right corner (Enter adds a line inside the card, Enter on an empty last line leaves it, Tab indents).

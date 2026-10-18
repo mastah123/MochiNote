@@ -220,6 +220,21 @@ const NotesEditor = (function () {
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
   }
   const inCopyZone = (card, e) => { const r = card.getBoundingClientRect(); return e.clientX > r.right - 48 && e.clientY < r.top + 40; };
+  const linkCardOf = n => { const el = n && (n.nodeType === 1 ? n : n.parentElement); const c = el && el.closest && el.closest('.linkcard'); return c && body.contains(c) ? c : null; };
+  // Enter inside a link card must not split / copy the card: it just starts a fresh line under it
+  function onEnterInLinkCard(e) {
+    const r = currentRange(); if (!r) return false;
+    const card = linkCardOf(r.startContainer); if (!card) return false;
+    e.preventDefault();
+    let nxt = card.nextElementSibling;
+    if (!(nxt && nxt.tagName === 'DIV' && !nxt.getAttribute('class') && !nxt.textContent.trim() && !nxt.querySelector('img,ul,ol'))) { nxt = document.createElement('div'); nxt.appendChild(document.createElement('br')); card.after(nxt); }
+    caretIn(nxt, false); changed(); return true;
+  }
+  function onBeforeInput(e) {
+    if (e.target !== body || e.inputType !== 'insertParagraph') return;
+    if (onEnterInLinkCard(e)) return;
+    onEnterInTextCard(e);
+  }
   // Enter inside a code / prompt card adds a line inside it; Enter on an empty last line leaves the card
   function onEnterInTextCard(e) {
     const r = currentRange(); if (!r) return false;
@@ -492,7 +507,7 @@ const NotesEditor = (function () {
     const lc = e.target && e.target.classList && e.target.classList.contains('linkcard') ? e.target : null;
     if (lc) { const a0 = lc.querySelector('a[href]'); if (a0) window.open(a0.href, '_blank', 'noopener'); return; }
     const li = e.target;
-    if (li && li.tagName === 'LI' && li.parentElement.classList.contains('checklist') && e.clientX - li.getBoundingClientRect().left < 28) {
+    if (li && li.tagName === 'LI' && li.parentElement.classList.contains('checklist') && (() => { const dx = e.clientX - li.getBoundingClientRect().left; return dx >= 22 && dx < 52; })()) {
       li.classList.toggle('done'); changed(); clScheduleLayout();
     }
     const a = e.target.closest && e.target.closest('a');
@@ -629,7 +644,7 @@ const NotesEditor = (function () {
 
   function onKeydown(e) {
     if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { const r0 = currentRange(); if (r0 && textCardOf(r0.startContainer)) { e.preventDefault(); document.execCommand('insertText', false, '  '); changed(); return; } }
-    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { if (onEnterInTextCard(e)) return; if (lineAboveTopList(e, true)) return; maybeExitCallout(e); return; }
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { const r1 = currentRange(); if (r1 && (textCardOf(r1.startContainer) || linkCardOf(r1.startContainer))) return; if (lineAboveTopList(e, true)) return; maybeExitCallout(e); return; }
     if (e.key === 'ArrowUp' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { lineAboveTopList(e, false); return; }
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
@@ -650,7 +665,8 @@ const NotesEditor = (function () {
     sort: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5v14M7 19l-3-3M7 19l3-3"/><path d="M14 6h6M14 12h4.5M14 18h3"/></svg>'
   };
   const clScheduleLayout = () => { if (CL.raf) return; CL.raf = requestAnimationFrame(() => { CL.raf = 0; clLayout(); }); };
-  const clLists = () => Array.from(body.querySelectorAll('ul.checklist')).filter(u => !(u.parentElement && u.parentElement.closest('li')));
+  const clLists = () => Array.from(body.querySelectorAll('ul.checklist'));
+  const clTop = ul => !(ul.parentElement && ul.parentElement.closest('li'));
   const clItems = ul => Array.from(ul.children).filter(c => c.tagName === 'LI');
   function clMakeHead(ul) {
     const el = document.createElement('div'); el.className = 'cl-head';
@@ -713,22 +729,26 @@ const NotesEditor = (function () {
     CL.layer.classList.toggle('ro', ro);
     const lists = clLists(), liveL = new Set();
     lists.forEach(ul => {
-      let H = null; CL.heads.forEach(x => { if (x.ul === ul) H = x; });
-      if (!H) H = clMakeHead(ul);
       const r = ul.getBoundingClientRect(); if (!r.width) return;
+      let H = null;
+      if (clTop(ul)) {
+      CL.heads.forEach(x => { if (x.ul === ul) H = x; });
+      if (!H) H = clMakeHead(ul);
       H.el.style.left = Math.round(r.left - sr.left) + 'px'; H.el.style.top = Math.round(r.top - sr.top + st - 42) + 'px'; H.el.style.width = Math.round(r.width) + 'px';
-      const items = clItems(ul), done = items.filter(li => li.classList.contains('done')).length;
-      H.count.textContent = done + '/' + items.length;
-      H.fill.style.width = (items.length ? Math.round(done / items.length * 100) : 0) + '%';
+      const hItems = clItems(ul), done = hItems.filter(li => li.classList.contains('done')).length;
+      H.count.textContent = done + '/' + hItems.length;
+      H.fill.style.width = (hItems.length ? Math.round(done / hItems.length * 100) : 0) + '%';
       if (document.activeElement !== H.title) H.title.value = ul.getAttribute('data-title') || '';
       H.title.readOnly = ro;
       H.el.dataset.live = '1'; liveL.add(H);
+      }
+      const items = clItems(ul);
       items.forEach(li => {
         let C = null; CL.ctls.forEach(x => { if (x.li === li) C = x; });
         if (!C) C = clMakeCtl(li);
         const lr = li.getBoundingClientRect(), lh = parseFloat(getComputedStyle(li).lineHeight) || 24;
-        const top = Math.round(lr.top - sr.top + st + 3 + lh / 2 - 12) + 'px';
-        C.h.style.left = Math.round(lr.left - sr.left - 19) + 'px'; C.h.style.top = top;
+        const top = Math.round(lr.top - sr.top + st + 3 + lh / 2 - 14) + 'px';
+        C.h.style.left = Math.round(lr.left - sr.left) + 'px'; C.h.style.top = top;
         C.x.style.left = Math.round(lr.right - sr.left - 26) + 'px'; C.x.style.top = top;
         C.live = true;
       });
@@ -837,6 +857,7 @@ const NotesEditor = (function () {
     root.addEventListener('input', e => { if (e.target === body) onBodyInput(e); });
     root.addEventListener('click', e => { if (e.target.closest && body.contains(e.target)) onBodyClick(e); });
     root.addEventListener('mousedown', e => { const t = e.target; if (t && t.nodeType === 1 && t.matches && t.matches(TEXTCARD) && inCopyZone(t, e)) e.preventDefault(); });
+    root.addEventListener('beforeinput', onBeforeInput);
     root.addEventListener('paste', e => { if (e.target === body || body.contains(e.target)) onPaste(e); });
     root.addEventListener('copy', e => { if (e.target === body || inBody(e.target)) onCopyCut(e); });
     root.addEventListener('cut', e => { if (e.target === body || inBody(e.target)) onCopyCut(e); });
