@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 25.0.0**
+**Version 27.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -47,7 +47,7 @@ js/logic.js       pure helpers: tags, search/filter, sorting, import validation 
 js/db.js          IndexedDB wrapper (notes + folders), with an in-memory fallback
 js/editor.js      contenteditable editor, toolbar, checklists, sanitizer, tag suggestions
 js/app.js         UI controller: state, rendering, folders, settings, backup
-tests/            logic.test.js (Node), e2e*.js (Playwright)
+tests/            logic.test.js (Node), e2e*.js (Playwright) — kept out of the zips since v27
 ```
 
 `logic.js` and `db.js` have no UI dependencies, which keeps the app easy to wrap later as a browser extension
@@ -90,6 +90,17 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v27.0.0 — Code, prompt and link cards
+- New **Code** and **Prompt** cards under “+”: a card you type or paste into, with a copy icon in its top-right corner (Enter adds a line inside the card, Enter on an empty last line leaves it, Tab indents).
+- A link added from “+ → Link” or a URL pasted on an empty line becomes a **link card** (site name and address; tap the card to open it). A link added over selected text stays an inline link. The app is local-only, so cards don't fetch the page itself.
+- Note previews on the home screen show these cards too.
+- The zips no longer include the tests folder.
+
+### v26.0.0 — Checklist
+- Smaller checkbox, a drag handle on the left to reorder items and an × on the right to remove one.
+- Each checklist has a title, a sort button (completed last / first), a done count like 3/6 and a faint progress bar behind that header.
+- Works the same on phone and desktop.
 
 ### v25.0.0 — Editor basics
 - Images fit the note area: they use the available width and a taller height limit, never cropped or stretched (phone and desktop).

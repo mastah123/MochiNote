@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '25.0.0';
+  const APP_VERSION = '27.0.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -298,6 +298,15 @@
           if (t) lines.push({ k: 'callout', t, sticker: ch.getAttribute('data-sticker') || '' });
           return;
         }
+        if (tag === 'DIV' && /(^|\s)(codecard|promptcard|linkcard)(\s|$)/.test(ch.className)) {
+          flush();
+          let t;
+          if (ch.classList.contains('linkcard')) t = ch.getAttribute('data-host') || ch.textContent;
+          else { const c = ch.cloneNode(true); c.querySelectorAll('br').forEach(b => b.replaceWith('\n')); t = c.textContent.split('\n').map(s => s.trim()).filter(Boolean)[0] || ''; }
+          t = String(t).replace(/\s+/g, ' ').trim();
+          if (t) lines.push({ k: ch.classList.contains('codecard') ? 'code' : ch.classList.contains('promptcard') ? 'prompt' : 'link', t });
+          return;
+        }
         if (BLOCK.test(tag)) { flush(); walk(ch); flush(); return; }
         walk(ch);
       });
@@ -310,7 +319,7 @@
     if (!lines.length) return null;
     const box = el('div', { class: 'n-rich' });
     lines.forEach(l => box.append(el('div', { class: 'pl pl-' + l.k + (l.done ? ' done' : '')},
-      el('span', { class: 'pl-m', 'aria-hidden': 'true', text: l.k === 'ul' ? '•' : l.k === 'ol' ? l.n + '.' : l.k === 'check' ? (l.done ? '●' : '○') : l.k === 'callout' ? (l.sticker || '') : '' }),
+      el('span', { class: 'pl-m', 'aria-hidden': 'true', text: l.k === 'ul' ? '•' : l.k === 'ol' ? l.n + '.' : l.k === 'check' ? (l.done ? '●' : '○') : l.k === 'callout' ? (l.sticker || '') : l.k === 'code' ? '</>' : l.k === 'prompt' ? '✦' : l.k === 'link' ? '↗' : '' }),
       el('span', { class: 'pl-t', text: l.t }))));
     if (more) box.append(el('div', { class: 'pl pl-more', 'aria-hidden': 'true', text: '…' }));
     return box;

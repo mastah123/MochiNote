@@ -49,9 +49,10 @@ const NotesEditor = (function () {
         let ok = false;
         if (n === 'style') { const c = cleanStyle(v); if (c) { ch.setAttribute('style', c); ok = true; } }
         else if (n === 'class' && (tag === 'UL' || tag === 'LI' || tag === 'DIV')) {
-          const c = v.split(/\s+/).filter(x => (tag === 'UL' && x === 'checklist') || (tag === 'LI' && x === 'done') || (tag === 'DIV' && x === 'callout'));
+          const c = v.split(/\s+/).filter(x => (tag === 'UL' && x === 'checklist') || (tag === 'LI' && x === 'done') || (tag === 'DIV' && /^(callout|codecard|promptcard|linkcard)$/.test(x)));
           if (c.length) { ch.setAttribute('class', c.join(' ')); ok = true; }
         }
+        else if (tag === 'UL' && n === 'data-title' && ch.classList.contains('checklist')) { const t = v.replace(/[<>]/g, '').trim().slice(0, 60); if (t) { ch.setAttribute('data-title', t); ok = true; } }
         else if (tag === 'DIV' && n === 'data-sticker' && /^[^<>"'&\s]{1,8}$/.test(v)) ok = true;
         else if (tag === 'OL' && n === 'start' && /^\d{1,4}$/.test(v)) ok = true;
         else if (tag === 'A' && n === 'href') { const u = safeUrl(v); if (u) { ch.setAttribute('href', u); ok = true; } }
@@ -67,6 +68,13 @@ const NotesEditor = (function () {
         ch.setAttribute('target', '_blank'); ch.setAttribute('rel', 'noopener noreferrer');
       }
       if (tag === 'DIV' && ch.hasAttribute('data-sticker') && !ch.classList.contains('callout')) ch.removeAttribute('data-sticker');
+      if (tag === 'DIV') {
+        if (ch.classList.contains('linkcard')) {      // a link card needs its link; the shown host is derived from it
+          const a = ch.querySelector('a[href]'); let host = '';
+          try { host = a ? new URL(a.getAttribute('href')).hostname.replace(/^www\./, '') : ''; } catch (_) {}
+          if (host) ch.setAttribute('data-host', host); else { ch.removeAttribute('class'); ch.removeAttribute('data-host'); }
+        } else ch.removeAttribute('data-host');
+      }
       if (tag === 'IMG' && !ch.getAttribute('src')) ch.remove();
     });
   }
@@ -106,7 +114,7 @@ const NotesEditor = (function () {
   const changed = () => opts.onChange();
   function exec(cmd, val) { focusBody(); const jf = /^justify/.test(cmd); if (jf) document.execCommand('styleWithCSS', false, true); const ok = document.execCommand(cmd, false, val); if (jf) document.execCommand('styleWithCSS', false, false); saveRange(); changed(); updateToolbar(); return ok; }
 
-  function uncheck(uls) { uls.forEach(u => { u.classList.remove('checklist'); u.querySelectorAll('li.done').forEach(li => li.classList.remove('done')); if (!u.getAttribute('class')) u.removeAttribute('class'); }); }
+  function uncheck(uls) { uls.forEach(u => { u.classList.remove('checklist'); u.removeAttribute('data-title'); u.querySelectorAll('li.done').forEach(li => li.classList.remove('done')); if (!u.getAttribute('class')) u.removeAttribute('class'); }); }
   function toggleBullet() {
     focusBody();
     const uls = listsInSelection('ul');
@@ -166,6 +174,69 @@ const NotesEditor = (function () {
     });
     if (!card.firstChild) { const d = document.createElement('div'); d.appendChild(document.createElement('br')); card.appendChild(d); }
     caretIn(card.lastChild, true); changed(); updateToolbar();
+  }
+
+  /* ---------- code / prompt / link cards ---------- */
+  const TEXTCARD = '.codecard, .promptcard';
+  const textCardOf = n => { const el = n && (n.nodeType === 1 ? n : n.parentElement); const c = el && el.closest && el.closest(TEXTCARD); return c && body.contains(c) ? c : null; };
+  const cardText = card => { const c = card.cloneNode(true); c.querySelectorAll('br').forEach(b => b.replaceWith('\n')); return c.textContent.replace(/\n$/, ''); };
+  // put a block card below the current line (or in place of an empty one) and keep a free line under it for typing
+  function placeBlockCard(card, r) {
+    let b = r ? topBlock(r.startContainer) : null;
+    if (!b || b === body) body.appendChild(card);
+    else if (/^(DIV|P)$/.test(b.tagName) && !b.classList.contains('callout') && !b.matches('.codecard, .promptcard, .linkcard') && !b.textContent.trim() && !b.querySelector('img,ul,ol')) b.replaceWith(card);
+    else b.after(card);
+    if (!card.nextSibling) { const d = document.createElement('div'); d.appendChild(document.createElement('br')); card.after(d); }
+  }
+  function toggleTextCard(kind) {
+    focusBody();
+    let r = currentRange(); if (!r) { caretIn(body, true); r = currentRange(); }
+    const ex = textCardOf(r.startContainer);
+    if (ex) {                                                       // second press: back to normal lines
+      const frag = document.createDocumentFragment();
+      cardText(ex).split('\n').forEach(l => { const d = document.createElement('div'); if (l) d.textContent = l; else d.appendChild(document.createElement('br')); frag.appendChild(d); });
+      const lastD = frag.lastChild; ex.replaceWith(frag); if (lastD) caretIn(lastD, true);
+      changed(); updateToolbar(); return;
+    }
+    const card = document.createElement('div'); card.className = kind;
+    const picked = r.collapsed ? '' : r.toString();
+    if (picked) { const lines = picked.split('\n'); lines.forEach((l, i) => { if (i) card.appendChild(document.createElement('br')); card.appendChild(document.createTextNode(l)); }); r.deleteContents(); }
+    else card.appendChild(document.createElement('br'));
+    placeBlockCard(card, r);
+    caretIn(card, true); changed(); updateToolbar();
+  }
+  function insertLinkCard(url) {
+    let host = ''; try { host = new URL(url).hostname.replace(/^www\./, ''); } catch (_) {}
+    const r = currentRange();
+    const card = document.createElement('div'); card.className = 'linkcard'; card.setAttribute('data-host', host);
+    const a = document.createElement('a'); a.href = url; a.textContent = url.replace(/^https?:\/\//i, '').replace(/\/$/, ''); card.appendChild(a);
+    placeBlockCard(card, r);
+    const nxt = card.nextSibling; if (nxt) caretIn(nxt, false);
+    changed();
+  }
+  function copyText(text) {
+    const done = () => opts.toast('Copied');
+    const fallback = () => { const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (_) { opts.toast('Could not copy'); } t.remove(); const s = savedRange; if (s) { focusBody(); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
+  const inCopyZone = (card, e) => { const r = card.getBoundingClientRect(); return e.clientX > r.right - 48 && e.clientY < r.top + 40; };
+  // Enter inside a code / prompt card adds a line inside it; Enter on an empty last line leaves the card
+  function onEnterInTextCard(e) {
+    const r = currentRange(); if (!r) return false;
+    const card = textCardOf(r.startContainer); if (!card) return false;
+    e.preventDefault();
+    const atEnd = r.collapsed && (() => { const t = document.createRange(); t.selectNodeContents(card); t.setStart(r.startContainer, r.startOffset); return t.toString().replace(/\n/g, '') === ''; })();
+    if (atEnd && cardText(card).endsWith('\n')) {
+      for (let n = card.lastChild; n;) {                       // drop the blank line(s) at the end of the card
+        if (n.nodeName === 'BR') { const p = n.previousSibling; n.remove(); n = p; }
+        else if (n.nodeType === 3 && /\n$/.test(n.textContent)) { n.textContent = n.textContent.replace(/\n+$/, ''); if (!n.textContent) { const p = n.previousSibling; n.remove(); n = p; } else break; }
+        else break;
+      }
+      if (!card.firstChild) card.appendChild(document.createElement('br'));
+      let nxt = card.nextSibling; if (!nxt) { nxt = document.createElement('div'); nxt.appendChild(document.createElement('br')); card.after(nxt); }
+      caretIn(nxt, false); changed(); return true;
+    }
+    document.execCommand('insertLineBreak'); changed(); return true;
   }
   // Enter on an empty last line of a callout leaves the card (otherwise you could never type below it).
   function maybeExitCallout(e) {
@@ -273,6 +344,7 @@ const NotesEditor = (function () {
     forceRestore(at);
     if (hadText) document.execCommand('createLink', false, url);
     else {
+      if (/^https?:/i.test(url)) { insertLinkCard(url); return; }
       const a = document.createElement('a'); a.href = url; a.textContent = url.replace(/^(https?:\/\/|mailto:)/i, '');
       document.execCommand('insertHTML', false, a.outerHTML + '&nbsp;');
     }
@@ -348,6 +420,7 @@ const NotesEditor = (function () {
         if (cmd === 'checklist') on = listsInSelection('ul').some(u => u.classList.contains('checklist'));
         if (/^h[123]$/.test(cmd)) { const s0 = sel(); const e0 = s0.anchorNode && (s0.anchorNode.nodeType === 1 ? s0.anchorNode : s0.anchorNode.parentElement); const hh = e0 && e0.closest && e0.closest('h1,h2,h3'); on = !!(hh && body.contains(hh) && hh.tagName.toLowerCase() === cmd); }
         if (cmd === 'callout') { const r0 = currentRange(); on = !!(r0 && calloutOf(r0.startContainer)); }
+        if (cmd === 'codeblock' || cmd === 'promptcard') { const r0 = currentRange(), tc = r0 && textCardOf(r0.startContainer); on = !!(tc && tc.classList.contains(cmd === 'codeblock' ? 'codecard' : 'promptcard')); }
       }
       b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
@@ -414,9 +487,13 @@ const NotesEditor = (function () {
       const cur = card.getAttribute('data-sticker') || '';
       openSticker(card, 'Card sticker', cur, s => setCardSticker(card, s)); return;
     }
+    const tc = e.target && e.target.nodeType === 1 && e.target.matches && e.target.matches(TEXTCARD) ? e.target : null;
+    if (tc && inCopyZone(tc, e)) { copyText(cardText(tc)); tc.classList.add('copied'); setTimeout(() => { tc.classList.remove('copied'); if (!tc.getAttribute('class')) tc.removeAttribute('class'); }, 1300); return; }
+    const lc = e.target && e.target.classList && e.target.classList.contains('linkcard') ? e.target : null;
+    if (lc) { const a0 = lc.querySelector('a[href]'); if (a0) window.open(a0.href, '_blank', 'noopener'); return; }
     const li = e.target;
-    if (li && li.tagName === 'LI' && li.parentElement.classList.contains('checklist') && e.clientX - li.getBoundingClientRect().left < 34) {
-      li.classList.toggle('done'); changed();
+    if (li && li.tagName === 'LI' && li.parentElement.classList.contains('checklist') && e.clientX - li.getBoundingClientRect().left < 28) {
+      li.classList.toggle('done'); changed(); clScheduleLayout();
     }
     const a = e.target.closest && e.target.closest('a');
     if (a && (e.ctrlKey || e.metaKey)) window.open(a.href, '_blank', 'noopener');
@@ -506,6 +583,9 @@ const NotesEditor = (function () {
     const cd = e.clipboardData;
     const html = cd.getData('text/html'), text = cd.getData('text/plain');
     const single = caretLineIsEmpty();
+    const r0 = currentRange(), inCard = r0 && textCardOf(r0.startContainer);
+    if (inCard && text) { document.execCommand('insertHTML', false, text.replace(/\r/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')); changed(); return; }
+    if (single && /^https?:\/\/\S+$/i.test(text.trim()) && safeUrl(text.trim())) { insertLinkCard(text.trim()); return; }
     if (html) {
       const clean = sanitize(html);
       const lists = listifyHtml(clean, single && !/\n/.test(text.trim())) || (/<(ul|ol)\b/i.test(clean) ? null : (text && listifyText(text, false)));
@@ -548,7 +628,8 @@ const NotesEditor = (function () {
   }
 
   function onKeydown(e) {
-    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { if (lineAboveTopList(e, true)) return; maybeExitCallout(e); return; }
+    if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { const r0 = currentRange(); if (r0 && textCardOf(r0.startContainer)) { e.preventDefault(); document.execCommand('insertText', false, '  '); changed(); return; } }
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { if (onEnterInTextCard(e)) return; if (lineAboveTopList(e, true)) return; maybeExitCallout(e); return; }
     if (e.key === 'ArrowUp' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { lineAboveTopList(e, false); return; }
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
@@ -559,8 +640,120 @@ const NotesEditor = (function () {
     else if (e.shiftKey && (e.key === '9' || e.key === '(')) { e.preventDefault(); toggleChecklist(); }
   }
 
+
+  /* ---------- checklist controls: title + progress header, drag handle, remove ----------
+     They live in an overlay layer next to the editable area (never inside the note HTML), positioned over each list. */
+  const CL = { layer: null, scroller: null, heads: new Set(), ctls: new Set(), raf: 0, mo: null, ro: null, drag: null, wired: false };
+  const CL_SVG = {
+    grip: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>',
+    x: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    sort: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5v14M7 19l-3-3M7 19l3-3"/><path d="M14 6h6M14 12h4.5M14 18h3"/></svg>'
+  };
+  const clScheduleLayout = () => { if (CL.raf) return; CL.raf = requestAnimationFrame(() => { CL.raf = 0; clLayout(); }); };
+  const clLists = () => Array.from(body.querySelectorAll('ul.checklist')).filter(u => !(u.parentElement && u.parentElement.closest('li')));
+  const clItems = ul => Array.from(ul.children).filter(c => c.tagName === 'LI');
+  function clMakeHead(ul) {
+    const el = document.createElement('div'); el.className = 'cl-head';
+    el.innerHTML = '<span class="cl-fill"></span><input class="cl-title" type="text" maxlength="60" placeholder="Checklist" aria-label="Checklist title" autocomplete="off" enterkeyhint="done"><button type="button" class="cl-sort" title="Sort: completed last" aria-label="Sort: completed last">' + CL_SVG.sort + '</button><span class="cl-count" aria-label="Completed items"></span>';
+    const H = { el, ul, title: el.querySelector('.cl-title'), fill: el.querySelector('.cl-fill'), count: el.querySelector('.cl-count'), sort: el.querySelector('.cl-sort') };
+    H.title.addEventListener('input', () => {
+      const v = H.title.value.replace(/[<>]/g, '').slice(0, 60);
+      if (v.trim()) H.ul.setAttribute('data-title', v); else H.ul.removeAttribute('data-title');
+      changed();
+    });
+    H.title.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault(); const li = clItems(H.ul)[0]; H.title.blur();
+      if (li) { focusBody(); const r = document.createRange(); r.selectNodeContents(li); r.collapse(true); const s = sel(); s.removeAllRanges(); s.addRange(r); saveRange(); }
+    });
+    H.sort.addEventListener('mousedown', ev => ev.preventDefault());
+    H.sort.addEventListener('click', () => {
+      const items = clItems(H.ul), isDone = li => li.classList.contains('done');
+      const doneLast = items.every((li, i) => i === 0 || !(isDone(items[i - 1]) && !isDone(li)));
+      const open = items.filter(li => !isDone(li)), done = items.filter(isDone);
+      (doneLast ? [...done, ...open] : [...open, ...done]).forEach(li => H.ul.append(li));
+      changed(); clLayout();
+    });
+    CL.layer.append(el); CL.heads.add(H); return H;
+  }
+  function clMakeCtl(li) {
+    const h = document.createElement('button'); h.type = 'button'; h.className = 'cl-h'; h.title = 'Drag to reorder'; h.setAttribute('aria-label', 'Drag to reorder'); h.innerHTML = CL_SVG.grip;
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'cl-x'; x.title = 'Remove item'; x.setAttribute('aria-label', 'Remove item'); x.innerHTML = CL_SVG.x;
+    const C = { li, h, x };
+    [h, x].forEach(b => b.addEventListener('mousedown', ev => ev.preventDefault()));
+    x.addEventListener('click', () => {
+      const ul = li.parentElement; li.remove();
+      if (ul && !clItems(ul).length) { const p = document.createElement('div'); p.innerHTML = '<br>'; ul.replaceWith(p); }
+      changed(); clLayout();
+    });
+    h.addEventListener('pointerdown', ev => {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      ev.preventDefault(); try { h.setPointerCapture(ev.pointerId); } catch (_) {}
+      CL.drag = { li, id: ev.pointerId }; li.classList.add('cl-drag');
+    });
+    h.addEventListener('pointermove', ev => {
+      const d = CL.drag; if (!d || d.id !== ev.pointerId) return;
+      const ul = d.li.parentElement; if (!ul) return;
+      let before = null;
+      for (const s of clItems(ul)) { if (s === d.li) continue; const r = s.getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { before = s; break; } }
+      if (before) { if (d.li.nextElementSibling !== before) ul.insertBefore(d.li, before); }
+      else if (ul.lastElementChild !== d.li) ul.append(d.li);
+      const sr = CL.scroller.getBoundingClientRect();
+      if (ev.clientY < sr.top + 50) CL.scroller.scrollTop -= 12; else if (ev.clientY > sr.bottom - 50) CL.scroller.scrollTop += 12;
+      clLayout();
+    });
+    const end = ev => { const d = CL.drag; if (!d || d.id !== ev.pointerId) return; CL.drag = null; d.li.classList.remove('cl-drag'); if (!d.li.getAttribute('class')) d.li.removeAttribute('class'); changed(); clLayout(); };
+    h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end);
+    CL.layer.append(h, x); CL.ctls.add(C); return C;
+  }
+  function clLayout() {
+    if (!body || !CL.layer || root.hidden) return;
+    const sc = CL.scroller, sr = sc.getBoundingClientRect(), st = sc.scrollTop;
+    const ro = body.getAttribute('contenteditable') === 'false';
+    CL.layer.classList.toggle('ro', ro);
+    const lists = clLists(), liveL = new Set();
+    lists.forEach(ul => {
+      let H = null; CL.heads.forEach(x => { if (x.ul === ul) H = x; });
+      if (!H) H = clMakeHead(ul);
+      const r = ul.getBoundingClientRect(); if (!r.width) return;
+      H.el.style.left = Math.round(r.left - sr.left) + 'px'; H.el.style.top = Math.round(r.top - sr.top + st - 42) + 'px'; H.el.style.width = Math.round(r.width) + 'px';
+      const items = clItems(ul), done = items.filter(li => li.classList.contains('done')).length;
+      H.count.textContent = done + '/' + items.length;
+      H.fill.style.width = (items.length ? Math.round(done / items.length * 100) : 0) + '%';
+      if (document.activeElement !== H.title) H.title.value = ul.getAttribute('data-title') || '';
+      H.title.readOnly = ro;
+      H.el.dataset.live = '1'; liveL.add(H);
+      items.forEach(li => {
+        let C = null; CL.ctls.forEach(x => { if (x.li === li) C = x; });
+        if (!C) C = clMakeCtl(li);
+        const lr = li.getBoundingClientRect(), lh = parseFloat(getComputedStyle(li).lineHeight) || 24;
+        const top = Math.round(lr.top - sr.top + st + 3 + lh / 2 - 12) + 'px';
+        C.h.style.left = Math.round(lr.left - sr.left - 19) + 'px'; C.h.style.top = top;
+        C.x.style.left = Math.round(lr.right - sr.left - 26) + 'px'; C.x.style.top = top;
+        C.live = true;
+      });
+    });
+    CL.heads.forEach(H => { if (!liveL.has(H)) { H.el.remove(); CL.heads.delete(H); } });
+    CL.ctls.forEach(C => { if (!C.live || !body.contains(C.li)) { C.h.remove(); C.x.remove(); CL.ctls.delete(C); } else C.live = false; });
+  }
+  function clAttach() {
+    if (!CL.layer) return;
+    if (CL.mo) CL.mo.disconnect(); if (CL.ro) CL.ro.disconnect();
+    CL.mo = new MutationObserver(clScheduleLayout);
+    CL.mo.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'data-title'], characterData: true });
+    if (window.ResizeObserver) { CL.ro = new ResizeObserver(clScheduleLayout); CL.ro.observe(body); }
+    clScheduleLayout();
+  }
+  function clInit() {
+    CL.layer = root.querySelector('#clLayer'); CL.scroller = root.querySelector('#edScroll');
+    if (!CL.layer || !CL.scroller) return;
+    if (!CL.wired) { CL.wired = true; window.addEventListener('resize', clScheduleLayout); root.addEventListener('load', clScheduleLayout, true); }
+    clAttach();
+  }
+
   function init(o) {
     opts = o; root = o.root; body = o.body;
+    clInit();
     const tb = root.querySelector('#toolbar');
     tb.addEventListener('mousedown', e => { if (!e.target.closest('select, label, input')) e.preventDefault(); });
     tb.addEventListener('click', e => {
@@ -570,6 +763,8 @@ const NotesEditor = (function () {
       else if (cmd === 'insertOrderedList') toggleNumbered();
       else if (cmd === 'checklist') toggleChecklist();
       else if (cmd === 'callout') toggleCallout();
+      else if (cmd === 'codeblock') toggleTextCard('codecard');
+      else if (cmd === 'promptcard') toggleTextCard('promptcard');
       else if (cmd === 'sticker') openSticker(b, 'Insert a sticker', '', s => insertSticker(s));
       else if (/^h[123]$/.test(cmd)) { const cur = (document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); exec('formatBlock', '<' + (cur === cmd ? 'p' : cmd) + '>'); }
       else if (cmd === 'link') insertLink();
@@ -641,6 +836,7 @@ const NotesEditor = (function () {
     // body events are delegated through root so the body element can be replaced (resets undo history per note)
     root.addEventListener('input', e => { if (e.target === body) onBodyInput(e); });
     root.addEventListener('click', e => { if (e.target.closest && body.contains(e.target)) onBodyClick(e); });
+    root.addEventListener('mousedown', e => { const t = e.target; if (t && t.nodeType === 1 && t.matches && t.matches(TEXTCARD) && inCopyZone(t, e)) e.preventDefault(); });
     root.addEventListener('paste', e => { if (e.target === body || body.contains(e.target)) onPaste(e); });
     root.addEventListener('copy', e => { if (e.target === body || inBody(e.target)) onCopyCut(e); });
     root.addEventListener('cut', e => { if (e.target === body || inBody(e.target)) onCopyCut(e); });
@@ -657,6 +853,8 @@ const NotesEditor = (function () {
     fresh.innerHTML = sanitize(html);
     body.replaceWith(fresh);
     body = fresh; savedRange = null; hideSuggest();
+    CL.heads.forEach(H => H.el.remove()); CL.heads.clear(); CL.ctls.forEach(C => { C.h.remove(); C.x.remove(); }); CL.ctls.clear();
+    clAttach(); setTimeout(clScheduleLayout, 60);
     return body;
   }
 
