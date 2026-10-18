@@ -569,3 +569,8 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .ed-body .linkcard::after { content: attr(data-host) "  \2197"; grid-column: 2; grid-row: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: none; -webkit-user-select: none; }
 .ed-body .linkcard > a { grid-column: 2; grid-row: 2; display: block; font-size: .82em; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .n-rich .pl-code .pl-t { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .9em; }
+
+/* v30: viewing mode (read-only) */
+#editor.viewing #edBar, #editor.viewing #toolbar, #editor.viewing #edUndo, #editor.viewing #edRedo, #editor.viewing #edStatus, #editor.viewing #edFmtDesktop { display: none !important; }
+#editor.viewing .ed-body { caret-color: transparent; -webkit-user-select: text; user-select: text; }
+#edEdit[hidden] { display: none; }

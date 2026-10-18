@@ -15,7 +15,8 @@ const NotesEditor = (function () {
     'text-align': v => /^(left|right|center|justify)$/i.test(v),
     'text-decoration': v => /^[a-z\s-]+$/i.test(v),
     'font-weight': v => /^(normal|bold|[1-9]00)$/i.test(v),
-    'font-style': v => /^(normal|italic)$/i.test(v)
+    'font-style': v => /^(normal|italic)$/i.test(v),
+    'line-height': v => /^[\d.]+px$/i.test(v)
   };
   function cleanStyle(value) {
     return String(value).split(';').map(d => {
@@ -231,6 +232,7 @@ const NotesEditor = (function () {
     caretIn(nxt, false); changed(); return true;
   }
   function onBeforeInput(e) {
+    if (e.target === body) autoCap(e);
     if (e.target !== body || e.inputType !== 'insertParagraph') return;
     if (onEnterInLinkCard(e)) return;
     onEnterInTextCard(e);
@@ -345,6 +347,43 @@ const NotesEditor = (function () {
       sel().removeAllRanges(); sel().addRange(range);
     }
     changed();
+  }
+
+  const BLOCK_SEL = 'div,p,li,h1,h2,h3,h4,h5,h6,blockquote';
+  function applyLineHeight(key) {
+    const r = currentRange(); if (!r) return;
+    const px = parseInt(key, 10), set = new Set();
+    const blockOf = n => { const el = n.nodeType === 1 ? n : n.parentElement; const b = el && el.closest(BLOCK_SEL); return b && body.contains(b) && b !== body ? b : null; };
+    const a = blockOf(r.startContainer), z = blockOf(r.endContainer);
+    if (a) set.add(a); if (z) set.add(z);
+    if (!r.collapsed) body.querySelectorAll(BLOCK_SEL).forEach(b => { if (r.intersectsNode(b) && !b.querySelector(BLOCK_SEL)) set.add(b); });
+    if (!set.size) { opts.toast('Tap inside a line first.'); return; }
+    set.forEach(b => {
+      const card = b.closest('.codecard,.promptcard,.linkcard'); const t = card || b;
+      if (px > 0) t.style.lineHeight = px + 'px'; else { t.style.removeProperty('line-height'); if (!t.getAttribute('style')) t.removeAttribute('style'); }
+    });
+    changed();
+  }
+
+  /* auto capitalization: first letter of a line / sentence, and a lone "i" */
+  function autoCap(e) {
+    if (!opts.autoCap || !opts.autoCap() || e.inputType !== 'insertText' || !e.data || e.data.length !== 1) return;
+    const r = currentRange(); if (!r || !r.collapsed) return;
+    const el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;
+    if (!el || el.closest('.codecard,.promptcard,.linkcard,a,pre,code')) return;
+    const blk = el.closest(BLOCK_SEL) || body;
+    const pre = document.createRange(); pre.selectNodeContents(blk); pre.setEnd(r.startContainer, r.startOffset);
+    const before = pre.toString().replace(/\u200b/g, '');
+    const ch = e.data;
+    if (/[a-z]/.test(ch) && /(^\s*$|[.!?]["')\]]*\s+$)/.test(before)) {
+      e.preventDefault(); document.execCommand('insertText', false, ch.toUpperCase()); return;
+    }
+    if (/[\s.,!?;:')]/.test(ch) && /(^|[\s(])i$/.test(before) && r.startContainer.nodeType === 3 && r.startOffset > 0) {
+      const t = r.startContainer, o = r.startOffset;
+      const rr = document.createRange(); rr.setStart(t, o - 1); rr.setEnd(t, o);
+      sel().removeAllRanges(); sel().addRange(rr);
+      document.execCommand('insertText', false, 'I');
+    }
   }
 
   async function insertLink() {
@@ -507,7 +546,7 @@ const NotesEditor = (function () {
     const lc = e.target && e.target.classList && e.target.classList.contains('linkcard') ? e.target : null;
     if (lc) { const a0 = lc.querySelector('a[href]'); if (a0) window.open(a0.href, '_blank', 'noopener'); return; }
     const li = e.target;
-    if (li && li.tagName === 'LI' && li.parentElement.classList.contains('checklist') && (() => { const dx = e.clientX - li.getBoundingClientRect().left; return dx >= 22 && dx < 52; })()) {
+    if (body.isContentEditable && li && li.tagName === 'LI' && li.parentElement.classList.contains('checklist') && (() => { const dx = e.clientX - li.getBoundingClientRect().left; return dx >= 22 && dx < 52; })()) {
       li.classList.toggle('done'); changed(); clScheduleLayout();
     }
     const a = e.target.closest && e.target.closest('a');
@@ -797,6 +836,7 @@ const NotesEditor = (function () {
     });
     const withRange = fn => () => { restoreRange(); fn(); updateToolbar(); };
     root.querySelector('#blockSel').addEventListener('change', e => { const v = e.target.value; withRange(() => exec('formatBlock', '<' + v + '>'))(); });
+    root.querySelector('#lineSel').addEventListener('change', e => { const v = e.target.value; if (v !== '') withRange(() => applyLineHeight(v))(); e.target.value = ''; });
     root.querySelector('#fontSel').addEventListener('change', e => { const v = e.target.value; if (v) withRange(() => exec('fontName', v))(); e.target.value = ''; });
     root.querySelector('#sizeSel').addEventListener('change', e => { const v = e.target.value; if (v) withRange(() => applySize(v))(); e.target.value = ''; });
     /* font / size / highlight: drop-down menus (below the button on desktop, popping up above it on phones) */
@@ -879,5 +919,5 @@ const NotesEditor = (function () {
     return body;
   }
 
-  return { init, load, sanitize, hideSuggest, hideSticker, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), keepCaretVisible, el: () => body, focus: () => focusBody(), updateToolbar };
+  return { init, load, sanitize, hideSuggest, hideSticker, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), keepCaretVisible, relayout: () => clScheduleLayout(), el: () => body, focus: () => focusBody(), updateToolbar };
 })();

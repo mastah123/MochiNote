@@ -4,9 +4,9 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '28.0.0';
+  const APP_VERSION = '30.0.0';
   const PREFS_KEY = 'mochinote:prefs';
-  const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, motion: 'on', lastBackup: 0 };
+  const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
   const FONTS = [['', 'Default (sans)'], ['Georgia, serif', 'Serif'], ["'Courier New', monospace", 'Mono'], ["'Comic Sans MS', 'Trebuchet MS', cursive", 'Playful']];
   const COLOR_VAR = { default: '--c-default', yellow: '--c-yellow', green: '--c-green', blue: '--c-blue', pink: '--c-pink', lilac: '--c-lilac' };
@@ -543,14 +543,37 @@
     $('#edTitle').value = n.title;
     NotesEditor.load(n.html); NotesEditor.keyboard(true); $('#edTitle').inputMode = 'text';
     paintEditorMeta(n); setSaveStatus(n.trashed ? 'In Trash' : 'Saved');
-    const ro = n.trashed;
-    NotesEditor.el().contentEditable = ro ? 'false' : 'true'; $('#edTitle').readOnly = ro;
+    state.viewing = !isNew && (n.trashed || state.prefs.openView !== false); state.editPushed = false;
+    applyMode();
     const isDesktop = window.matchMedia('(min-width: 900px)').matches;
-    $('#toolbar').hidden = !isDesktop; // desktop: always show; mobile: hidden by default
-    $$('#edBar .bar-btn').forEach(b => { b.hidden = ro; b.setAttribute('aria-pressed', 'false'); }); $('#edBar').hidden = ro;
-    const edFmtD = $('#edFmtDesktop'); if (edFmtD) { edFmtD.hidden = ro; edFmtD.setAttribute('aria-pressed', isDesktop && !ro ? 'true' : 'false'); }
     // phones: opening an existing note must not pop the keyboard up (tap the text to start typing)
-    if (isDesktop || isNew) setTimeout(() => { (isNew || !n.html ? $('#edTitle') : NotesEditor.el()).focus({ preventScroll: true }); }, 30);
+    if (isNew) setTimeout(() => { (!n.html ? $('#edTitle') : NotesEditor.el()).focus({ preventScroll: true }); }, 30);
+    else if (isDesktop && !state.viewing) setTimeout(() => { NotesEditor.el().focus({ preventScroll: true }); }, 30);
+  }
+  /* viewing mode: read-only, no format buttons / undo / redo, no keyboard. The edit icon (beside ⋮) switches to editing. */
+  function applyMode() {
+    const n = noteById(state.openId), trashed = !!(n && n.trashed), v = !!state.viewing || trashed;
+    const isDesktop = window.matchMedia('(min-width: 900px)').matches;
+    $('#editor').classList.toggle('viewing', v);
+    NotesEditor.el().contentEditable = v ? 'false' : 'true'; $('#edTitle').readOnly = v;
+    if (v) { NotesEditor.hideKeyboard(); NotesEditor.hideSuggest(); if (document.activeElement && document.activeElement.blur && $('#editor').contains(document.activeElement)) document.activeElement.blur(); }
+    else NotesEditor.keyboard(true);
+    $('#toolbar').hidden = v || !isDesktop;
+    $$('#edBar .bar-btn').forEach(b => { b.hidden = v; b.setAttribute('aria-pressed', 'false'); }); $('#edBar').hidden = v;
+    ['#edUndo', '#edRedo'].forEach(id => { $(id).hidden = v; });
+    $('#edEdit').hidden = !v || trashed;
+    const edFmtD = $('#edFmtDesktop'); if (edFmtD) { edFmtD.hidden = v; edFmtD.setAttribute('aria-pressed', isDesktop && !v ? 'true' : 'false'); }
+    NotesEditor.relayout();
+  }
+  function startEditing() {
+    if (!state.openId || !state.viewing) return;
+    state.viewing = false; applyMode();
+    if (!state.editPushed) { history.pushState({ kind: 'editor', edit: true }, ''); state.editPushed = true; }
+    setTimeout(() => NotesEditor.el().focus({ preventScroll: true }), 30);
+  }
+  async function stopEditing() {       // Back from editing returns to viewing mode
+    clearTimeout(state.saveTimer); state.dirty = true; await saveOpen();
+    state.viewing = true; state.editPushed = false; applyMode();
   }
   function paintEditorMeta(n) {
     $('#edPinLabel').textContent = n.pinned ? 'Unpin' : 'Pin';
@@ -617,7 +640,7 @@
         state.notes = state.notes.filter(x => x.id !== n.id);
       } else { state.dirty = true; await saveOpen(); }
     }
-    state.openId = null; state.dirty = false;
+    state.openId = null; state.dirty = false; state.viewing = false; state.editPushed = false;
     NotesEditor.hideSuggest();
     $('#editorLayer').hidden = true; document.body.style.overflow = ''; $('#editorLayer').style.removeProperty('--vvh'); $('#editorLayer').style.removeProperty('--vvt'); $('#edMenu').hidden = true;
     $('#globalStatus').textContent = '';
@@ -653,7 +676,8 @@
   async function closeEditorKeep() { // close without extra render churn when followed by another action
     state.openId = null; state.dirty = false; await state.saving;
     $('#editorLayer').hidden = true; document.body.style.overflow = ''; $('#editorLayer').style.removeProperty('--vvh'); $('#editorLayer').style.removeProperty('--vvt');
-    if (history.state && history.state.kind === 'editor') history.back();
+    state.viewing = false; const extra = state.editPushed; state.editPushed = false;
+    if (history.state && history.state.kind === 'editor') { history.back(); if (extra) setTimeout(() => { if (history.state && history.state.kind === 'editor') history.back(); }, 60); }
   }
 
   /* ---------- settings screen ---------- */
@@ -676,6 +700,8 @@
         row('Default font', 'Only affects text without its own font — existing formatting is kept', sel(FONTS, p.fontFamily, v => setPref('fontFamily', v), 'Default font')),
         row('Default font size', 'In pixels (12–28)', el('input', { type: 'number', min: 12, max: 28, value: p.fontSize, 'aria-label': 'Default font size', onchange: e => { const v = Math.min(28, Math.max(12, Number(e.target.value) || 16)); e.target.value = v; setPref('fontSize', v); } }))),
       el('section', { class: 'set-card' }, el('h2', { text: 'Behavior' }),
+        row('Auto-capitalize', 'Capitalize the first letter of each sentence and a lone "i" while you type.', el('input', { type: 'checkbox', checked: p.autocap !== false, 'aria-label': 'Auto-capitalize', onchange: e => setPref('autocap', e.target.checked) })),
+        row('Open notes to read', 'Notes open in viewing mode; tap the edit icon to change them.', el('input', { type: 'checkbox', checked: p.openView !== false, 'aria-label': 'Open notes in viewing mode', onchange: e => setPref('openView', e.target.checked) })),
         row('Autosave', 'Save a moment after you stop typing. When off, notes save when you go back.', el('input', { type: 'checkbox', checked: p.autosave, 'aria-label': 'Autosave', onchange: e => setPref('autosave', e.target.checked) })),
         row('Animations', 'Turn off for a still interface (also follows your system setting)', el('input', { type: 'checkbox', checked: p.motion !== 'off', 'aria-label': 'Animations', onchange: e => setPref('motion', e.target.checked ? 'on' : 'off') }))),
       dataCard(),
@@ -764,6 +790,7 @@
   window.addEventListener('popstate', e => {
     const s = e.state;
     if (sheetIsOpen() && !(s && s.kind === 'sheet')) { hideSheet(); const f = sheetPending; sheetPending = null; if (f) f(); return; }
+    if (state.openId && state.editPushed && !(s && s.edit)) { stopEditing(); return; }   // Back while editing -> viewing mode
     if (state.openId) { closeEditor(); return; }
     if (sidebarIsOpen() && !(s && s.kind === 'sidebar')) { closeSidebar(); return; }
     if (s && s.kind === 'view') { state.view = s.view; state.folderId = s.folderId; state.tag = s.tag; closeSidebar(); render(); }
@@ -809,6 +836,7 @@
 
     // editor chrome
     $('#edBack').onclick = requestCloseEditor;
+    $('#edEdit').onclick = startEditing;
     $('#edStatus').onclick = () => { if (state.dirty) saveOpen(); else toast('Saved'); };
     $('#editorBackdrop').onclick = requestCloseEditor;
     // Mobile: Aa opens the format bar (bottom) and hides the keyboard; closing it brings the keyboard back
@@ -855,7 +883,7 @@
 
     NotesEditor.init({
       root: $('#editor'), body: $('#edBody'), suggestEl: $('#tagSuggest'),
-      onChange: markDirty, toast,
+      onChange: markDirty, toast, autoCap: () => state.prefs.autocap !== false,
       getKnownTags: () => allTags().map(t => t[0]),
       askLink: () => dialog({ kind: 'prompt', title: 'Insert link', placeholder: 'https://example.com', ok: 'Add link' })
     });

@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 28.0.0**
+**Version 30.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -90,6 +90,17 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v30.0.0 — Viewing mode
+- Opening an existing note now shows it in **viewing mode**: read-only, no keyboard, and the format buttons and undo/redo are hidden. Code/prompt cards can still be copied and link cards opened.
+- A new **edit icon** beside the ⋮ menu switches to editing and brings back the format buttons and undo/redo.
+- **Back** while editing returns to viewing mode (your changes are saved); Back again closes the note. The browser/phone back button does the same.
+- New notes still open ready to type. Notes in Trash stay view-only.
+- Settings → Behavior → "Open notes to read" turns viewing mode off if you prefer to open notes ready to edit.
+
+### v29.0.0 — Line height and auto-capitalization
+- New **Line height** drop-down next to Font, Size and Highlight (in px, or Default). It applies to the selected lines (or the line the cursor is in) and is saved with the note.
+- **Auto-capitalize**: the first letter of a line or sentence and a lone "i" are capitalized as you type. Code, prompt and link cards, links and #tags are left alone. On by default; switch it off in Settings → Behavior.
 
 ### v28.0.0 — Fixes and ordering
 - Pressing Enter inside a link card no longer duplicates it; it starts a new line under the card (also works with phone keyboards).
