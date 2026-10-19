@@ -9,7 +9,14 @@
 <link rel="alternate icon" type="image/png" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="css/theme-and-buttons.css">
+<link rel="stylesheet" href="css/home-and-notes.css">
+<link rel="stylesheet" href="css/editor.css">
+<link rel="stylesheet" href="css/dialog-and-settings.css">
+<link rel="stylesheet" href="css/desktop-layout.css">
+<link rel="stylesheet" href="css/cards-and-stickers.css">
+<link rel="stylesheet" href="css/mobile-home-and-sheets.css">
+<link rel="stylesheet" href="css/editor-extras.css">
 </head>
 <body>
 <div class="app" id="app">
@@ -274,9 +281,11 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </div>
 
-<script src="js/logic.js"></script>
-<script src="js/db.js"></script>
-<script src="js/editor.js"></script>
-<script src="js/app.js"></script>
+<script src="js/core/notes-logic.js"></script>
+<script src="js/core/notes-storage.js"></script>
+<script src="js/editor/html-sanitizer.js"></script>
+<script src="js/editor/rich-text-editor.js"></script>
+<script src="js/app/icons.js"></script>
+<script src="js/app/notes-app.js"></script>
 </body>
 </html>

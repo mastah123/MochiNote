@@ -1,0 +1,19 @@
+feat: 38.0.0 → 38.1.0 — Reorganise CSS/JS into folders, tab title shows "MochiNote" only
+
+Fixed
+- Browser tab title: before → "All notes · MochiNote" (view name + app name); after → "MochiNote" on every view.
+
+Added
+- css/ folder with 8 files: theme-and-buttons, home-and-notes, editor, dialog-and-settings, desktop-layout, cards-and-stickers, mobile-home-and-sheets, editor-extras.
+- js/editor/html-sanitizer.js (NotesSanitizer) and js/app/icons.js (NotesIcons), extracted from the editor and app files.
+- PROJECT_CONTEXT.md (status, architecture, decisions, known issues, next steps) and this commit.txt.
+- tests/e2e-batch39.js: file layout, no console errors, tab title, card title bold / content normal.
+
+Changed
+- style.css → split into css/*.css, linked in the original cascade order (no visual change).
+- js/logic.js → js/core/notes-logic.js; js/db.js → js/core/notes-storage.js; js/editor.js → js/editor/rich-text-editor.js; js/app.js → js/app/notes-app.js.
+- Version numbering: before → sequential "v38"; after → semver 38.1.0 (zip is named with the version).
+- index.html script/link tags and the README file structure updated for the new paths.
+
+Impact
+- Easier to find and edit code; no behaviour change. All 40 test suites pass.

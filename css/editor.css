@@ -1,0 +1,100 @@
+/* editor.css — editor layout, checklist base */
+/* editor */
+.editor-layer { position: fixed; inset: 0; z-index: 40; display: grid; place-items: stretch; }
+.editor-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.35); animation: fade 200ms ease both; }
+.editor { position: relative; background: var(--bg); display: flex; flex-direction: column; min-height: 0; height: 100%; width: 100%; animation: rise 240ms ease both; }
+.editor.nc { background: var(--nc); }
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.ed-top { display: flex; align-items: center; gap: 4px; flex: none; padding: 0 8px; border-bottom: 1px solid var(--border); position: relative; }
+.ed-top .save-pill { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn { flex: none; width: 44px; height: 44px; border: 0; background: none; border-radius: 12px; font-size: 1.35rem; line-height: 1; color: var(--text); display: grid; place-items: center; }
+.icon-btn:hover, .icon-btn[aria-pressed="true"] { background: var(--surface-2); }
+.icon-btn.txt { font-size: 1rem; font-weight: 600; }
+.ed-top-spacer { flex: 1; min-width: 0; }
+.ed-actions { display: flex; position: relative; }
+.menu { position: absolute; right: 4px; top: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px; min-width: 210px; z-index: 5; display: grid; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+.menu button { border: 0; background: none; text-align: left; min-height: 44px; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 12px; }
+.menu button .ico { opacity: .8; }
+.menu-info { display: block; padding: 8px 12px 4px; margin-top: 4px; border-top: 1px solid var(--border); color: var(--muted); font-size: .8rem; }
+.ed-bar[hidden] { display: none !important; }
+/* the note footer only holds tags now ("Edited" lives in the ⋮ menu); undo / redo live in the header */
+.ed-foot { display: none !important; } /* tags still live in the text as #hashtags */
+.toolbar #blockSel, .toolbar [data-cmd="sticker"] { display: none; }
+.toolbar .hl { font-size: 0; gap: 0; }
+.tb-break { display: none; }
+.toolbar .hl select { font-size: .85rem; }
+.toolbar [data-cmd="undo"], .toolbar [data-cmd="redo"], .toolbar [data-cmd="redo"] + .sep { display: none; }
+#edUndo, #edRedo { width: 34px; height: 34px; border-radius: 10px; }
+#edUndo .ico, #edRedo .ico { width: 18px; height: 18px; }
+#edUndo { margin-left: 12px; }
+#edRedo { margin-left: -2px; }
+.toolbar .hd { font-weight: 700; }
+.menu-theme { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 10px; color: var(--muted); font-size: .9rem; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.menu-theme .swatch { width: 26px; height: 26px; }
+.menu-theme .swatch.on { border-color: var(--accent); }
+.menu .menu-theme .swatches { gap: 8px; }
+.menu button:hover { background: var(--surface-2); }
+.menu .danger { color: var(--danger); }
+/* no sideways scrolling anywhere in the editor */
+.editor, .ed-top { max-width: 100%; min-width: 0; }
+.ed-meta, .ed-foot { max-width: 100%; min-width: 0; overflow-x: hidden; }
+.ed-body, .ed-title { max-width: 100%; min-width: 0; }
+.ed-body * { max-width: 100%; }
+.ed-body { overflow-x: clip; flex: 1 0 auto; word-break: break-word; }   /* the outer .ed-scroll is the one scroller */
+.ed-scroll { position: relative; overflow-x: hidden; touch-action: pan-y; overscroll-behavior-x: none; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; overscroll-behavior: contain; }
+.ed-title { width: 100%; flex: none; border: 0; background: transparent; font-size: 1.5rem; font-weight: 600; padding: 16px 20px 4px; outline: none; color: var(--text); }
+.ed-title::placeholder { color: var(--muted); opacity: .6; }
+/* desktop editor meta row (folder + swatches) */
+.ed-meta { display: flex; align-items: center; gap: 10px; padding: 8px 20px; border-bottom: 1px solid var(--border); flex: none; flex-wrap: wrap; }
+.ed-meta select { min-height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); padding: 0 8px; font-size: .9rem; }
+.swatches { display: flex; gap: 6px; align-items: center; }
+.swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform var(--dur); }
+.swatch:hover { transform: scale(1.2); }
+.swatch.on { border-color: var(--text); }
+/* mobile save icon */
+.ed-note-info { flex: none; padding: 0 20px 6px; font-size: .76rem; line-height: 1.4; color: var(--muted); opacity: .75; }
+#edStatus[hidden] { display: none; }
+.save-btn { position: relative; color: var(--muted); }
+.save-btn .save-dot { position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: none; }
+.save-btn.dirty { color: var(--text); }
+.save-btn.dirty .save-dot { display: block; }
+.save-icon-mobile { font-size: .75rem; color: var(--muted); padding: 2px 6px; min-height: 1em; flex: none; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 2px 4px; padding: 6px 8px; max-height: 38vh; overflow-y: auto; border-block: 1px solid var(--border); background: var(--surface); align-items: center; animation: fade 240ms ease both; }
+.toolbar button { flex: none; min-width: 40px; min-height: 40px; padding: 0 9px; border: 0; background: none; border-radius: 10px; white-space: nowrap; }
+@media (hover: hover) { .toolbar button:hover { background: var(--accent-soft); } }
+.toolbar button.on, .toolbar button.on:hover { background: var(--accent); color: var(--accent-ink); }
+.toolbar button.on svg { color: inherit; }
+.toolbar select { flex: none; }
+.toolbar .hl { flex: none; display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted); }
+.toolbar .sep { width: 1px; height: 24px; background: var(--border); flex: none; margin: 0 2px; }
+@media (max-width: 600px) { .toolbar .sep { display: none; } .toolbar select { max-width: 120px; } }
+.ed-body { flex: 1 0 auto; min-height: 40vh; padding: 8px 16px 12px; outline: none; font-family: var(--editor-font); font-size: var(--editor-size); line-height: 1.6; caret-color: var(--accent); overflow-wrap: anywhere; }
+.ed-body:empty::before { content: attr(data-placeholder); color: var(--muted); opacity: .7; }
+.ed-body h1 { font-size: 1.7em; margin: .5em 0 .25em; } .ed-body h2 { font-size: 1.4em; margin: .5em 0 .25em; } .ed-body h3 { font-size: 1.15em; margin: .5em 0 .25em; }
+.ed-body p, .ed-body div { margin: 0 0 .35em; }
+.ed-body ul, .ed-body ol { margin: .2em 0 .4em; padding-left: 1.5em; }
+.ed-body a { color: var(--accent); text-decoration: underline; }
+/* images: fixed display box so every picture takes the same space (phone vs desktop sizes below) */
+.ed-body img { display: block; box-sizing: content-box; width: auto !important; height: auto !important; max-width: calc(100% - 12px) !important; max-height: min(62vh, 480px) !important; object-fit: contain; padding: 6px; background: var(--surface-2); border-radius: 16px; margin: .5em auto; }
+.ed-body mark { border-radius: 4px; padding: 0 2px; }
+.ed-body .hashtag { color: var(--accent); font-weight: 500; }
+/* an aligned list item (centre / right): the bullet or number stays next to its text instead of stretching across the line */
+.ed-body li { transition: none; }
+.ed-body li[style*="text-align"] { list-style-position: inside; }
+.ed-body ul.checklist > li[style*="text-align"] { padding-left: 26px; }
+.ed-body ul.checklist > li[style*="text-align"]::before { position: static; display: inline-block; vertical-align: -4px; margin-right: 8px; }
+/* checklist (child combinators: a bullet / numbered list nested inside an item keeps its own look) */
+.ed-body ul.checklist { list-style: none; padding-left: 0; margin: .2em 0 .4em; }
+.ed-body > ul.checklist, .ed-body :not(li) > ul.checklist { margin-top: 46px; }   /* room for the title / progress header */
+.ed-body ul.checklist > li { position: relative; display: block; padding: 3px 30px 3px 50px; min-height: 1.6em; }
+.ed-body ul.checklist > li::before { content: ""; position: absolute; left: 24px; top: calc(.8em - 6px); width: 18px; height: 18px; box-sizing: border-box; border-radius: 6px; border: 1.8px solid var(--muted); cursor: pointer; background: transparent center / 12px no-repeat; transition: background-color var(--dur), border-color var(--dur); }
+.ed-body ul.checklist > li.done::before { background-color: var(--sage-ink); border-color: var(--sage-ink); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.ed-body ul.checklist > li.cl-drag { background: var(--accent-soft); border-radius: 8px; }
+.ed-body ul.checklist > li > ul:not(.checklist), .ed-body ul.checklist > li > ol { margin: .2em 0 .2em; padding-left: 1.4em; }
+.ed-body ul.checklist > li.done { color: var(--muted); text-decoration: line-through; }
+.ed-foot { display: flex; gap: 10px; align-items: center; padding: 8px 20px; border-top: 1px solid var(--border); font-size: .85rem; color: var(--muted); }
+.ed-foot .tags { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.ed-foot .info { margin-left: auto; white-space: nowrap; }
+.ed-foot .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-suggest { position: absolute; left: 12px; right: 12px; bottom: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.12); z-index: 6; }

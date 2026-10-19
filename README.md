@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 37.0.0**
+**Version 38.1.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -41,13 +41,26 @@ It is a static site, so it can also be dropped onto any static host (GitHub Page
 ## File structure
 
 ```
-index.html        page structure (list, sidebar, editor sheet, dialog)
-style.css         theme variables, layout, animations
-js/logic.js       pure helpers: tags, search/filter, sorting, import validation (no DOM; unit-tested)
-js/db.js          IndexedDB wrapper (notes + folders), with an in-memory fallback
-js/editor.js      contenteditable editor, toolbar, checklists, sanitizer, tag suggestions
-js/app.js         UI controller: state, rendering, folders, settings, backup
-tests/            logic.test.js (Node), e2e*.js (Playwright) — kept out of the zips since v27
+index.html                       page structure (list, sidebar, editor sheet, dialog)
+manifest.webmanifest, assets/    install info, icons, logo
+css/                             styles, linked in cascade order from index.html
+  theme-and-buttons.css          theme variables, buttons, sidebar
+  home-and-notes.css             search, folder strip, note grid
+  editor.css                     editor layout, checklist base
+  dialog-and-settings.css        dialog, toast, settings, reduced motion
+  desktop-layout.css             desktop layout
+  cards-and-stickers.css         cards, sticker picker, format bar
+  mobile-home-and-sheets.css     mobile home, previews, action sheet, mobile block
+  editor-extras.css              drop-downs, checklist header, text cards, viewing mode, card colours
+js/core/notes-logic.js           pure helpers: tags, search/filter, sorting, import validation (no DOM; unit-tested)
+js/core/notes-storage.js         IndexedDB wrapper (notes + folders), in-memory fallback
+js/editor/html-sanitizer.js      whitelist HTML cleaner
+js/editor/rich-text-editor.js    contenteditable editor, toolbar, cards, checklists, tag suggestions
+js/app/icons.js                  line-icon set
+js/app/notes-app.js              UI controller: state, rendering, folders, settings, backup
+tests/                           logic.test.js (Node), e2e*.js (Playwright) — kept out of the zips since v27
+PROJECT_CONTEXT.md               status, architecture, decisions, known issues, next steps (handoff)
+commit.txt                       commit messages, newest first
 ```
 
 `logic.js` and `db.js` have no UI dependencies, which keeps the app easy to wrap later as a browser extension
@@ -90,6 +103,16 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v38.1.0 — Files reorganised, tab title
+- Versioning now follows semver (`fix:` patch, `feat:` minor, `feat!:` major); the zip name carries the version.
+- CSS moved into `css/` (8 files, same order, same look). JS moved into `js/core`, `js/editor`, `js/app`, with the sanitizer and the icon set in their own files. Behaviour is unchanged.
+- The browser tab now shows just **MochiNote** (it used to show "All notes · MochiNote").
+- Added `PROJECT_CONTEXT.md` (handoff notes) and `commit.txt`.
+
+### v38.0.0 — Card content is normal text again
+- In a card, only the **title** (first line) is bold. The lines you type under it are normal text again — the title's bold is no longer carried over to them (also with phone keyboards).
+- Lines that already came out bold in notes made with v36/v37 are kept as they are; select them and press Bold to turn it off.
 
 ### v37.0.0 — Lettered lists and edit-where-you-read
 - New **lettered list** (a, b, c…) in the list options, between bulleted and indent. It converts to and from numbered/bulleted lists, shows as "a. b." in the home previews and keeps its letters when copied.
