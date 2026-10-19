@@ -322,7 +322,7 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .ed-body .callout[data-sticker]::before { content: attr(data-sticker); left: 14px; top: 11px; width: auto; height: auto; display: block; border: 0; border-radius: 0; opacity: 1; color: inherit; font-size: 1.2em; line-height: 1.4; }
 .ed-body .callout > div, .ed-body .callout > p { margin: 0 0 .25em; }
 .ed-body .callout > div:last-child, .ed-body .callout > p:last-child { margin-bottom: 0; }
-.ed-body .callout > :first-child:not(:last-child) { font-weight: 600; }
+.ed-body .callout > :first-child { font-weight: 600; }   /* the title is bold from the first letter typed */
 
 /* format bar: desktop shows text labels, mobile swaps in icons */
 .t-ico, .tb-head { display: none; }
@@ -574,3 +574,31 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 #editor.viewing #edBar, #editor.viewing #toolbar, #editor.viewing #edUndo, #editor.viewing #edRedo, #editor.viewing #edStatus, #editor.viewing #edFmtDesktop { display: none !important; }
 #editor.viewing .ed-body { caret-color: transparent; -webkit-user-select: text; user-select: text; }
 #edEdit[hidden] { display: none; }
+
+/* v36: Size / Font / Highlight light up like the other format buttons */
+.toolbar .dd-btn.on { border-color: var(--accent); background: var(--accent-soft); }
+
+/* v36: every card type has its own colour (light + dark) */
+:root {
+  --card-note-bg: #fff2cc;   --card-note-bd: #efd88f;   --card-note-ink: #8a5f00;
+  --card-prompt-bg: #ece3fb; --card-prompt-bd: #d3c3f0; --card-prompt-ink: #6a45b5;
+  --card-link-bg: #e0eefa;   --card-link-bd: #b7d4ec;   --card-link-ink: #2b73ad;
+  --card-code-bg: #1f2430;   --card-code-bd: #1f2430;   --card-code-ink: #e7ecf5; --card-code-tag: #7fd6a8;
+}
+html[data-mode="dark"] {
+  --card-note-bg: #3a3220;   --card-note-bd: #5b4c27;   --card-note-ink: #f0c866;
+  --card-prompt-bg: #2d2742; --card-prompt-bd: #4a3f6b; --card-prompt-ink: #b9a0f2;
+  --card-link-bg: #1e3043;   --card-link-bd: #34506b;   --card-link-ink: #82bce8;
+  --card-code-bg: #12161f;   --card-code-bd: #2a3140;   --card-code-ink: #e7ecf5; --card-code-tag: #7fd6a8;
+}
+.ed-body .callout { background: var(--card-note-bg); border-color: var(--card-note-bd); }
+.ed-body .callout::before { color: var(--card-note-ink); border-color: var(--card-note-ink); }
+.ed-body .callout[data-sticker]::before { border: 0; }
+.ed-body .promptcard { background: var(--card-prompt-bg); border: 1px solid var(--card-prompt-bd); }
+.ed-body .promptcard::before, .ed-body .promptcard::after { color: var(--card-prompt-ink); }
+.ed-body .promptcard::before { opacity: .95; }
+.ed-body .linkcard { background: var(--card-link-bg); border-color: var(--card-link-bd); }
+.ed-body .linkcard::before { background: var(--card-link-ink); }
+.ed-body .linkcard::after { color: var(--card-link-ink); }
+.ed-body .codecard { background: var(--card-code-bg); border: 1px solid var(--card-code-bd); color: var(--card-code-ink); }
+.ed-body .codecard::before { color: var(--card-code-tag); opacity: .95; }

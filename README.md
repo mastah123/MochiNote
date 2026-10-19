@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 30.0.0**
+**Version 36.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -90,6 +90,29 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v36.0.0 — Size, highlight and card colours
+- **Size** (and Font, Highlight) now work like Bold/Italic: pick one with the cursor in a line and it applies to what you type next. The buttons light up, and Size shows the number in use (e.g. "20 px").
+- **Highlight → None** really removes the highlight, also from part of a highlighted run on the same line, and turning it off at the cursor stops it carrying over to new text.
+- A card's **title is bold from the first letter** you type, not only after Enter.
+- Each card type has its **own colour** (light and dark mode): note card amber, prompt lilac, link blue, code dark with a green tag.
+
+### v35.0.0 — Typed text always matches the toolbar
+- Whatever the Bold / Italic / Underline / Strike buttons show at the cursor is now exactly how the next typed text looks. Before, a style could sneak in from the line above (e.g. Italic coming on after leaving a strikethrough line and choosing Bold).
+- Fixed a saving problem where some struck-through text could come back underlined after reopening a note.
+
+### v34.0.0 — Auto-capital no longer breaks formats
+- The auto-capitalized first letter of a line or sentence used to lose (or wrongly keep) the format you had just chosen — e.g. after turning strikethrough off and bold on, the first letter stayed struck through. The capital now keeps exactly the format of the word you are typing.
+
+### v33.0.0 — The last format choice wins (phone keyboards)
+- Phone keyboards type words in "composing" mode, which made a format you had just turned off (bold, italic, underline, strikethrough) come back as you typed or deleted. Your last choice now wins while you type words, delete letters, press Space or press Enter, until you move the cursor somewhere else.
+
+### v32.0.0 — Formats stay off after deleting
+- If you turn a format off (e.g. underline) at the cursor and then delete a letter, the format now stays off — before, deleting brought the underline back for the next letters and the button lit up again. Deleting while a format is on keeps it on. Moving the cursor still clears the choice.
+
+### v31.0.0 — Text formats no longer stick
+- Bold / Italic / Underline / Strikethrough pressed at a plain cursor now decide exactly how the next typed letters look, and the button always shows the truth. Before, a new line after italic or underlined text kept the style while the button looked off, so pressing it did the wrong thing.
+- Moving the cursor forgets the pending choice. Selected text still toggles on and off as before.
 
 ### v30.0.0 — Viewing mode
 - Opening an existing note now shows it in **viewing mode**: read-only, no keyboard, and the format buttons and undo/redo are hidden. Code/prompt cards can still be copied and link cards opened.

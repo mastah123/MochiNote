@@ -14,6 +14,7 @@ const NotesEditor = (function () {
     'background-color': v => COLOR_RE.test(v),
     'text-align': v => /^(left|right|center|justify)$/i.test(v),
     'text-decoration': v => /^[a-z\s-]+$/i.test(v),
+    'text-decoration-line': v => /^[a-z\s-]+$/i.test(v),
     'font-weight': v => /^(normal|bold|[1-9]00)$/i.test(v),
     'font-style': v => /^(normal|italic)$/i.test(v),
     'line-height': v => /^[\d.]+px$/i.test(v)
@@ -113,7 +114,107 @@ const NotesEditor = (function () {
     return Array.from(body.querySelectorAll(tag)).filter(l => r.intersectsNode(l));
   }
   const changed = () => opts.onChange();
-  function exec(cmd, val) { focusBody(); const jf = /^justify/.test(cmd); if (jf) document.execCommand('styleWithCSS', false, true); const ok = document.execCommand(cmd, false, val); if (jf) document.execCommand('styleWithCSS', false, false); saveRange(); changed(); updateToolbar(); return ok; }
+  /* Typing style override: Bold/Italic/Underline/Strike pressed with a plain caret decide how the NEXT typed characters look.
+     Browsers lose or ignore that pending style in some places (caret at the start of a bold word, Android keyboards), so the
+     choice is remembered here and re-applied to what is typed, until the caret moves somewhere else. */
+  const TOGGLE_CMDS = ['bold', 'italic', 'underline', 'strikeThrough'];
+  let ov = null, composing = false, ovValid = true;
+  const ovHere = () => { const s = sel(); return s.rangeCount && s.isCollapsed && ov && s.anchorNode === ov.node && s.anchorOffset === ov.off; };
+  const ovAll = () => { const o = {}; TOGGLE_CMDS.forEach(c => { o[c] = caretFormat(c); }); return o; };
+  /* at a plain caret, fix what the toolbar shows right now as the format of whatever gets typed next
+     (so a style the browser would otherwise drag along from the line above cannot sneak in) */
+  function ovEnsure() {
+    const s = sel(); if (!s.rangeCount || !s.isCollapsed || !inBody(s.anchorNode)) return;
+    if (ov && ovHere()) return;
+    const el = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement;
+    if (el && el.closest && el.closest('.codecard,.promptcard,.linkcard')) { ov = null; return; }
+    ov = { cmds: ovAll(), node: s.anchorNode, off: s.anchorOffset };
+  }
+  function ovMark() { const s = sel(); if (ov && s.rangeCount) { ov.node = s.anchorNode; ov.off = s.anchorOffset; } }
+  function ovFix(n) {
+    if (!ov || !n) return;
+    const s = sel(); if (!s.rangeCount || !s.isCollapsed) { ov = null; return; }
+    const nd = s.anchorNode, off = s.anchorOffset;
+    if (!nd || nd.nodeType !== 3 || off < n) { ov = null; return; }
+    const r = document.createRange(); r.setStart(nd, off - n); r.setEnd(nd, off);
+    s.removeAllRanges(); s.addRange(r);
+    Object.keys(ov.cmds).forEach(c => { let st; try { st = document.queryCommandState(c); } catch (_) { return; } if (st !== ov.cmds[c]) document.execCommand(c, false); });
+    if (ov.sty) { const cur = sel(); if (cur.rangeCount && !cur.isCollapsed) { const f = cur.getRangeAt(0).startContainer; applyPendingStyles(f.nodeType === 3 ? f : (f.firstChild || f)); } }
+    s.collapseToEnd(); ovMark();
+  }
+  /* font / size / highlight chosen at a plain caret: remembered with the toggles and applied to what is typed next */
+  function setPending(kind, val) {
+    ovEnsure();
+    if (!ov) { opts.toast('Not available inside this card.'); return; }
+    (ov.sty || (ov.sty = {}))[kind] = val; ovMark(); updateToolbar();
+  }
+  const hlOf = t => { for (let e = t.parentElement; e && e !== body; e = e.parentElement) if (e.style && e.style.backgroundColor) return e; return null; };
+  function unhighlight(r) {          // really takes the highlight off the chosen text (a child can't hide a parent's colour, so the parent is split)
+    let sc = r.startContainer, so = r.startOffset, ec = r.endContainer, eo = r.endOffset;
+    if (ec.nodeType === 3 && eo < ec.length) ec.splitText(eo);
+    if (sc.nodeType === 3 && so > 0) { const n = sc.splitText(so); if (ec === sc) ec = n; sc = n; }
+    const range = document.createRange();
+    range.setStart(sc, sc.nodeType === 3 ? 0 : so); range.setEnd(ec, ec.nodeType === 3 ? ec.length : eo);
+    const nodes = [], w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT); let n;
+    while ((n = w.nextNode())) if (n.data && range.intersectsNode(n)) nodes.push(n);
+    nodes.forEach(t => {
+      for (let a = hlOf(t), guard = 0; a && guard < 20; a = hlOf(t), guard++) {
+        const before = document.createRange(); before.setStart(a, 0); before.setEndBefore(t.parentNode === a ? t : t);
+        const f1 = before.extractContents(); if (f1.textContent) { const c = a.cloneNode(false); c.appendChild(f1); a.before(c); }
+        const after = document.createRange(); after.setStartAfter(t); after.setEnd(a, a.childNodes.length);
+        const f2 = after.extractContents(); if (f2.textContent) { const c = a.cloneNode(false); c.appendChild(f2); a.after(c); }
+        a.style.removeProperty('background-color'); a.style.removeProperty('background');
+        if (!a.getAttribute('style')) a.removeAttribute('style');
+        if (a.tagName === 'SPAN' && !a.attributes.length) { while (a.firstChild) a.before(a.firstChild); a.remove(); }
+      }
+    });
+    if (nodes.length) { const rr = document.createRange(); rr.setStart(nodes[0], 0); rr.setEnd(nodes[nodes.length - 1], nodes[nodes.length - 1].length); sel().removeAllRanges(); sel().addRange(rr); }
+  }
+  function highlightSelection(v) {
+    const r = currentRange(); if (!r) return;
+    if (v === 'none') { unhighlight(r); changed(); return; }
+    document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, v); document.execCommand('styleWithCSS', false, false); changed();
+  }
+  function applyHighlight(v) {
+    const r = currentRange(); if (!r) return;
+    if (r.collapsed) setPending('hl', v); else highlightSelection(v);
+  }
+  function applyFont(v) {
+    const r = currentRange(); if (!r) return;
+    if (r.collapsed) setPending('font', v); else exec('fontName', v);
+  }
+  const colorKey = c => { const p = document.createElement('span'); p.style.backgroundColor = c; return p.style.backgroundColor; };
+  function effectiveBg(el) { for (let e = el; e && e !== body; e = e.parentElement) { const b = getComputedStyle(e).backgroundColor; if (b && b !== 'rgba(0, 0, 0, 0)' && b !== 'transparent') return b; } return ''; }
+  function applyPendingStyles(t) {   // t: the text node holding what was just typed (selected)
+    const el = t.parentElement; if (!el || !ov || !ov.sty) return;
+    const st = ov.sty;
+    if (st.size && getComputedStyle(el).fontSize !== st.size) sizeOnSelection(parseInt(st.size, 10));
+    if (st.font) { const fam = getComputedStyle(el).fontFamily.replace(/["']/g, '').toLowerCase(); if (fam !== st.font.replace(/["']/g, '').toLowerCase()) document.execCommand('fontName', false, st.font); }
+    if (st.hl) {
+      if (st.hl === 'none') { if (effectiveBg(el)) { const rr = currentRange(); if (rr) unhighlight(rr); } }
+      else if (effectiveBg(el) !== colorKey(st.hl)) { document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, st.hl); document.execCommand('styleWithCSS', false, false); }
+    }
+  }
+  // what the next typed character will really look like at a plain caret (queryCommandState is unreliable on empty lines / run edges)
+  function caretFormat(cmd) {
+    if (ov && ovHere() && cmd in ov.cmds) return ov.cmds[cmd];
+    const s = sel(); let el = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement);
+    if (!el || !body.contains(el)) { try { return document.queryCommandState(cmd); } catch (_) { return false; } }
+    const cs = getComputedStyle(el);
+    if (cmd === 'bold') return cs.fontWeight === 'bold' || parseInt(cs.fontWeight, 10) >= 600;
+    if (cmd === 'italic') return cs.fontStyle === 'italic' || cs.fontStyle === 'oblique';
+    const want = cmd === 'underline' ? 'underline' : 'line-through';
+    for (let n = el; n && n !== body; n = n.parentElement) { const d = getComputedStyle(n).textDecorationLine || ''; if (d.includes(want)) return true; }
+    return false;
+  }
+  function exec(cmd, val) { focusBody();
+    const r0 = TOGGLE_CMDS.includes(cmd) ? currentRange() : null;
+    if (r0 && r0.collapsed) {            // plain caret: remember the choice for the next typed characters
+      ovEnsure();
+      if (!ov) { ov = { cmds: ovAll(), node: null, off: 0 }; }
+      ov.cmds[cmd] = !ov.cmds[cmd]; ovMark(); updateToolbar(); return true;
+    }
+    const jf = /^justify/.test(cmd); if (jf) document.execCommand('styleWithCSS', false, true); const ok = document.execCommand(cmd, false, val); if (jf) document.execCommand('styleWithCSS', false, false); saveRange(); changed(); updateToolbar(); return ok; }
 
   function uncheck(uls) { uls.forEach(u => { u.classList.remove('checklist'); u.removeAttribute('data-title'); u.querySelectorAll('li.done').forEach(li => li.classList.remove('done')); if (!u.getAttribute('class')) u.removeAttribute('class'); }); }
   function toggleBullet() {
@@ -232,6 +333,8 @@ const NotesEditor = (function () {
     caretIn(nxt, false); changed(); return true;
   }
   function onBeforeInput(e) {
+    if (e.target === body && ov) ovValid = composing || /Composition/.test(e.inputType) || ovHere();   // only keep the choice if the caret hasn't moved since
+    if (e.target === body && e.inputType === 'insertText' && !composing) { if (ov && !ovValid) ov = null; ovEnsure(); ovValid = true; }
     if (e.target === body) autoCap(e);
     if (e.target !== body || e.inputType !== 'insertParagraph') return;
     if (onEnterInLinkCard(e)) return;
@@ -330,7 +433,11 @@ const NotesEditor = (function () {
 
   function applySize(key) {
     const r = currentRange();
-    if (!r || r.collapsed) { opts.toast('Select some text first, then choose a size.'); return; }
+    if (!r) return;
+    if (r.collapsed) { setPending('size', (Math.min(96, Math.max(8, parseInt(key, 10) || 16))) + 'px'); return; }   // plain caret: applies to what is typed next
+    sizeOnSelection(key);
+  }
+  function sizeOnSelection(key) {
     document.execCommand('fontSize', false, '7');
     const spans = [];
     body.querySelectorAll('font[size="7"]').forEach(f => {
@@ -366,7 +473,18 @@ const NotesEditor = (function () {
   }
 
   /* auto capitalization: first letter of a line / sentence, and a lone "i" */
+  let pendingCap = false;
+  function capNow() {            // runs after the browser inserted one lowercase letter: replace it by its capital
+    pendingCap = false;
+    const s = sel(); if (!s.rangeCount || !s.isCollapsed) return;
+    const nd = s.anchorNode, off = s.anchorOffset;
+    if (!nd || nd.nodeType !== 3 || off < 1) return;
+    const ch = nd.textContent[off - 1]; if (!/[a-z]/.test(ch)) return;
+    const r = document.createRange(); r.setStart(nd, off - 1); r.setEnd(nd, off);
+    s.removeAllRanges(); s.addRange(r); document.execCommand('insertText', false, ch.toUpperCase());
+  }
   function autoCap(e) {
+    pendingCap = false;
     if (!opts.autoCap || !opts.autoCap() || e.inputType !== 'insertText' || !e.data || e.data.length !== 1) return;
     const r = currentRange(); if (!r || !r.collapsed) return;
     const el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;
@@ -376,7 +494,7 @@ const NotesEditor = (function () {
     const before = pre.toString().replace(/\u200b/g, '');
     const ch = e.data;
     if (/[a-z]/.test(ch) && /(^\s*$|[.!?]["')\]]*\s+$)/.test(before)) {
-      e.preventDefault(); document.execCommand('insertText', false, ch.toUpperCase()); return;
+      pendingCap = true; return;      // the browser inserts the letter normally (keeping its format); input() swaps it for the capital
     }
     if (/[\s.,!?;:')]/.test(ch) && /(^|[\s(])i$/.test(before) && r.startContainer.nodeType === 3 && r.startOffset > 0) {
       const t = r.startContainer, o = r.startOffset;
@@ -467,7 +585,7 @@ const NotesEditor = (function () {
       const cmd = b.dataset.cmd; let on = false;
       if (active) {
         try {
-          if (['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight'].includes(cmd)) on = document.queryCommandState(cmd);
+          if (['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight'].includes(cmd)) on = (TOGGLE_CMDS.includes(cmd) && currentRange().collapsed) ? caretFormat(cmd) : document.queryCommandState(cmd);
         } catch (_) {}
         if (cmd === 'insertUnorderedList') on = listsInSelection('ul').some(u => !u.classList.contains('checklist'));
         if (cmd === 'insertOrderedList') on = listsInSelection('ol').length > 0;
@@ -483,6 +601,25 @@ const NotesEditor = (function () {
       const h = el && el.closest && el.closest('h1,h2,h3');
       const bs = root.querySelector('#blockSel'); if (bs) bs.value = h && body.contains(h) ? h.tagName.toLowerCase() : 'p';
     }
+    paintStyleButtons(active);
+  }
+  /* Size / Font / Highlight buttons light up like the others; Size shows the number in use */
+  function paintStyleButtons(active) {
+    const dd = id => root.querySelector('#' + id + ' .dd-btn');
+    const bS = dd('ddSize'), bF = dd('ddFont'), bH = dd('ddHl'); if (!bS || !bF || !bH) return;
+    let size = '', font = false, hl = false;
+    if (active) {
+      const s = sel(); const el = s.anchorNode && (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement);
+      const pend = ov && ovHere() && ov.sty ? ov.sty : null;
+      if (el && body.contains(el)) {
+        const fs = el.closest('[style*="font-size"]'); if (fs && body.contains(fs) && fs.style.fontSize) size = fs.style.fontSize;
+        font = !!(el.closest('[style*="font-family"], font[face]') && body.contains(el.closest('[style*="font-family"], font[face]')));
+        hl = !!hlOf(s.anchorNode.nodeType === 3 ? s.anchorNode : (s.anchorNode.firstChild || s.anchorNode));
+      }
+      if (pend) { if (pend.size) size = pend.size; if (pend.font) font = true; if (pend.hl) hl = pend.hl !== 'none'; }
+    }
+    const lab = bS.querySelector('.dd-l'); if (lab) lab.textContent = size ? parseInt(size, 10) + ' px' : 'Size';
+    bS.classList.toggle('on', !!size); bF.classList.toggle('on', font); bH.classList.toggle('on', hl);
   }
 
   // Keep the line being typed above the format bar / keyboard (like the keyboard does): scroll the note area so the caret is visible.
@@ -507,6 +644,11 @@ const NotesEditor = (function () {
   }
 
   function onBodyInput(e) {
+    if (pendingCap && e.inputType === 'insertText') capNow();
+    if (ov && !ovValid) ov = null;
+    if (ov && e.inputType === 'insertText' && e.data) ovFix(e.data.length);
+    if (ov && /^insert(Paragraph|LineBreak)$/.test(e.inputType)) { const s1 = sel(); if (s1.rangeCount && s1.isCollapsed) { ovMark(); updateToolbar(); } else ov = null; }   // Enter keeps the chosen format for the new line
+    if (ov && /^delete/.test(e.inputType)) { const s0 = sel(); if (s0.rangeCount && s0.isCollapsed) { ovMark(); updateToolbar(); } else ov = null; }   // deleting a letter keeps the chosen format
     if (e.inputType === 'insertParagraph') {      // new checklist item shouldn't inherit "done"
       const r = currentRange(), li = r && (r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement).closest('li.done');
       if (li) li.classList.remove('done');
@@ -837,7 +979,7 @@ const NotesEditor = (function () {
     const withRange = fn => () => { restoreRange(); fn(); updateToolbar(); };
     root.querySelector('#blockSel').addEventListener('change', e => { const v = e.target.value; withRange(() => exec('formatBlock', '<' + v + '>'))(); });
     root.querySelector('#lineSel').addEventListener('change', e => { const v = e.target.value; if (v !== '') withRange(() => applyLineHeight(v))(); e.target.value = ''; });
-    root.querySelector('#fontSel').addEventListener('change', e => { const v = e.target.value; if (v) withRange(() => exec('fontName', v))(); e.target.value = ''; });
+    root.querySelector('#fontSel').addEventListener('change', e => { const v = e.target.value; if (v) withRange(() => applyFont(v))(); e.target.value = ''; });
     root.querySelector('#sizeSel').addEventListener('change', e => { const v = e.target.value; if (v) withRange(() => applySize(v))(); e.target.value = ''; });
     /* font / size / highlight: drop-down menus (below the button on desktop, popping up above it on phones) */
     (function initDropdowns() {
@@ -876,7 +1018,7 @@ const NotesEditor = (function () {
     })();
     root.querySelector('#hlSel').addEventListener('change', e => {
       const v = e.target.value;
-      if (v) withRange(() => { document.execCommand('styleWithCSS', false, true); exec('hiliteColor', v === 'none' ? 'transparent' : v); document.execCommand('styleWithCSS', false, false); })();
+      if (v) withRange(() => applyHighlight(v))();
       e.target.value = '';
     });
     const sp = root.querySelector('#stickerPop');
@@ -904,7 +1046,9 @@ const NotesEditor = (function () {
     root.addEventListener('keydown', e => { if (e.target === body) onKeydown(e); });
     root.addEventListener('keyup', e => { if (e.target === body) { updateToolbar(); if (e.key.startsWith('Arrow')) hideSuggest(); } });
     root.addEventListener('focusout', e => { if (e.target === body) setTimeout(() => { if (!opts.suggestEl.matches(':hover')) hideSuggest(); }, 150); });
-    document.addEventListener('selectionchange', () => { if (currentRange()) { saveRange(); updateToolbar(); } });
+    document.addEventListener('selectionchange', () => { if (ov && !composing && !ovHere()) ov = null; if (currentRange()) { saveRange(); updateToolbar(); } });
+    root.addEventListener('compositionstart', e => { if (e.target !== body) return; composing = true; if (!(ov && ovHere())) { ov = null; ovEnsure(); } });
+    root.addEventListener('compositionend', e => { if (e.target !== body) return; composing = false; if (ov && e.data) { ovFix(e.data.length); updateToolbar(); } else if (ov) ovMark(); });
     try { document.execCommand('defaultParagraphSeparator', false, 'div'); } catch (_) {}
   }
 
