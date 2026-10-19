@@ -3,7 +3,7 @@
 A cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript: no build step, no dependencies, no backend.
 Notes live **only in your browser** (IndexedDB). There is no cloud sync.
 
-Current version: **38.2.0** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
+Current version: **38.2.1** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
 
 ## Run it
 
@@ -41,7 +41,6 @@ js/editor/rich-text-editor.js contenteditable editor, toolbar, cards, checklists
 js/app/icons.js               line-icon set
 js/app/notes-app.js           UI controller: state, rendering, folders, settings, backup
 assets/                       logo and icons
-tests/                        Node unit tests and Playwright end-to-end suites
 ```
 
 Scripts are plain globals loaded in order (no ES modules), so the app has no build tooling.
@@ -54,14 +53,15 @@ Scripts are plain globals loaded in order (no ES modules), so the app has no bui
   Files are validated and note HTML is re-sanitized on import.
 - Images are stored inside notes as data URLs (downscaled to 1280px).
 
-## Tests
+## Versioning
 
-```bash
-node tests/logic.test.js
-NODE_PATH=<path to playwright> CHROME=<chromium> node tests/e2e.js
-```
+Semantic versioning, `MAJOR.MINOR.PATCH`:
 
-The other `tests/e2e-*.js` suites run the same way.
+| Commit type | Bump | Example | Meaning |
+|---|---|---|---|
+| `fix:` | patch | 1.0.0 → 1.0.1 | Bug fixes |
+| `feat:` | minor | 1.0.0 → 1.1.0 | New features |
+| `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
 ## Limitations
 

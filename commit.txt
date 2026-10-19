@@ -1,4 +1,27 @@
-docs: 38.1.0 → 38.2.0 — Clean GitHub README, separate CHANGELOG.md
+Version semantics
+  fix:   patch  (1.0.0 → 1.0.1) — Bug fixes
+  feat:  minor  (1.0.0 → 1.1.0) — New features
+  feat!: major  (1.0.0 → 2.0.0) — Breaking changes
+
+Format: <type>: <previous_version> → <new_version> — <summary>, then Fixed / Added / Changed / Impact (only the relevant sections).
+New entries go at the top, below this legend.
+
+==========================================================================
+
+fix: 38.2.0 → 38.2.1 — README no longer lists tests; version semantics legend added
+
+Fixed
+- README: before → had a "Tests" section and a tests/ line in the layout although tests are not shipped in the zip (since v27); after → both removed.
+- Docs: before → the semantics of fix / feat / feat! were not written down anywhere in the project; after → legend added to README, CHANGELOG.md and commit.txt.
+
+Changed
+- The 38.2.0 entry below is now typed feat: (new README and CHANGELOG.md files), consistent with the legend.
+- Settings → About shows 38.2.1.
+
+Impact
+- README matches what is actually in the zip; the versioning rules are visible to anyone opening the project.
+
+feat: 38.1.0 → 38.2.0 — Clean GitHub README, separate CHANGELOG.md
 
 Added
 - CHANGELOG.md with the full history (v1 … v38.1.0 plus this release), newest first, with a note on the switch to semantic versioning.

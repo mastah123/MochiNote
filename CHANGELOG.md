@@ -4,6 +4,15 @@ All notable changes to MochiNote, newest first. Versions up to 38.0.0 were numbe
 from 38.1.0 on the project follows semantic versioning: `fix:` patch, `feat:` minor, `feat!:` major.
 Commit messages are in [commit.txt](commit.txt).
 
+| Commit type | Bump | Example | Meaning |
+|---|---|---|---|
+| `fix:` | patch | 1.0.0 → 1.0.1 | Bug fixes |
+| `feat:` | minor | 1.0.0 → 1.1.0 | New features |
+| `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
+
+### v38.2.1 — Docs fix
+- README no longer mentions tests (they are not in the zip); version semantics table added.
+
 ### v38.2.0 — Docs
 - README rewritten for GitHub (short, current feature list); the changelog now lives in this file.
 - `commit.txt` and `PROJECT_CONTEXT.md` updated.
