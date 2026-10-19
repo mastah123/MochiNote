@@ -1,6 +1,6 @@
 # MochiNote
 
-**Version 36.0.0**
+**Version 37.0.0**
 
 A cute, cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript — no build step, no
 dependencies, no backend. Your notes live **only in your browser** (local-first). There is no cloud sync.
@@ -90,6 +90,10 @@ Built with plain HTML, CSS and JavaScript. No third-party libraries, fonts or im
 ---
 
 ## Changelog
+
+### v37.0.0 — Lettered lists and edit-where-you-read
+- New **lettered list** (a, b, c…) in the list options, between bulleted and indent. It converts to and from numbered/bulleted lists, shows as "a. b." in the home previews and keeps its letters when copied.
+- Tapping the **edit icon** keeps your reading position (no scrolling again) and puts the cursor on the line you were reading — or at the end of the note when the end is on screen.
 
 ### v36.0.0 — Size, highlight and card colours
 - **Size** (and Font, Highlight) now work like Bold/Italic: pick one with the cursor in a line and it applies to what you type next. The buttons light up, and Size shows the number in use (e.g. "20 px").

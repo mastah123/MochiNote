@@ -57,6 +57,7 @@ const NotesEditor = (function () {
         else if (tag === 'UL' && n === 'data-title' && ch.classList.contains('checklist')) { const t = v.replace(/[<>]/g, '').trim().slice(0, 60); if (t) { ch.setAttribute('data-title', t); ok = true; } }
         else if (tag === 'DIV' && n === 'data-sticker' && /^[^<>"'&\s]{1,8}$/.test(v)) ok = true;
         else if (tag === 'OL' && n === 'start' && /^\d{1,4}$/.test(v)) ok = true;
+        else if (tag === 'OL' && n === 'type' && v === 'a') ok = true;
         else if (tag === 'A' && n === 'href') { const u = safeUrl(v); if (u) { ch.setAttribute('href', u); ok = true; } }
         else if (tag === 'IMG' && n === 'src') { const u = safeUrl(v, true); if (u) { ch.setAttribute('src', u); ok = true; } }
         else if (tag === 'IMG' && n === 'alt') { ch.setAttribute('alt', v.slice(0, 200)); ok = true; }
@@ -223,11 +224,30 @@ const NotesEditor = (function () {
     if (uls.some(u => u.classList.contains('checklist'))) { uncheck(uls); changed(); updateToolbar(); return; }
     exec('insertUnorderedList');
   }
+  const letterOf = i => { let n = i, t = ''; while (n > 0) { n--; t = String.fromCharCode(97 + n % 26) + t; n = Math.floor(n / 26); } return t; };
   function toggleNumbered() {
     focusBody();
     const uls = listsInSelection('ul').filter(u => u.classList.contains('checklist'));
     if (uls.length) uncheck(uls);
+    const ols = listsInSelection('ol');
+    if (ols.some(o => o.getAttribute('type') === 'a')) { ols.forEach(o => o.removeAttribute('type')); changed(); updateToolbar(); return; }   // lettered -> numbered
     exec('insertOrderedList');
+  }
+  function toggleLettered() {
+    focusBody();
+    const uls = listsInSelection('ul').filter(u => u.classList.contains('checklist'));
+    if (uls.length) uncheck(uls);
+    const ols = listsInSelection('ol');
+    if (ols.length && ols.every(o => o.getAttribute('type') === 'a')) document.execCommand('insertOrderedList');      // pressing again removes the list
+    else if (ols.length) ols.forEach(o => o.setAttribute('type', 'a'));
+    else {
+      const had = new Set(body.querySelectorAll('ol'));
+      document.execCommand('insertOrderedList');
+      const made = new Set(listsInSelection('ol'));
+      body.querySelectorAll('ol').forEach(o => { if (!had.has(o)) made.add(o); });   // a brand-new empty list may not count as "in the selection"
+      made.forEach(o => o.setAttribute('type', 'a'));
+    }
+    changed(); updateToolbar();
   }
   function toggleChecklist() {
     focusBody();
@@ -381,7 +401,7 @@ const NotesEditor = (function () {
       Array.from(el.children).forEach(li => {
         if (li.tagName !== 'LI') return; i++;
         if (!range.intersectsNode(li)) return;
-        const marker = ordered ? i + '. ' : check ? (li.classList.contains('done') ? '☑ ' : '☐ ') : '• ';
+        const marker = ordered ? (el.getAttribute('type') === 'a' ? letterOf(i) : i) + '. ' : check ? (li.classList.contains('done') ? '☑ ' : '☐ ') : '• ';
         buf = ''; Array.from(li.childNodes).forEach(c => { if (c.nodeType === 1 && /^(UL|OL)$/.test(c.tagName)) return; inline(c); });
         const t = buf.replace(/\s+/g, ' ').trim(); buf = ''; lines.push('  '.repeat(depth) + marker + t);
         Array.from(li.children).forEach(c => { if (/^(UL|OL)$/.test(c.tagName)) list(c, depth + 1); });
@@ -588,7 +608,8 @@ const NotesEditor = (function () {
           if (['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight'].includes(cmd)) on = (TOGGLE_CMDS.includes(cmd) && currentRange().collapsed) ? caretFormat(cmd) : document.queryCommandState(cmd);
         } catch (_) {}
         if (cmd === 'insertUnorderedList') on = listsInSelection('ul').some(u => !u.classList.contains('checklist'));
-        if (cmd === 'insertOrderedList') on = listsInSelection('ol').length > 0;
+        if (cmd === 'insertOrderedList') on = listsInSelection('ol').some(o => o.getAttribute('type') !== 'a');
+        if (cmd === 'lettered') on = listsInSelection('ol').some(o => o.getAttribute('type') === 'a');
         if (cmd === 'checklist') on = listsInSelection('ul').some(u => u.classList.contains('checklist'));
         if (/^h[123]$/.test(cmd)) { const s0 = sel(); const e0 = s0.anchorNode && (s0.anchorNode.nodeType === 1 ? s0.anchorNode : s0.anchorNode.parentElement); const hh = e0 && e0.closest && e0.closest('h1,h2,h3'); on = !!(hh && body.contains(hh) && hh.tagName.toLowerCase() === cmd); }
         if (cmd === 'callout') { const r0 = currentRange(); on = !!(r0 && calloutOf(r0.startContainer)); }
@@ -635,6 +656,19 @@ const NotesEditor = (function () {
     const el = n.nodeType === 1 && n !== body ? n : n.parentElement;
     const er = el && el.getBoundingClientRect();
     return er && er.height ? (el.tagName === 'BR' ? el.parentElement.getBoundingClientRect() : er) : null;
+  }
+  /* entering edit mode from viewing mode: put the caret where the reader is (end of the note if it is on screen, else the top visible line) */
+  function placeCaretForEdit() {
+    const sc = body && body.closest('.ed-scroll'); if (!sc) return;
+    const box = sc.getBoundingClientRect(), br = body.getBoundingClientRect();
+    const lastEl = body.lastElementChild;
+    if (!body.textContent.trim() || !lastEl || lastEl.getBoundingClientRect().bottom <= box.bottom - 8) { if (lastEl) caretIn(lastEl, true); else caretIn(body, true); return; }   // the end of the note is on screen: continue there
+    const x = Math.min(br.right - 4, Math.max(br.left + 4, box.left + box.width / 2)), y = box.top + 48;
+    let r = null;
+    if (document.caretRangeFromPoint) r = document.caretRangeFromPoint(x, y);
+    else if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(x, y); if (p) { r = document.createRange(); r.setStart(p.offsetNode, p.offset); r.collapse(true); } }
+    if (!r || !body.contains(r.startContainer)) return;
+    sel().removeAllRanges(); sel().addRange(r); saveRange();
   }
   function keepCaretVisible() {
     const sc = body && body.closest('.ed-scroll'); const rect = caretRect(); if (!sc || !rect || !rect.height) return;
@@ -962,6 +996,7 @@ const NotesEditor = (function () {
       const cmd = b.dataset.cmd; restoreRange();
       if (cmd === 'insertUnorderedList') toggleBullet();
       else if (cmd === 'insertOrderedList') toggleNumbered();
+      else if (cmd === 'lettered') toggleLettered();
       else if (cmd === 'checklist') toggleChecklist();
       else if (cmd === 'callout') toggleCallout();
       else if (cmd === 'codeblock') toggleTextCard('codecard');
@@ -1063,5 +1098,5 @@ const NotesEditor = (function () {
     return body;
   }
 
-  return { init, load, sanitize, hideSuggest, hideSticker, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), keepCaretVisible, relayout: () => clScheduleLayout(), el: () => body, focus: () => focusBody(), updateToolbar };
+  return { init, load, sanitize, hideSuggest, hideSticker, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), keepCaretVisible, placeCaretForEdit, relayout: () => clScheduleLayout(), el: () => body, focus: () => focusBody(), updateToolbar };
 })();

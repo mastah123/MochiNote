@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '36.0.0';
+  const APP_VERSION = '37.0.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -267,6 +267,7 @@
 
   /* Structured preview for cards: keeps bullets, numbering and checklists instead of flattening to text.
      Note HTML is already sanitized; DOMParser never runs scripts or loads images. */
+  const letterOf = i => { let n = i, t = ''; while (n > 0) { n--; t = String.fromCharCode(97 + n % 26) + t; n = Math.floor(n / 26); } return t; };
   function previewLines(html, max) {
     const doc = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html');
     const lines = []; let buf = '';
@@ -288,7 +289,7 @@
             i++;
             const c = li.cloneNode(true); c.querySelectorAll('ul,ol').forEach(x => x.remove());
             const t = c.textContent.replace(/\s+/g, ' ').trim();
-            if (t) lines.push({ k: kind, t, n: i, done: li.classList.contains('done') });
+            if (t) lines.push({ k: kind, t, n: (tag === 'OL' && ch.getAttribute('type') === 'a') ? letterOf(i) : i, done: li.classList.contains('done') });
           });
           return;
         }
@@ -567,9 +568,14 @@
   }
   function startEditing() {
     if (!state.openId || !state.viewing) return;
+    const sc = $('#edScroll'), top = sc.scrollTop;          // keep the reading position: no scrolling again after tapping edit
     state.viewing = false; applyMode();
     if (!state.editPushed) { history.pushState({ kind: 'editor', edit: true }, ''); state.editPushed = true; }
-    setTimeout(() => NotesEditor.el().focus({ preventScroll: true }), 30);
+    NotesEditor.el().focus({ preventScroll: true }); NotesEditor.placeCaretForEdit();
+    let stop = false; const halt = () => { stop = true; };
+    ['touchstart', 'wheel', 'pointerdown', 'keydown'].forEach(ev => sc.addEventListener(ev, halt, { once: true, passive: true }));
+    const keep = () => { if (!stop && Math.abs(sc.scrollTop - top) > 1) sc.scrollTop = top; };
+    keep(); requestAnimationFrame(keep); [60, 160, 320, 600].forEach(ms => setTimeout(keep, ms));
   }
   async function stopEditing() {       // Back from editing returns to viewing mode
     clearTimeout(state.saveTimer); state.dirty = true; await saveOpen();
