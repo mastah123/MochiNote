@@ -3,7 +3,7 @@
 Handoff notes for another AI or account. Keep this file short and current; update it with every release.
 
 ## Status
-- Version **38.1.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
+- Version **38.2.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
 - Personal notes web app: vanilla HTML/CSS/JS, no build tools, no backend, local-first (IndexedDB, in-memory fallback). Mobile-first; desktop (≥900px) adapts.
 - Work arrives as lists of changes; the owner says "Next" to build a batch. One zip per version, named `mochinote-vX.Y.Z.zip`, tests excluded.
 
@@ -30,6 +30,5 @@ Handoff notes for another AI or account. Keep this file short and current; updat
 - `tests/logic.test.js` (Node) and `tests/e2e*.js` (Playwright, Chromium); 40 suites, about 7 minutes in total. Run with `NODE_PATH` pointing at the global Playwright and `CHROME` set to the Chromium binary.
 
 ## Next steps
-1. README clean-up for GitHub and a separate CHANGELOG.md with the full history (the changelog is currently inside the README).
-2. Keep `commit.txt` updated at the top for every release.
-3. Split the two big JS files further if it can be done without changing behaviour.
+1. Keep `commit.txt` updated at the top for every release.
+2. Split the two big JS files further if it can be done without changing behaviour.
