@@ -23,6 +23,14 @@
   .folder-strip.grid .fname { grid-area: n; font-size: 1rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .folder-strip.grid .fcount { grid-area: c; font-size: .82rem; }
 
+  /* "Show all" looks like the phone's: accent-coloured text, no border */
+  .show-all { border: 0; background: none; color: var(--accent); font-size: .98rem; padding: 0 10px; min-height: 40px; border-radius: 10px; cursor: pointer; }
+  .show-all:hover { background: var(--accent-soft); }
+
+  /* list view like the phone: the pin sits at the bottom right of the row, clear of the date */
+  .notes.list .note { min-height: 72px; padding: 12px 16px; align-content: center; }
+  .notes.list .note .pin-mark { position: absolute; top: auto; bottom: 10px; right: 14px; display: flex; align-items: center; height: 20px; margin: 0; }
+
   /* pinned notes: the pin sits above the title, like the phone */
   .notes.grid .note .pin-mark { position: static; display: flex; align-items: center; height: 20px; margin-bottom: 4px; }
 }

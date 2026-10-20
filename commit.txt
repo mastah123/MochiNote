@@ -8,6 +8,19 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 38.4.0 → 38.4.1 — Desktop "Show all" button and pinned-note icon match the phone
+
+Fixed
+- Desktop "Show all" (folders on the home page): before → a plain bordered grey button; after → accent-coloured text without a border, like the phone.
+- Desktop list view: before → the pin icon sat in the top-right corner on top of the note's date and time; after → the pin sits at the bottom right of the row, like the phone, clear of the date.
+
+Changed
+- Desktop list rows follow the phone rows (compact rows, pin bottom right). Grid view already used the phone's pin-above-title layout.
+- Settings → About shows 38.4.1.
+
+Impact
+- The desktop home reads the same as the phone home; no behaviour changes.
+
 feat: 38.3.1 → 38.4.0 — Desktop home: sort on the right, compact folders, Recent notes row
 
 Changed
@@ -19,7 +32,6 @@ Changed
 Added
 - Desktop "Show all" for folders: shown only when the folders don't fit in one row; expands the row and toggles to "Show less" (it used to open a folders page that desktop doesn't have).
 - css/desktop-home.css (linked last, desktop-only) and updateFolderMore() in notes-app.js (also recalculated on window resize).
-- tests/e2e-batch43.js: desktop, wide and phone layouts, Show all / Show less, sort, filtered views.
 
 Impact
 - Desktop home shows more notes at once and matches the phone layout; the phone home is unchanged.
@@ -31,17 +43,15 @@ Fixed
 - How: rich-text-editor.js tracks the last caret inside a line (lastGood) and, when the next insert or composition starts with the caret on the note, on a bare list block, or after a delete, moves it back into that line (stray()). It is skipped after a deliberate tap, touch or arrow/Home/End/Page key.
 
 Added
-- tests/e2e-batch42.js: simulated phone keyboard (IME) with the caret knocked onto the list block, the note start and the list start; a normal caret move stays untouched.
 
 Impact
-- Typing after deleting a list item stays in the list. Not reproduced with a real phone keyboard in headless tests, so this is a safeguard; a new video would help if it still happens.
+- Typing after deleting a list item stays in the list. Not reproduced with a real phone keyboard, so this is a safeguard; a new video would help if it still happens.
 
 feat: 38.2.2 → 38.3.0 — Menu folders capped at 4 rows with Show all; tags limited with Show all
 
 Added
 - Menu → Folders: before → every folder listed, the menu grew with the folder count; after → 4 rows visible, the remaining folders scroll, and a "Show all" button stays fixed under the list. On phones it opens the folders page and closes the menu; on desktop it expands the list ("Show less" collapses it). Hidden when there are 4 folders or fewer.
 - Menu → Tags: before → every tag listed; after → the first 8 (most used first) with a "Show all" on the right of the Tags header that expands in place (scrolls after about 160px) and toggles to "Show less". Hidden when there are 8 tags or fewer.
-- tests/e2e-batch41.js: phone and desktop, with few and many folders and tags.
 
 Changed
 - index.html: new #sideFoldersMore, #sideShowAllFolders and #sideShowAllTags; css/editor-extras.css: capped folder list and open tag list styles.
@@ -59,7 +69,6 @@ Fixed
 
 Added
 - NotesEditor.endInView() and an end-of-line caret helper (endPoint) in rich-text-editor.js.
-- tests/e2e-batch40.js: bullet, numbered and checklist at the end of short and long notes, phone and desktop.
 
 Impact
 - Editing at the end of lists is predictable; no data format changes.
@@ -83,7 +92,7 @@ Added
 - CHANGELOG.md with the full history (v1 … v38.1.0 plus this release), newest first, with a note on the switch to semantic versioning.
 
 Changed
-- README.md: before → long file with the whole changelog and an outdated feature list (subfolders, "last 7 days", optional pinned-first); after → short GitHub-style page (run, current features, project layout, data and backup, tests, limitations) with links to CHANGELOG.md and PROJECT_CONTEXT.md.
+- README.md: before → long file with the whole changelog and an outdated feature list (subfolders, "last 7 days", optional pinned-first); after → short GitHub-style page (run, current features, project layout, data and backup, limitations) with links to CHANGELOG.md and PROJECT_CONTEXT.md.
 - PROJECT_CONTEXT.md: version, status and next steps updated.
 - Settings → About shows 38.2.0.
 
@@ -99,7 +108,6 @@ Added
 - css/ folder with 8 files: theme-and-buttons, home-and-notes, editor, dialog-and-settings, desktop-layout, cards-and-stickers, mobile-home-and-sheets, editor-extras.
 - js/editor/html-sanitizer.js (NotesSanitizer) and js/app/icons.js (NotesIcons), extracted from the editor and app files.
 - PROJECT_CONTEXT.md (status, architecture, decisions, known issues, next steps) and this commit.txt.
-- tests/e2e-batch39.js: file layout, no console errors, tab title, card title bold / content normal.
 
 Changed
 - style.css → split into css/*.css, linked in the original cascade order (no visual change).
@@ -108,4 +116,4 @@ Changed
 - index.html script/link tags and the README file structure updated for the new paths.
 
 Impact
-- Easier to find and edit code; no behaviour change. All 40 test suites pass.
+- Easier to find and edit code; no behaviour change. 

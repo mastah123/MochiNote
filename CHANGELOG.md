@@ -10,6 +10,10 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v38.4.1 — Desktop details like the phone
+- The desktop "Show all" button is accent-coloured text without a border, like the phone.
+- In the desktop list view the pin icon sits at the bottom right of the row instead of covering the date.
+
 ### v38.4.0 — Desktop home like the phone
 - Desktop: the sort control and the grid/list toggle are on the right, in the same row as the "Recent notes" title.
 - Desktop: folders are smaller, in one compact row (icon, name and count) with a "Folders" title; "Show all" appears only when some folders don't fit and expands the row ("Show less" collapses it).
