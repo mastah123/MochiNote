@@ -284,7 +284,21 @@ const NotesEditor = (function () {
     if (!(nxt && nxt.tagName === 'DIV' && !nxt.getAttribute('class') && !nxt.textContent.trim() && !nxt.querySelector('img,ul,ol'))) { nxt = document.createElement('div'); nxt.appendChild(document.createElement('br')); card.after(nxt); }
     caretIn(nxt, false); changed(); return true;
   }
+  /* Some phone keyboards leave the caret on the list itself (after the last item) or at the very start of the note after a Backspace
+     in a list; the next letter then lands on a new line above the list. Put the caret back inside the item it was in. */
+  let lastGood = null, pointed = false;
+  function stray() {
+    const s = sel(); if (!s.rangeCount || !s.isCollapsed) return false;
+    const n = s.anchorNode; if (!n || n.nodeType !== 1 || !(n === body || n.nodeName === 'UL' || n.nodeName === 'OL') || !(n === body || body.contains(n))) return false;
+    if (lastGood && !pointed && body.contains(lastGood.startContainer)) { s.removeAllRanges(); s.addRange(lastGood.cloneRange()); saveRange(); return true; }
+    if (n.nodeName === 'UL' || n.nodeName === 'OL') {
+      const off = s.anchorOffset, li = n.childNodes[off > 0 ? off - 1 : 0];
+      if (li && li.nodeName === 'LI') { caretIn(li, off > 0); return true; }
+    }
+    return false;
+  }
   function onBeforeInput(e) {
+    if (e.target === body && /^insert(Text|CompositionText|FromComposition)$/.test(e.inputType)) stray();
     if (e.target === body && ov) ovValid = composing || /Composition/.test(e.inputType) || ovHere();   // only keep the choice if the caret hasn't moved since
     if (e.target === body && e.inputType === 'insertText' && !composing) { if (ov && !ovValid) ov = null; ovEnsure(); ovValid = true; }
     if (e.target === body) autoCap(e);
@@ -616,6 +630,7 @@ const NotesEditor = (function () {
   }
 
   function onBodyInput(e) {
+    if (/^delete/.test(e.inputType)) stray();        // after a Backspace the caret must be inside a line, not on the list block
     if (pendingCap && e.inputType === 'insertText') capNow();
     if (ov && !ovValid) ov = null;
     if (ov && e.inputType === 'insertText' && e.data) ovFix(e.data.length);
@@ -1019,8 +1034,14 @@ const NotesEditor = (function () {
     root.addEventListener('keydown', e => { if (e.target === body) onKeydown(e); });
     root.addEventListener('keyup', e => { if (e.target === body) { updateToolbar(); if (e.key.startsWith('Arrow')) hideSuggest(); } });
     root.addEventListener('focusout', e => { if (e.target === body) setTimeout(() => { if (!opts.suggestEl.matches(':hover')) hideSuggest(); }, 150); });
-    document.addEventListener('selectionchange', () => { if (ov && !composing && !ovHere()) ov = null; if (currentRange()) { saveRange(); updateToolbar(); } });
-    root.addEventListener('compositionstart', e => { if (e.target !== body) return; composing = true; if (!(ov && ovHere())) { ov = null; ovEnsure(); } });
+    root.addEventListener('pointerdown', () => { pointed = true; }, true);
+    root.addEventListener('keydown', e => { if (/^(Arrow|Home$|End$|Page)/.test(e.key)) pointed = true; }, true);
+    root.addEventListener('touchstart', () => { pointed = true; }, { capture: true, passive: true });
+    document.addEventListener('selectionchange', () => {
+      if (ov && !composing && !ovHere()) ov = null;
+      if (currentRange()) { saveRange(); updateToolbar(); const s = sel(); if (s.isCollapsed && s.anchorNode && s.anchorNode.nodeType === 3) { lastGood = s.getRangeAt(0).cloneRange(); pointed = false; } }
+    });
+    root.addEventListener('compositionstart', e => { if (e.target !== body) return; stray(); composing = true; if (!(ov && ovHere())) { ov = null; ovEnsure(); } });
     root.addEventListener('compositionend', e => { if (e.target !== body) return; composing = false; if (ov && e.data) { ovFix(e.data.length); updateToolbar(); } else if (ov) ovMark(); });
     try { document.execCommand('defaultParagraphSeparator', false, 'div'); } catch (_) {}
   }

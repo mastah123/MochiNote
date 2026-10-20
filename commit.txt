@@ -8,6 +8,18 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 38.3.0 → 38.3.1 — Caret no longer jumps above the list after Backspace
+
+Fixed
+- Enter at the end of a list, Backspace on the empty item, then typing: before → on a phone the letters appeared on a new line above the list (the caret was on the list block or at the start of the note, not inside the last item); after → typing continues at the end of the list item.
+- How: rich-text-editor.js tracks the last caret inside a line (lastGood) and, when the next insert or composition starts with the caret on the note, on a bare list block, or after a delete, moves it back into that line (stray()). It is skipped after a deliberate tap, touch or arrow/Home/End/Page key.
+
+Added
+- tests/e2e-batch42.js: simulated phone keyboard (IME) with the caret knocked onto the list block, the note start and the list start; a normal caret move stays untouched.
+
+Impact
+- Typing after deleting a list item stays in the list. Not reproduced with a real phone keyboard in headless tests, so this is a safeguard; a new video would help if it still happens.
+
 feat: 38.2.2 → 38.3.0 — Menu folders capped at 4 rows with Show all; tags limited with Show all
 
 Added

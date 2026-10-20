@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v38.3.1 — Caret after Backspace in a list
+- After pressing Backspace in a list (for example on an empty last item), the next letters stay at the end of the list instead of jumping to a new line above it. The editor now puts the caret back inside the item when a phone keyboard leaves it on the list itself or at the start of the note.
+
 ### v38.3.0 — Menu folders and tags
 - The menu shows 4 folder rows; the rest scrolls, with a fixed "Show all" under the list (phone: opens the folders page; desktop: expands the list, then "Show less").
 - Tags are limited to 8, with a "Show all" on the right of the Tags header (expands in place, then "Show less").
