@@ -8,6 +8,22 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 38.3.1 → 38.4.0 — Desktop home: sort on the right, compact folders, Recent notes row
+
+Changed
+- Desktop sort: before → the sort icon sat on the left, away from the grid/list toggle, above the folders; after → sort and view toggle sit together on the right of the "Recent notes" row, below the folders.
+- Desktop folders: before → big cards (about 110px high) listing every folder under a small "Folders" label; after → a "Folders" title and one compact row of 60px cards (icon left, name and count beside it).
+- Desktop notes: before → no section title and the pin in the top-right corner; after → a "Recent notes" title (like the phone; hidden in filtered views such as Pinned or a folder, where the page title already says it) and the pin above the title, like the phone.
+- Order on desktop: filters → folders → Recent notes row → trash bar → notes (same as the phone).
+
+Added
+- Desktop "Show all" for folders: shown only when the folders don't fit in one row; expands the row and toggles to "Show less" (it used to open a folders page that desktop doesn't have).
+- css/desktop-home.css (linked last, desktop-only) and updateFolderMore() in notes-app.js (also recalculated on window resize).
+- tests/e2e-batch43.js: desktop, wide and phone layouts, Show all / Show less, sort, filtered views.
+
+Impact
+- Desktop home shows more notes at once and matches the phone layout; the phone home is unchanged.
+
 fix: 38.3.0 → 38.3.1 — Caret no longer jumps above the list after Backspace
 
 Fixed

@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '38.3.1';
+  const APP_VERSION = '38.4.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -216,11 +216,13 @@
     const showFolders = plainHome && top.length > 0;
     strip.className = 'folder-strip ' + fview;
     if (showFolders) {
-      if (!mobile) strip.append(el('div', { class: 'folder-strip-head' }, el('span', {}, icon(svgIco('folder', 18)), 'Folders')));
       top.slice(0, mobile ? (fview === 'list' ? 4 : 2) : top.length).forEach((fo, i) => strip.append(folderCard(fo, i)));
     }
+    strip.classList.toggle('open', !mobile && !!state.homeFoldersOpen);
     strip.hidden = !strip.childNodes.length;
     $('#folderSection').hidden = !showFolders;
+    $('.controls').classList.toggle('plain', plainHome);
+    updateFolderMore();
     $('#fvGrid').setAttribute('aria-pressed', p.folderView === 'grid'); $('#fvList').setAttribute('aria-pressed', p.folderView === 'list');
     $('#trashBar').hidden = state.view !== 'trash' || !state.notes.some(n => n.trashed);
 
@@ -239,6 +241,14 @@
     }
   }
 
+  // desktop home: folders sit in one compact row; "Show all" appears only when some folders don't fit and expands the row
+  function updateFolderMore() {
+    const b = $('#showAllFolders'), strip = $('#folderStrip'); if (!b || !strip) return;
+    if (isMobile()) { b.hidden = false; b.textContent = 'Show all'; return; }
+    const cols = (getComputedStyle(strip).gridTemplateColumns || '').split(' ').filter(Boolean).length || 1;
+    const many = strip.querySelectorAll('.folder-card').length > cols;
+    b.hidden = !many; b.textContent = state.homeFoldersOpen ? 'Show less' : 'Show all';
+  }
   function folderCard(fo, i) {
     const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
     const fc = el('button', { class: 'folder-card f' + (i % 4), title: fo.name, onclick: () => go('all', { folderId: fo.id }) },
@@ -814,7 +824,8 @@
     $('#emptyTrash').onclick = emptyTrash;
     $('#sheetScrim').onclick = () => requestCloseSheet();
     window.addEventListener('resize', () => { if (sheetIsOpen()) placeSheet(sheetAnchor); });
-    $('#showAllFolders').onclick = () => go('folders');
+    $('#showAllFolders').onclick = () => { if (isMobile()) go('folders'); else { state.homeFoldersOpen = !state.homeFoldersOpen; $('#folderStrip').classList.toggle('open', state.homeFoldersOpen); updateFolderMore(); } };
+    let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(updateFolderMore, 120); });
     $('#sideShowAllFolders').onclick = () => { if (isMobile()) { closeSidebar(); go('folders'); } else { state.sideFoldersOpen = !state.sideFoldersOpen; renderSidebar(); } };
     $('#sideShowAllTags').onclick = () => { state.sideTagsOpen = !state.sideTagsOpen; renderSidebar(); };
     $('#heroEdit').onclick = editHero;

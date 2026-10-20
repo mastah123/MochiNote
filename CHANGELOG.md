@@ -10,6 +10,12 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v38.4.0 — Desktop home like the phone
+- Desktop: the sort control and the grid/list toggle are on the right, in the same row as the "Recent notes" title.
+- Desktop: folders are smaller, in one compact row (icon, name and count) with a "Folders" title; "Show all" appears only when some folders don't fit and expands the row ("Show less" collapses it).
+- Desktop: the "Recent notes" row and the pin above a pinned note's title follow the phone home. Filtered views (folder, tag, Pinned…) keep the sort and toggle on the right without repeating the title.
+- The phone home is unchanged.
+
 ### v38.3.1 — Caret after Backspace in a list
 - After pressing Backspace in a list (for example on an empty last item), the next letters stay at the end of the list instead of jumping to a new line above it. The editor now puts the caret back inside the item when a phone keyboard leaves it on the list itself or at the start of the note.
 

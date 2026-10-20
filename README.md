@@ -3,7 +3,7 @@
 A cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript: no build step, no dependencies, no backend.
 Notes live **only in your browser** (IndexedDB). There is no cloud sync.
 
-Current version: **38.3.1** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
+Current version: **38.4.0** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
 
 ## Run it
 
@@ -33,7 +33,7 @@ It is a static site, so it also works on GitHub Pages, Netlify and similar hosts
 
 ```
 index.html                    page structure
-css/                          styles, linked in cascade order from index.html
+css/                          styles, linked in cascade order from index.html (desktop-home.css last)
 js/core/notes-logic.js        pure helpers: tags, filtering, sorting, import validation (unit-tested)
 js/core/notes-storage.js      IndexedDB wrapper with in-memory fallback
 js/editor/html-sanitizer.js   whitelist HTML cleaner

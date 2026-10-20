@@ -1,0 +1,28 @@
+/* desktop-home.css — desktop home like the phone home: compact folder row, "Recent notes" row with sort + view on the right, pin above the title */
+@media (min-width: 900px) {
+  #notesView { display: flex; flex-direction: column; }
+  .filters { order: 0; }
+  .folder-section { order: 1; margin-bottom: 4px; }
+  .controls { order: 2; flex-wrap: nowrap; gap: 2px; margin: 8px 0 10px; padding: 0; }
+  #trashBar { order: 3; }
+  .notes, #empty { order: 5; }
+
+  .folder-head { display: flex; align-items: center; gap: 2px; margin: 0 0 8px; min-height: 40px; }
+  .folder-head .seg { display: none; }
+  .fh-title, .notes-label { display: block; flex: 1; min-width: 0; font-size: 1.2rem; font-weight: 600; }
+  .controls:not(.plain) .notes-label { visibility: hidden; }
+  .controls .sel, .controls .seg { margin-left: 0; flex: none; }
+
+  /* folders: one compact row (icon left, name and count beside it); "Show all" expands it */
+  .folder-strip { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; margin: 0 0 6px; }
+  .folder-strip-head { display: none; }
+  .folder-strip.grid:not(.open) { grid-template-rows: 60px; grid-auto-rows: 60px; height: 60px; overflow: hidden; }
+  .folder-strip.grid .folder-card { height: 60px; min-height: 0; display: grid; grid-template-columns: 26px minmax(0, 1fr); grid-template-areas: "i n" "i c"; align-content: center; column-gap: 10px; padding: 8px 14px; border-radius: 16px; transform: none; }
+  .folder-strip.grid .folder-card:hover { transform: translateY(-1px); }
+  .folder-strip.grid .f-ico { display: block; grid-area: i; margin: 0; align-self: center; }
+  .folder-strip.grid .fname { grid-area: n; font-size: 1rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folder-strip.grid .fcount { grid-area: c; font-size: .82rem; }
+
+  /* pinned notes: the pin sits above the title, like the phone */
+  .notes.grid .note .pin-mark { position: static; display: flex; align-items: center; height: 20px; margin-bottom: 4px; }
+}
