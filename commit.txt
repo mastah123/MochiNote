@@ -8,6 +8,20 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 38.2.2 → 38.3.0 — Menu folders capped at 4 rows with Show all; tags limited with Show all
+
+Added
+- Menu → Folders: before → every folder listed, the menu grew with the folder count; after → 4 rows visible, the remaining folders scroll, and a "Show all" button stays fixed under the list. On phones it opens the folders page and closes the menu; on desktop it expands the list ("Show less" collapses it). Hidden when there are 4 folders or fewer.
+- Menu → Tags: before → every tag listed; after → the first 8 (most used first) with a "Show all" on the right of the Tags header that expands in place (scrolls after about 160px) and toggles to "Show less". Hidden when there are 8 tags or fewer.
+- tests/e2e-batch41.js: phone and desktop, with few and many folders and tags.
+
+Changed
+- index.html: new #sideFoldersMore, #sideShowAllFolders and #sideShowAllTags; css/editor-extras.css: capped folder list and open tag list styles.
+- Settings → About shows 38.3.0.
+
+Impact
+- The menu stays short and the Settings/Trash items and tags remain reachable with many folders and tags.
+
 fix: 38.2.1 → 38.2.2 — Cursor stays in the last list item when editing from the end of a list
 
 Fixed

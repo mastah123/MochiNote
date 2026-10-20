@@ -94,3 +94,9 @@ html[data-mode="dark"] {
 .ed-body .linkcard::after { color: var(--card-link-ink); }
 .ed-body .codecard { background: var(--card-code-bg); border: 1px solid var(--card-code-bd); color: var(--card-code-ink); }
 .ed-body .codecard::before { color: var(--card-code-tag); opacity: .95; }
+
+/* v38.3: menu folders show 4 rows then scroll (fixed "Show all" below); tags are limited with a "Show all" on the right */
+#sideFolders.capped { max-height: 184px; overflow-y: auto; overscroll-behavior: contain; }
+.side-more { padding: 2px 4px 0; }
+.side-more .btn-text, .side-head #sideShowAllTags { font-size: .85rem; padding: 6px 8px; min-height: 36px; text-transform: none; letter-spacing: 0; }
+#sideTags.open { max-height: 160px; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start; }

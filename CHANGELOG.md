@@ -10,6 +10,10 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v38.3.0 — Menu folders and tags
+- The menu shows 4 folder rows; the rest scrolls, with a fixed "Show all" under the list (phone: opens the folders page; desktop: expands the list, then "Show less").
+- Tags are limited to 8, with a "Show all" on the right of the Tags header (expands in place, then "Show less").
+
 ### v38.2.2 — List caret fixes
 - Editing a note from the end of a list puts the cursor inside the last list item, so Enter adds a new item instead of the cursor jumping.
 - Enter, then Back, then Edit again, then typing continues in the list instead of jumping to the top.

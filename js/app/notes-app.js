@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '38.2.2';
+  const APP_VERSION = '38.3.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -150,6 +150,7 @@
     if (settings) renderSettings(); else if (foldersPage) renderFoldersPage(); else renderNotes();
   }
 
+  const SIDE_FOLDER_ROWS = 4, SIDE_TAG_LIMIT = 8;
   function renderSidebar() {
     $$('.nav-item').forEach(b => {
       const v = b.dataset.view;
@@ -174,8 +175,16 @@
       }
     };
     L.folderTree(state.folders).forEach(({ folder }) => mk(folder.name, folder.id, active.filter(n => n.folderId === folder.id).length, folder));
+    // menu: 4 folder rows, the rest scrolls; a fixed "Show all" sits under the list (phone: the folders page, desktop: expands the list)
+    const manyFolders = state.folders.length > SIDE_FOLDER_ROWS, open = !isMobile() && state.sideFoldersOpen;
+    sf.classList.toggle('capped', manyFolders && !open);
+    $('#sideFoldersMore').hidden = !manyFolders;
+    $('#sideShowAllFolders').textContent = open ? 'Show less' : 'Show all';
     const st = $('#sideTags'); st.textContent = '';
-    const tags = allTags();
+    const allT = allTags(), moreTags = allT.length > SIDE_TAG_LIMIT;
+    const tags = moreTags && !state.sideTagsOpen ? allT.slice(0, SIDE_TAG_LIMIT) : allT;
+    st.classList.toggle('open', moreTags && !!state.sideTagsOpen);
+    $('#sideShowAllTags').hidden = !moreTags; $('#sideShowAllTags').textContent = state.sideTagsOpen ? 'Show less' : 'Show all';
     if (!tags.length) st.append(el('span', { class: 'info', style: 'color:var(--muted);font-size:.9rem', text: 'Type #tags in a note and they show up here.' }));
     tags.forEach(([t, c]) => st.append(el('button', { class: 'tag' + (state.tag === t ? ' active' : ''), onclick: () => go('all', { tag: state.tag === t ? null : t, folderId: state.folderId }) }, '#' + t + ' ' + c)));
   }
@@ -806,6 +815,8 @@
     $('#sheetScrim').onclick = () => requestCloseSheet();
     window.addEventListener('resize', () => { if (sheetIsOpen()) placeSheet(sheetAnchor); });
     $('#showAllFolders').onclick = () => go('folders');
+    $('#sideShowAllFolders').onclick = () => { if (isMobile()) { closeSidebar(); go('folders'); } else { state.sideFoldersOpen = !state.sideFoldersOpen; renderSidebar(); } };
+    $('#sideShowAllTags').onclick = () => { state.sideTagsOpen = !state.sideTagsOpen; renderSidebar(); };
     $('#heroEdit').onclick = editHero;
     onLongPress($('#hero'), () => openSheet('Your space', [
       { icon: 'edit', label: 'Edit', fn: editHero },
