@@ -8,6 +8,20 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 38.2.1 → 38.2.2 — Cursor stays in the last list item when editing from the end of a list
+
+Fixed
+- Viewing → Edit from the end of a list: before → the cursor was placed after the list block (outside the last item), so Enter or typing jumped or added nothing; after → the cursor is placed at the end of the last list item (bullet, numbered, lettered and checklist), so Enter adds a new item.
+- Enter at the end of a list, Back (to viewing), Edit, type: before → the cursor moved to the top of the note; after → typing continues in the last item.
+- Desktop: before → the format toolbar appearing shrank the scroll area and the end of the note was judged "off screen", so the cursor was put mid-note; after → "end in view" is measured before the layout changes and the view stays at the end.
+
+Added
+- NotesEditor.endInView() and an end-of-line caret helper (endPoint) in rich-text-editor.js.
+- tests/e2e-batch40.js: bullet, numbered and checklist at the end of short and long notes, phone and desktop.
+
+Impact
+- Editing at the end of lists is predictable; no data format changes.
+
 fix: 38.2.0 → 38.2.1 — README no longer lists tests; version semantics legend added
 
 Fixed

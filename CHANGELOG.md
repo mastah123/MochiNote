@@ -10,6 +10,11 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v38.2.2 — List caret fixes
+- Editing a note from the end of a list puts the cursor inside the last list item, so Enter adds a new item instead of the cursor jumping.
+- Enter, then Back, then Edit again, then typing continues in the list instead of jumping to the top.
+- On desktop, the format toolbar appearing no longer pushes the end of the note out of view when you start editing.
+
 ### v38.2.1 — Docs fix
 - README no longer mentions tests (they are not in the zip); version semantics table added.
 

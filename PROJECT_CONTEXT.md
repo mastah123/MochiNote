@@ -3,7 +3,7 @@
 Handoff notes for another AI or account. Keep this file short and current; update it with every release.
 
 ## Status
-- Version **38.2.1** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
+- Version **38.2.2** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
 - Personal notes web app: vanilla HTML/CSS/JS, no build tools, no backend, local-first (IndexedDB, in-memory fallback). Mobile-first; desktop (≥900px) adapts.
 - Work arrives as lists of changes; the owner says "Next" to build a batch. One zip per version, named `mochinote-vX.Y.Z.zip`, tests excluded.
 
@@ -27,7 +27,7 @@ Handoff notes for another AI or account. Keep this file short and current; updat
 - `rich-text-editor.js` and `notes-app.js` are still large (about 1000 and 900 lines) because they share closure state.
 
 ## Tests
-- `tests/logic.test.js` (Node) and `tests/e2e*.js` (Playwright, Chromium); 40 suites, about 7 minutes in total. Run with `NODE_PATH` pointing at the global Playwright and `CHROME` set to the Chromium binary.
+- `tests/logic.test.js` (Node) and `tests/e2e*.js` (Playwright, Chromium); 41 suites, about 7 minutes in total. Run with `NODE_PATH` pointing at the global Playwright and `CHROME` set to the Chromium binary.
 
 ## Next steps
 1. Keep `commit.txt` updated at the top for every release.

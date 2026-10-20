@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '38.2.1';
+  const APP_VERSION = '38.2.2';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -547,10 +547,12 @@
   }
   function startEditing() {
     if (!state.openId || !state.viewing) return;
-    const sc = $('#edScroll'), top = sc.scrollTop;          // keep the reading position: no scrolling again after tapping edit
+    const sc = $('#edScroll'); let top = sc.scrollTop;      // keep the reading position: no scrolling again after tapping edit
+    const atEnd = NotesEditor.endInView(), wasBottom = top >= sc.scrollHeight - sc.clientHeight - 2;   // measured before the format bar changes the layout
     state.viewing = false; applyMode();
+    if (atEnd && wasBottom) top = Math.max(0, sc.scrollHeight - sc.clientHeight);   // the toolbar took space: stay at the end so the caret is visible
     if (!state.editPushed) { history.pushState({ kind: 'editor', edit: true }, ''); state.editPushed = true; }
-    NotesEditor.el().focus({ preventScroll: true }); NotesEditor.placeCaretForEdit();
+    NotesEditor.el().focus({ preventScroll: true }); NotesEditor.placeCaretForEdit(atEnd);
     let stop = false; const halt = () => { stop = true; };
     ['touchstart', 'wheel', 'pointerdown', 'keydown'].forEach(ev => sc.addEventListener(ev, halt, { once: true, passive: true }));
     const keep = () => { if (!stop && Math.abs(sc.scrollTop - top) > 1) sc.scrollTop = top; };

@@ -186,8 +186,20 @@ const NotesEditor = (function () {
   const calloutOf = n => { const el = n && (n.nodeType === 1 ? n : n.parentElement); const c = el && el.closest && el.closest('.callout'); return c && body.contains(c) ? c : null; };
   const topBlock = n => { while (n && n.parentNode !== body) n = n.parentNode; return n; };
   const INLINE = /^(B|STRONG|I|EM|U|S|STRIKE|DEL|A|SPAN|FONT|MARK|IMG|BR)$/;
+  // the very end of a block, INSIDE its last line: after a list the caret must sit in the last item, not after the <ul>
+  function endPoint(node) {
+    while (node.lastChild) {
+      const c = node.lastChild;
+      if (c.nodeType === 3) return [c, c.length];
+      if (c.nodeType !== 1 || c.contentEditable === 'false' || /^(IMG|INPUT|BUTTON|HR)$/.test(c.nodeName)) break;
+      if (c.nodeName === 'BR') return [node, node.childNodes.length - 1];
+      node = c;
+    }
+    return [node, node.childNodes.length];
+  }
   function caretIn(node, atEnd) {
-    const r = document.createRange(); r.selectNodeContents(node); r.collapse(!atEnd);
+    const r = document.createRange();
+    if (atEnd) { const [n, o] = endPoint(node); r.setStart(n, o); r.collapse(true); } else { r.selectNodeContents(node); r.collapse(true); }
     sel().removeAllRanges(); sel().addRange(r); saveRange();
   }
   function toggleCallout() {
@@ -578,11 +590,17 @@ const NotesEditor = (function () {
     return er && er.height ? (el.tagName === 'BR' ? el.parentElement.getBoundingClientRect() : er) : null;
   }
   /* entering edit mode from viewing mode: put the caret where the reader is (end of the note if it is on screen, else the top visible line) */
-  function placeCaretForEdit() {
+  function endInView() {      // is the end of the note on screen right now?
+    const sc = body && body.closest('.ed-scroll'); if (!sc) return false;
+    const lastEl = body.lastElementChild;
+    return !body.textContent.trim() || !lastEl || lastEl.getBoundingClientRect().bottom <= sc.getBoundingClientRect().bottom - 8;
+  }
+  function placeCaretForEdit(endWasInView) {
     const sc = body && body.closest('.ed-scroll'); if (!sc) return;
     const box = sc.getBoundingClientRect(), br = body.getBoundingClientRect();
     const lastEl = body.lastElementChild;
-    if (!body.textContent.trim() || !lastEl || lastEl.getBoundingClientRect().bottom <= box.bottom - 8) { if (lastEl) caretIn(lastEl, true); else caretIn(body, true); return; }   // the end of the note is on screen: continue there
+    if (endWasInView === undefined) endWasInView = endInView();
+    if (endWasInView) { if (lastEl) caretIn(lastEl, true); else caretIn(body, true); return; }   // the end of the note is on screen: continue there
     const x = Math.min(br.right - 4, Math.max(br.left + 4, box.left + box.width / 2)), y = box.top + 48;
     let r = null;
     if (document.caretRangeFromPoint) r = document.caretRangeFromPoint(x, y);
@@ -1018,5 +1036,5 @@ const NotesEditor = (function () {
     return body;
   }
 
-  return { init, load, sanitize, hideSuggest, hideSticker, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), keepCaretVisible, placeCaretForEdit, relayout: () => clScheduleLayout(), el: () => body, focus: () => focusBody(), updateToolbar };
+  return { init, load, sanitize, hideSuggest, hideSticker, hideKeyboard, resumeKeyboard, keyboard, saveRange, getHTML: () => sanitize(body.innerHTML), keepCaretVisible, placeCaretForEdit, endInView, relayout: () => clScheduleLayout(), el: () => body, focus: () => focusBody(), updateToolbar };
 })();
