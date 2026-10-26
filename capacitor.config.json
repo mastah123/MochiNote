@@ -1,0 +1,9 @@
+{
+  "appId": "com.mochinote.app",
+  "appName": "MochiNote",
+  "webDir": "www",
+  "backgroundColor": "#f8f1e7",
+  "android": {
+    "allowMixedContent": false
+  }
+}
