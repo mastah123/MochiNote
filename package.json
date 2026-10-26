@@ -1,10 +1,11 @@
 {
   "name": "mochinote",
-  "version": "38.4.2",
+  "version": "38.4.3",
   "private": true,
   "description": "MochiNote Android build (Capacitor wrapper around the web app)",
   "dependencies": {
     "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.1",
     "@capacitor/cli": "^6.2.0",
     "@capacitor/core": "^6.2.0"
   }

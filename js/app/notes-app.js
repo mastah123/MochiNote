@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '38.4.2';
+  const APP_VERSION = '38.4.3';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -793,15 +793,34 @@
   function closeSidebar() { $('#sidebar').classList.remove('open'); $('#scrim').classList.remove('show'); }
   function requestCloseSidebar() { if (history.state && history.state.kind === 'sidebar') history.back(); else closeSidebar(); }
   function requestCloseEditor() { if (history.state && history.state.kind === 'editor') history.back(); else closeEditor(); }
-  window.addEventListener('popstate', e => {
-    const s = e.state;
+  function applyBack(s) {
     if (sheetIsOpen() && !(s && s.kind === 'sheet')) { hideSheet(); const f = sheetPending; sheetPending = null; if (f) f(); return; }
     if (state.openId && state.editPushed && !(s && s.edit)) { stopEditing(); return; }   // Back while editing -> viewing mode
     if (state.openId) { closeEditor(); return; }
     if (sidebarIsOpen() && !(s && s.kind === 'sidebar')) { closeSidebar(); return; }
     if (s && s.kind === 'view') { state.view = s.view; state.folderId = s.folderId; state.tag = s.tag; closeSidebar(); render(); }
     else if (s && (s.kind === 'editor' || s.kind === 'sheet')) history.replaceState(viewState(), '');   // forward into a closed editor / sheet
-  });
+  }
+  window.addEventListener('popstate', e => applyBack(e.state));
+
+  /* Android app (Capacitor wrapper): the hardware Back button does what the browser Back button does.
+     At the plain home screen it leaves the app; anywhere else it goes back one step. If the WebView
+     has no history entry to go back to, the same step is applied directly. */
+  function atHomeRoot() {
+    return !sheetIsOpen() && !state.openId && !sidebarIsOpen() && state.view === 'all' && !state.folderId && !state.tag && !state.query && !$('#headFixed').classList.contains('searching');
+  }
+  function androidBack(capApp) {
+    if (atHomeRoot()) { capApp.exitApp(); return; }
+    if ($('#headFixed').classList.contains('searching') && !state.openId && !sheetIsOpen() && !sidebarIsOpen()) { closeSearch(); return; }
+    let popped = false; const mark = () => { popped = true; };
+    window.addEventListener('popstate', mark, { once: true });
+    history.back();
+    setTimeout(() => { window.removeEventListener('popstate', mark); if (!popped) applyBack({ kind: 'view', view: 'all', folderId: null, tag: null }); }, 220);
+  }
+  try {
+    const cap = window.Capacitor, capApp = cap && cap.Plugins && cap.Plugins.App;
+    if (capApp && capApp.addListener) capApp.addListener('backButton', () => androidBack(capApp));
+  } catch (_) {}
 
   /* phones: the header shows a search icon; tapping it opens the field, the ✕ clears and closes it */
   function openSearch() {

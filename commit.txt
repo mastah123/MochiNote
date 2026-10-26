@@ -8,6 +8,19 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 38.4.2 → 38.4.3 — Android Back button goes back one screen instead of closing the app
+
+Fixed
+- Android app (Capacitor wrapper): before → the hardware Back button closed the app from Settings, an open note or editing; after → it closes the menu, a sheet or search, goes from editing back to viewing, closes the note, leaves a folder or Settings, and exits only from the plain home screen.
+- How: notes-app.js registers a Capacitor `backButton` listener (needs @capacitor/app). It calls history.back(); if the WebView has no history entry to go back to, the same step is applied directly. The popstate handler's logic moved into applyBack(). Browsers are unaffected.
+
+Changed
+- Android build (android-apk branch): adds the @capacitor/app dependency, takes the web files from master during the build, and uses a proper adaptive launcher icon (paper-coloured background plus the logo) instead of the plain resized image.
+- Settings → About shows 38.4.3.
+
+Impact
+- The Android app navigates like the phone browser version; the web app behaves as before.
+
 fix: 38.4.1 → 38.4.2 — Saved status shows no time
 
 Fixed

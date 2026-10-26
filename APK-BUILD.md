@@ -2,15 +2,13 @@
 
 The APK is built by GitHub's servers. Nothing is installed on your phone.
 
-## One-time setup
-1. Open the repo on github.com. Tap the branch name (top left), type `android-apk`, choose **Create branch**.
-2. With `android-apk` selected, add these files to the **top level** of the branch:
-   - `package.json`
-   - `capacitor.config.json`
-   - `.gitignore`
-   - `.github/workflows/build-apk.yml` (use **Add file → Create new file**, type the whole path including the slashes, and paste the contents)
-   - `APK-BUILD.md` (optional)
-3. Committing a file to `android-apk` starts a build automatically.
+## Files on the `android-apk` branch
+- `package.json`
+- `capacitor.config.json`
+- `.gitignore`
+- `.github/workflows/build-apk.yml`
+
+The web app itself is taken from the **master** branch every time the workflow runs, so the copies of `index.html`, `css/`, `js/`, `assets/` and `manifest.webmanifest` on `android-apk` are not used. You can delete them.
 
 ## Get the APK
 1. Open the **Actions** tab, then the newest run called "Build Android APK".
@@ -18,10 +16,10 @@ The APK is built by GitHub's servers. Nothing is installed on your phone.
 3. Scroll to **Artifacts** and download **MochiNote-apk** (a zip with `app-debug.apk` inside).
 4. Unzip it, open the APK, and allow "install from unknown apps" when Android asks.
 
-## Updating the app later
-Copy the changed web files (`index.html`, `css/`, `js/`, `assets/`, `manifest.webmanifest`) from `master` into `android-apk`, then commit. A new build starts.
+## After you update the app on master
+Open the latest run on the Actions tab and press **Re-run all jobs**. It builds again with the newest files from master. (Or commit any small change to `android-apk`.)
 
 ## Notes
-- This is a debug-signed APK: fine for your own phone, not for the Play Store.
-- The app id is `com.mochinote.app`. Installing a build over an older one keeps your notes only if both builds are signed the same way; debug builds from GitHub use a new key each time, so keep an Export backup before you install a new APK, or uninstall first.
-- Export backup (download) may not save a file inside the APK yet; that needs a Capacitor file plugin.
+- Debug-signed APK: fine for your own phone, not for the Play Store.
+- Each build gets a new debug signing key, so Android will not install it over the previous one. Use Export backup if you can, uninstall the old app, then install the new one.
+- Export backup (a download) may not save a file inside the APK yet; that needs a Capacitor file plugin.
