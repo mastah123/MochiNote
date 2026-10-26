@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '38.4.1';
+  const APP_VERSION = '38.4.2';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
@@ -63,7 +63,7 @@
     const n = noteById(state.openId); if (!n) return;
     const fmt = ts => new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
     const w = countWords();
-    const st = curStatus === 'Saved' ? 'Saved ' + new Date(n.updated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : curStatus;
+    const st = curStatus;
     m.textContent = [w + (w === 1 ? ' word' : ' words'), 'Created ' + fmt(n.created || n.updated), st].filter(Boolean).join(' · ');
   }
   function setStatus(msg) {

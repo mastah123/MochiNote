@@ -8,6 +8,17 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 38.4.1 → 38.4.2 — Saved status shows no time
+
+Fixed
+- Info line under the note title: before → "2 words · Created Oct 20, 2026, 10:12 AM · Saved 10:12 AM"; after → "2 words · Created Oct 20, 2026, 10:12 AM · Saved".
+
+Changed
+- Settings → About shows 38.4.2.
+
+Impact
+- Less clutter in the editor; the created date and time stay.
+
 fix: 38.4.0 → 38.4.1 — Desktop "Show all" button and pinned-note icon match the phone
 
 Fixed

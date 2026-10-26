@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v38.4.2 — Plain "Saved"
+- The note's info line says just "Saved" (no time) after saving.
+
 ### v38.4.1 — Desktop details like the phone
 - The desktop "Show all" button is accent-coloured text without a border, like the phone.
 - In the desktop list view the pin icon sits at the bottom right of the row instead of covering the date.
