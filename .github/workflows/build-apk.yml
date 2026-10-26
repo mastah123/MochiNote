@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Get the Android build files (this branch)
         uses: actions/checkout@v4
@@ -46,8 +46,9 @@ jobs:
           npx cap sync android
 
       - name: Use the MochiNote icon
+        continue-on-error: true
         run: |
-          command -v convert >/dev/null 2>&1 || sudo apt-get install -y imagemagick
+          command -v convert >/dev/null 2>&1 || command -v magick >/dev/null 2>&1 || { sudo apt-get update -y && sudo apt-get install -y imagemagick; }
           IM=$(command -v magick || command -v convert)
           RES=android/app/src/main/res
           ICON=web/assets/icon-512.png
