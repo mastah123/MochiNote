@@ -8,6 +8,19 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 39.2.2 → 39.2.3 — Long category names no longer overflow; slimmer right column
+
+Fixed
+- Before → a long category name pushed past its row in the desktop sidebar and in Recent Categories, and quick-action labels could spill out of their cards; after → names are cut with "…" and stay inside their rows and cards.
+- Before → the right column was 320px wide and squeezed the main column on mid-size windows; after → it is 276px, with tighter cards, and below 1180px wide it moves under the main column in three across.
+
+Changed
+- Sidebar is 248px wide (was 264px), page padding and the quick-action cards are slightly smaller so everything fits.
+- Settings → About shows 39.2.3.
+
+Impact
+- Desktop Home fits at any window width from 900px up. Phones are unaffected.
+
 fix: 39.2.1 → 39.2.2 — Desktop sidebar fits the screen like the mockup
 
 Fixed

@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.2.2';
+  const APP_VERSION = '39.2.3';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -196,7 +196,7 @@
       const dn = dotN++;
       const isActive = state.view === 'all' && state.folderId === id;
       const item = el('button', { class: 'side-item' + (isActive ? ' active' : ''), onclick: () => go('all', { folderId: id, tag: state.tag }) },
-        el('span', { class: 'fl-name' }, el('span', { class: 'dot d' + (dn % 5), 'aria-hidden': 'true' }), icon(svgIco('folder', 18)), label), el('span', { class: 'count', text: count || '' }));
+        el('span', { class: 'fl-name' }, el('span', { class: 'dot d' + (dn % 5), 'aria-hidden': 'true' }), icon(svgIco('folder', 18)), el('span', { class: 'fl-t', text: label })), el('span', { class: 'count', text: count || '' }));
       if (folder) onLongPress(item, () => folderSheet(folder, item));
       sf.append(item);
       if (folder && isActive) {

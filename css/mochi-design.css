@@ -314,3 +314,31 @@ select { border-radius: 14px; border-color: var(--border); }
   .tags-list { padding: 6px 4px; }
   .side-foot { flex: none; margin-top: 0; padding-top: 10px; border-top: 1px solid var(--border); }
 }
+
+/* ======== v39.2.3: long names never overflow; slimmer right column ======== */
+.fl-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 900px) {
+  .app { grid-template-columns: 248px minmax(0, 1fr); }
+  .side-item .fl-name { min-width: 0; flex: 1; }
+  .side-item { min-width: 0; }
+  .main { padding: 20px 28px 48px; }
+  .main[data-home="1"] #notesView { grid-template-columns: minmax(0, 1fr) 276px; column-gap: 24px; }
+  .main[data-home="1"] .home-aside { gap: 16px; }
+  .hw { padding: 18px 18px; border-radius: 20px; }
+  .hw-mascot img { width: 56px; height: 56px; }
+  .hw-mascot { right: 18px; bottom: 18px; }
+  .hw-tip p { font-size: .88rem; }
+  .hw-cat { padding: 9px 4px; gap: 12px; }
+  .hc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hw-cat .dot { flex: none; }
+  .hc-n { flex: none; }
+  .main[data-home="1"] .folder-strip.actions { gap: 12px; }
+  .act { height: 132px; padding: 16px 14px 14px; min-width: 0; }
+  .act .a-name { max-width: 100%; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .main[data-home="1"] .hero-title { font-size: 1.9rem; }
+}
+@media (min-width: 900px) and (max-width: 1180px) {
+  .main[data-home="1"] #notesView { grid-template-columns: minmax(0, 1fr); }
+  .main[data-home="1"] .home-aside { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 20px; align-items: start; }
+  .main[data-home="1"] .home-aside { order: 2; }
+}
