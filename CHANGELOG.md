@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.2.1 — Phone Home fits one screen
+- Removed the extra space below the content and tightened spacing so the whole phone Home fits the screen like the mockup.
+
 ### v39.2.0 — New design, batch 3 (Notes, Categories, Settings, editor)
 - Page titles in the phone header, a tinted Categories page, switch toggles in Settings, and the rounded look on cards, menus, dialogs and the editor. "Folders" is now called "Categories".
 

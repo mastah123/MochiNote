@@ -8,6 +8,18 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 39.2.0 → 39.2.1 — Phone Home fits the screen, no extra space below
+
+Fixed
+- Before → on a 390×844 phone the Home page was 970px tall (reserved safe-area space under the content, loose spacing), so the banner was cut off and the page scrolled; after → everything (header, search, greeting, tiles, five Recent Notes rows, banner and bottom bar) fits in one screen like the mockup.
+- How: the bottom bar and page no longer add the device safe-area padding; header, greeting, tiles, rows (40px icons), card header and banner are tighter. Other pages and desktop are unaffected.
+
+Changed
+- Settings → About shows 39.2.1.
+
+Impact
+- Phone Home matches the mockup's one-screen layout. Shorter screens still scroll.
+
 feat: 39.1.0 → 39.2.0 — New design, batch 3: Notes, Categories, Settings and editor
 
 Added
