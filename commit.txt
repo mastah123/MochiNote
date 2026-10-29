@@ -8,6 +8,36 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat!: 38.4.3 → 39.0.0 — New MochiNote design, batch 1: phone Home, bottom bar, Poppins
+
+Added
+- Phone Home redesigned: logo + MochiNote header with a profile button, an always-visible search field, a time-of-day greeting ("Good morning, James!" with a sun) with a lavender New Note button, the tagline, four coloured folder tiles (icon, name, note count), a "Recent Notes" card (five rows with tinted icon, title, one-line preview, date, ⋮ menu, and "View all →") and an encouragement banner.
+- Bottom bar on phones: Home, Notes, Categories, Settings. It hides while a text field is focused.
+- Poppins font (400/500/700, bundled), new "Mochi" theme (default, with a dark variant), new line icons (user, home, grid, gear, doc, file, tag, bulb, arrow).
+- Settings → Profile: your name and tagline.
+
+Changed
+- Before → the phone Home had a "Your space" card, 2 folder cards, a sort/grid controls row and note cards; after → the layout above. The Notes tab holds the full notes list (sort, grid/list); Categories opens the folders page.
+- The floating New note button is replaced on Home by the New Note button in the greeting; other phone pages keep it, raised above the bottom bar.
+- Everyone starts on the Mochi theme once; themes picked afterwards are kept.
+- Long-press the greeting to edit or reset it. Settings → About shows 39.0.0.
+
+Impact
+- Phones get the new look. Desktop is unchanged until the next batch (desktop Home, then Notes/Categories/Settings/editor, then dark mode polish and the new logo).
+
+fix: 38.4.2 → 38.4.3 — Android Back button goes back one screen instead of closing the app
+
+Fixed
+- Android app (Capacitor wrapper): before → the hardware Back button closed the app from Settings, an open note or editing; after → it closes the menu, a sheet or search, goes from editing back to viewing, closes the note, leaves a folder or Settings, and exits only from the plain home screen.
+- How: notes-app.js registers a Capacitor `backButton` listener (needs @capacitor/app). It calls history.back(); if the WebView has no history entry to go back to, the same step is applied directly. The popstate handler's logic moved into applyBack(). Browsers are unaffected.
+
+Changed
+- Android build (android-apk branch): adds the @capacitor/app dependency, takes the web files from master during the build, and uses a proper adaptive launcher icon (paper-coloured background plus the logo) instead of the plain resized image.
+- Settings → About shows 38.4.3.
+
+Impact
+- The Android app navigates like the phone browser version; the web app behaves as before.
+
 fix: 38.4.1 → 38.4.2 — Saved status shows no time
 
 Fixed

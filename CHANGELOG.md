@@ -10,6 +10,14 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.0.0 — New design, batch 1 (phone Home)
+- New MochiNote look on phones: header with profile button, always-visible search, greeting with a New Note button, four folder tiles, Recent Notes card, encouragement banner and a Home / Notes / Categories / Settings bottom bar.
+- Poppins font, new Mochi theme (default, light and dark) and new icons. Settings → Profile sets your name and tagline.
+- Desktop is unchanged for now; more batches follow.
+
+### v38.4.3 — Android Back button
+- In the Android app, the hardware Back button closes the menu, a sheet, the editor or search, goes from editing to viewing, and leaves a folder or Settings. It only exits the app from the plain home screen.
+
 ### v38.4.2 — Plain "Saved"
 - The note's info line says just "Saved" (no time) after saving.
 
