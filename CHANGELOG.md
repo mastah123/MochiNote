@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.2.2 — Desktop sidebar fits the screen
+- The desktop sidebar is always the window height: navigation on top, Settings at the bottom, Categories and Tags scroll in between.
+
 ### v39.2.1 — Phone Home fits one screen
 - Removed the extra space below the content and tightened spacing so the whole phone Home fits the screen like the mockup.
 

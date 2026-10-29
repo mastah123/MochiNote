@@ -297,3 +297,20 @@ select { border-radius: 14px; border-color: var(--border); }
   .home-footer { margin-top: 10px; padding: 10px 16px; }
   .hf-mascot { width: 38px; height: 38px; }
 }
+
+/* ======== v39.2.2: desktop sidebar fits the screen ======== */
+@media (min-width: 900px) {
+  .sidebar { height: 100vh; overflow: hidden; padding: 18px 12px 14px; }
+  .brand { padding-bottom: 16px; }
+  .nav { gap: 2px; }
+  .nav-item { min-height: 42px; }
+  .side-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; padding-right: 2px; scrollbar-width: thin; }
+  .side-scroll .side-section:first-child { margin-top: 0; }
+  .side-section { margin-top: 12px; padding-top: 12px; }
+  .side-item { min-height: 40px; gap: 12px; }
+  .side-list { gap: 0; }
+  #sideFolders.capped { max-height: 160px; overflow-y: auto; }
+  .side-item .count { font-size: .82rem; }
+  .tags-list { padding: 6px 4px; }
+  .side-foot { flex: none; margin-top: 0; padding-top: 10px; border-top: 1px solid var(--border); }
+}

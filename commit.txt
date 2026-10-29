@@ -8,6 +8,18 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 39.2.1 → 39.2.2 — Desktop sidebar fits the screen like the mockup
+
+Fixed
+- Before → on desktop the sidebar grew taller than the window as Categories and Tags piled up, so Settings dropped off-screen and the whole menu scrolled; after → the sidebar is exactly the window height: logo and navigation on top, Settings pinned at the bottom, and Categories and Tags scroll in the space between.
+- Categories keep the coloured dots and counts from the mockup with tighter rows; the list still shows 4 rows with "Show all".
+
+Changed
+- Settings → About shows 39.2.2.
+
+Impact
+- Desktop menu always fits, whatever number of categories and tags. Phones are unaffected.
+
 fix: 39.2.0 → 39.2.1 — Phone Home fits the screen, no extra space below
 
 Fixed
