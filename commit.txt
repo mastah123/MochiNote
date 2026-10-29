@@ -8,6 +8,17 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 39.2.3 → 39.2.4 — Category tiles: name and number no longer overlap
+
+Fixed
+- Before → on phones the category tile's name and note count touched or overlapped (tile height 88px was less than icon + name + number); after → tiles are 94px tall with a 24px icon and tighter lines, so icon, name and number each have their own space; checked at 360px and 390px wide on Home and on the Categories page (big tiles 128px).
+
+Changed
+- Settings → About shows 39.2.4.
+
+Impact
+- Phone Home still fits one screen. Desktop is unaffected.
+
 fix: 39.2.2 → 39.2.3 — Long category names no longer overflow; slimmer right column
 
 Fixed

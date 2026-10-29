@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.2.4 — Category tiles
+- Name and number on the phone category tiles no longer overlap.
+
 ### v39.2.3 — Desktop Home fits
 - Long category names are cut with "…" instead of overflowing; the right column is slimmer and moves below the main column on narrower windows.
 

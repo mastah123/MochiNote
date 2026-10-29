@@ -342,3 +342,16 @@ select { border-radius: 14px; border-color: var(--border); }
   .main[data-home="1"] .home-aside { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 20px; align-items: start; }
   .main[data-home="1"] .home-aside { order: 2; }
 }
+
+/* ======== v39.2.4: category tiles never overlap their text ======== */
+@media (max-width: 899px) {
+  .tile { height: 94px; padding: 10px 10px 9px; }
+  .tile .t-ico svg { width: 24px; height: 24px; }
+  .tile .fname { line-height: 1.25; font-size: .78rem; flex: none; }
+  .tile .fcount { line-height: 1.25; font-size: .92rem; flex: none; }
+  .tile .t-ico { flex: none; margin-bottom: auto; }
+  .tile.big { height: 128px; padding: 14px; }
+  .tile.big .t-ico svg { width: 30px; height: 30px; }
+  .tile.big .fname { font-size: .95rem; }
+  .tile.big .fcount { font-size: .8rem; }
+}
