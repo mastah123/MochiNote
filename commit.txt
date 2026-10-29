@@ -8,6 +8,23 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.0.0 → 39.1.0 — New design, batch 2: desktop Home
+
+Added
+- Desktop Home like the mockup: top bar with a rounded search field (Ctrl K hint), a light/dark toggle and a profile button; greeting with the sun; four quick-action cards (New Note, New Folder, Add Tag, Quick Capture); a Recent Notes card (five rows, "View all →"); the encouragement banner.
+- Right-hand column on Home: Today (notes added today, total notes), Quick Tip (with "Learn more") and Recent Categories.
+- Sidebar: Home, All notes, Search, Pinned, Archive, Trash, then Categories with coloured dots and counts, Tags, and Settings at the bottom.
+- Quick Capture saves a one-line note without opening the editor; Add Tag starts a new note with a tag.
+
+Changed
+- Before → "All notes" on desktop was the Home page (compact folder row, sort and grid/list controls); after → Home is the dashboard above, and "All notes" is its own page with the folder row, sort and grid/list controls.
+- The sidebar "Folders" heading reads "Categories" and shows coloured dots instead of folder icons on desktop.
+- The floating New note button is hidden on Home (the New Note card replaces it); other pages keep it.
+- Settings → About shows 39.1.0.
+
+Impact
+- Desktop gets the new Home. Phones are unchanged from 39.0.0. Next: Notes / Categories / Settings / editor restyle, then dark mode polish and the new logo.
+
 feat!: 38.4.3 → 39.0.0 — New MochiNote design, batch 1: phone Home, bottom bar, Poppins
 
 Added

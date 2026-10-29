@@ -29,7 +29,8 @@ const NotesIcons = (function () {
     file: '<path d="M14 3H7.5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z"/><path d="M14 3v4a1 1 0 0 0 1 1h3.5"/>',
     tag: '<path d="M3.5 12.6V5.5a2 2 0 0 1 2-2h7.1a2 2 0 0 1 1.4.6l6.4 6.4a2 2 0 0 1 0 2.8l-7.1 7.1a2 2 0 0 1-2.8 0l-6.4-6.4a2 2 0 0 1-.6-1.4z"/><circle cx="8.5" cy="8.5" r="1.3"/>',
     bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5c0-.9.5-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>',
-    arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>'
+    arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    bolt: '<path d="M13 3 5.5 13.2h5.3L10 21l7.5-10.2h-5.3z"/>'
   };
   const svgIco = (name, size, sw) => '<svg class="ico" viewBox="0 0 24 24" width="' + (size || 20) + '" height="' + (size || 20) + '" fill="none" stroke="currentColor" stroke-width="' + (sw || 1.9) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + IPATHS[name] + '</svg>';
   const icon = svg => { const t = document.createElement('template'); t.innerHTML = svg; return t.content.firstChild.cloneNode(true); };

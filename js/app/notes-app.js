@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.0.0';
+  const APP_VERSION = '39.1.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -124,7 +124,7 @@
   }
 
   /* ---------- navigation + rendering ---------- */
-  const VIEW_TITLES = { all: 'All notes', notes: 'Notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Folders' };
+  const VIEW_TITLES = { all: 'Home', notes: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Folders' };
 
   function go(view, opts) {
     if (state.openId) closeEditor();
@@ -141,9 +141,9 @@
     $('#notesView').hidden = settings || foldersPage; $('#settingsView').hidden = !settings; $('#foldersView').hidden = !foldersPage;
     $('#homeHead').hidden = settings || foldersPage;
     $('#main').dataset.view = state.view;
-    const homeMode = isMobile() && state.view === 'all' && !state.folderId && !state.tag;
-    if (homeMode) $('#main').dataset.home = '1'; else delete $('#main').dataset.home;
-    $('#newNote').hidden = settings || foldersPage || state.view === 'trash' || homeMode;
+    const homeAny = state.view === 'all' && !state.folderId && !state.tag, homeMode = isMobile() && homeAny;
+    if (homeAny) $('#main').dataset.home = '1'; else delete $('#main').dataset.home;
+    $('#newNote').hidden = settings || foldersPage || state.view === 'trash' || homeAny;
     let title = VIEW_TITLES[state.view];
     if (state.view === 'all' && state.folderId) title = state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || { name: 'All notes' }).name;
     $('#viewTitle').textContent = title;
@@ -152,7 +152,7 @@
     mb.innerHTML = settings ? svgIco('back', 24) : homeMode ? svgIco('user', 24, 1.8) : mb.dataset.menuSvg;
     mb.classList.toggle('profile', homeMode);
     mb.setAttribute('aria-label', settings ? 'Back' : 'Open menu'); mb.title = settings ? 'Back' : 'Menu';
-    paintBottomNav(homeMode);
+    paintBottomNav(homeMode); paintTheme();
     document.title = 'MochiNote';
     renderSidebar();
     if (settings) renderSettings(); else if (foldersPage) renderFoldersPage(); else renderNotes();
@@ -184,17 +184,19 @@
     $$('.nav-item').forEach(b => {
       const v = b.dataset.view;
       b.classList.toggle('active', v === state.view && !(v === 'all' && (state.folderId || state.tag)));
-      if (v !== 'settings') {
-        const c = L.filterNotes(state.notes, state.folders, { view: v }).length;
-        $('[data-count]', b).textContent = c ? c : '';
+      if (v && v !== 'settings') {
+        const c = L.filterNotes(state.notes, state.folders, { view: v === 'notes' ? 'all' : v }).length;
+        const cn = $('[data-count]', b); if (cn) cn.textContent = c ? c : '';
       }
     });
     const sf = $('#sideFolders'); sf.textContent = '';
     const active = state.notes.filter(n => !n.trashed && !n.archived);
+    let dotN = 0;
     const mk = (label, id, count, folder) => {
+      const dn = dotN++;
       const isActive = state.view === 'all' && state.folderId === id;
       const item = el('button', { class: 'side-item' + (isActive ? ' active' : ''), onclick: () => go('all', { folderId: id, tag: state.tag }) },
-        el('span', { class: 'fl-name' }, icon(svgIco('folder', 18)), label), el('span', { class: 'count', text: count || '' }));
+        el('span', { class: 'fl-name' }, el('span', { class: 'dot d' + (dn % 5), 'aria-hidden': 'true' }), icon(svgIco('folder', 18)), label), el('span', { class: 'count', text: count || '' }));
       if (folder) onLongPress(item, () => folderSheet(folder, item));
       sf.append(item);
       if (folder && isActive) {
@@ -238,19 +240,22 @@
     if (state.tag) f.append(el('button', { class: 'pill', onclick: () => go('all', { tag: null, folderId: state.folderId }) }, 'Tag: ', el('b', { text: '#' + state.tag }), ' ✕'));
     // labels + "Your space" card (phones; desktop hides them in CSS)
     const plainHome = state.view === 'all' && !state.folderId && !state.tag && !state.query;
-    const homeMode = isMobile() && state.view === 'all' && !state.folderId && !state.tag;
+    const homeAny = state.view === 'all' && !state.folderId && !state.tag, homeMode = isMobile() && homeAny;
+    const deskAll = !isMobile() && state.view === 'notes' && !state.query;
     $('#hero').hidden = !plainHome; paintHero();
-    $('#homeFooter').hidden = !(homeMode && plainHome); $('#viewAll').hidden = !(homeMode && plainHome);
-    $('#notesLabel').textContent = homeMode ? (state.query ? 'Results' : 'Recent Notes') : state.view === 'all' && !state.folderId
+    $('#homeFooter').hidden = !(homeAny && plainHome); $('#viewAll').hidden = !(homeAny && plainHome); renderAside(homeAny);
+    $('#notesLabel').textContent = homeAny ? (state.query ? 'Results' : 'Recent Notes') : deskAll ? 'All notes' : state.view === 'all' && !state.folderId
       ? (state.tag ? '#' + state.tag : state.query ? 'Results' : p.sort === 'edited' ? 'Recent notes' : 'Notes')
       : $('#viewTitle').textContent;
     // folder cards on All notes: phones show 2 (grid) or 4 (list) with "Show all"; desktop shows them all as before
     const strip = $('#folderStrip'); strip.textContent = '';
     const top = state.folders.filter(x => !x.parentId).sort((a, b) => (a.created || 0) - (b.created || 0));
     const mobile = isMobile(), fview = mobile ? p.folderView : 'grid';
-    const showFolders = homeMode ? plainHome : plainHome && top.length > 0;
-    strip.className = 'folder-strip ' + (homeMode ? 'tiles' : fview);
-    if (showFolders && homeMode) {
+    const showFolders = homeAny ? plainHome : (plainHome || deskAll) && top.length > 0;
+    strip.className = 'folder-strip ' + (homeMode ? 'tiles' : homeAny ? 'actions' : fview);
+    if (showFolders && homeAny && !homeMode) {
+      actionCards().forEach(c => strip.append(c));
+    } else if (showFolders && homeMode) {
       top.slice(0, 4).forEach((fo, i) => strip.append(folderTile(fo, i)));
       if (top.length < 4) strip.append(el('button', { class: 'tile tile-new', onclick: () => createFolder(null) }, el('span', { class: 't-ico' }, icon(svgIco('plus', 26, 1.7))), el('span', { class: 'fname', text: 'New folder' })));
     } else if (showFolders) {
@@ -259,20 +264,20 @@
     strip.classList.toggle('open', !mobile && !!state.homeFoldersOpen);
     strip.hidden = !strip.childNodes.length;
     $('#folderSection').hidden = !showFolders;
-    $('.controls').classList.toggle('plain', plainHome);
+    $('.controls').classList.toggle('plain', plainHome || deskAll);
     updateFolderMore();
     $('#fvGrid').setAttribute('aria-pressed', p.folderView === 'grid'); $('#fvList').setAttribute('aria-pressed', p.folderView === 'list');
     $('#trashBar').hidden = state.view !== 'trash' || !state.notes.some(n => n.trashed);
 
-    const list = homeMode ? homeList() : currentList(), box = $('#notes');
-    box.className = 'notes ' + (homeMode ? 'home-list' : p.view); box.textContent = '';
+    const list = homeAny ? homeList() : currentList(), box = $('#notes');
+    box.className = 'notes ' + (homeAny ? 'home-list' : p.view); box.textContent = '';
     const frag = document.createDocumentFragment();
-    list.forEach(n => frag.append(homeMode ? homeRow(n) : noteCard(n)));
+    list.forEach(n => frag.append(homeAny ? homeRow(n) : noteCard(n)));
     box.append(frag);
     const empty = $('#empty'); empty.hidden = list.length > 0;
     if (!list.length) {
       const msgs = {
-        all: state.query || state.tag || state.folderId ? ['Nothing matches', 'Try a different search or clear a filter.'] : ['No notes yet', homeMode ? 'Tap “New Note” to write your first one.' : 'Tap “New note” to write your first one.'],
+        all: state.query || state.tag || state.folderId ? ['Nothing matches', 'Try a different search or clear a filter.'] : ['No notes yet', homeAny ? 'Tap “New Note” to write your first one.' : 'Tap “New note” to write your first one.'],
         pinned: ['No pinned notes', 'Pin a note to keep it handy.'], archive: ['Archive is empty', 'Archived notes live here.'], trash: ['Trash is empty', 'Deleted notes wait here until you remove them.']
       };
       const m = msgs[state.view] || msgs.all; empty.textContent = ''; empty.append(el('b', { text: m[0] }), m[1]);
@@ -294,6 +299,54 @@
     onLongPress(fc, () => folderSheet(fo, fc));
     return fc;
   }
+  /* desktop Home: four quick actions, and the right-hand column (today, a tip, recent categories) */
+  const ACTION_ICONS = { note: 'doc', folder: 'folder', tag: 'tag', capture: 'bolt' };
+  function actionCards() {
+    const mk = (cls, id, key, label, fn) => el('button', { class: 'act ' + cls, id, type: 'button', onclick: fn },
+      el('span', { class: 'a-ico' }, icon(svgIco(ACTION_ICONS[key], 30, 1.7))), el('span', { class: 'a-name', text: label }), el('span', { class: 'a-go' }, icon(svgIco('arrow', 20, 1.8))));
+    return [
+      mk('a0', 'actNewNote', 'note', 'New Note', createAndOpen),
+      mk('a1', 'actNewFolder', 'folder', 'New Folder', () => createFolder(null)),
+      mk('a2', 'actAddTag', 'tag', 'Add Tag', addTag),
+      mk('a3', 'actCapture', 'capture', 'Quick Capture', quickCapture)
+    ];
+  }
+  async function addTag() {
+    const v = await dialog({ kind: 'prompt', title: 'Add a tag', message: 'Starts a new note with the tag, so it shows up in the menu.', placeholder: 'tag name', ok: 'Add' });
+    const t = (v || '').trim().replace(/^#+/, '').replace(/[^\p{L}\p{N}_-]+/gu, '');
+    if (!t) return;
+    const n = newNote({ html: '<p>#' + t + ' </p>', text: '#' + t, tags: [t] });
+    state.notes.push(n); try { await persistNote(n); } catch (e) { toast('Could not create note: ' + e.message); }
+    openEditor(n.id, true);
+  }
+  async function quickCapture() {
+    const v = await dialog({ kind: 'prompt', title: 'Quick Capture', message: 'Jot something down. It is saved as a new note.', placeholder: 'What is on your mind?', ok: 'Save' });
+    const t = (v || '').trim(); if (!t) return;
+    const n = newNote({ html: '<div>' + t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>', text: t, tags: L.extractTags(t) });
+    state.notes.push(n); try { await persistNote(n); } catch (e) { toast('Could not save: ' + e.message); return; }
+    toast('Captured'); render();
+  }
+  const TIPS = ['You can organize your notes with categories to keep everything tidy and easy to find.', 'Type #tags in a note and they show up in the menu for quick filtering.', 'Pin a note to keep it at the top of your list.', 'Press Ctrl K (or /) anywhere to jump to search.', 'Everything stays on this device. Export a backup from Settings now and then.'];
+  function renderAside(on) {
+    if (!on) return;
+    const live = state.notes.filter(n => !n.trashed), d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    const added = live.filter(n => (n.created || 0) >= d0.getTime()).length;
+    const today = $('#hwToday'); today.textContent = '';
+    today.append(el('div', { class: 'hw-row' }, el('h3', { text: 'Today' }), el('span', { class: 'hw-date', text: new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) })),
+      el('div', { class: 'hw-stats' }, el('div', {}, el('b', { text: String(added) }), el('span', { text: 'Notes added' })), el('div', {}, el('b', { text: String(live.length) }), el('span', { text: 'Total notes' }))),
+      el('div', { class: 'hw-mascot', 'aria-hidden': 'true' }, el('img', { src: 'assets/logo.svg', alt: '', width: 64, height: 64 }), el('span', { class: 'hw-heart', text: '♥' })));
+    const ti = Math.floor(Date.now() / 86400000) % TIPS.length, tip = $('#hwTip'); tip.textContent = '';
+    tip.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('bulb', 24, 1.7))), el('h3', { text: 'Quick Tip' })), el('p', { text: TIPS[ti] }),
+      el('button', { class: 'learn', type: 'button', onclick: () => dialog({ title: 'Quick tips', message: TIPS.map(x => '• ' + x).join('\n'), ok: 'Got it', hideCancel: true }) }, 'Learn more ', icon(svgIco('arrow', 16, 1.8))));
+    const last = f => Math.max(f.created || 0, ...state.notes.filter(n => !n.trashed && n.folderId === f.id).map(n => n.updated || 0));
+    const top = state.folders.slice().sort((a, b) => last(b) - last(a)).slice(0, 4), cats = $('#hwCats'); cats.textContent = '';
+    cats.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('folder', 24, 1.7))), el('h3', { text: 'Recent Categories' })));
+    if (!top.length) cats.append(el('p', { class: 'hw-empty', text: 'No categories yet. Use New Folder to make one.' }));
+    top.forEach((f, i) => cats.append(el('button', { class: 'hw-cat', type: 'button', onclick: () => go('all', { folderId: f.id }) }, el('span', { class: 'dot d' + (i % 5) }), el('span', { class: 'hc-name', text: f.name }), el('span', { class: 'hc-n', text: String(state.notes.filter(n => !n.trashed && !n.archived && n.folderId === f.id).length) }))));
+  }
+  const SUN_SVG = '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>', MOON_SVG = '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>';
+  function paintTheme() { const b = $('#themeToggle'); if (!b) return; b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (state.prefs.mode === 'dark' ? MOON_SVG : SUN_SVG) + '</svg>'; }
+
   const TILE_ICONS = ['doc', 'folder', 'tag', 'bulb'], ROW_ICONS = ['doc', 'folder', 'tag', 'file', 'bulb'];
   function folderTile(fo, i) {
     const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
@@ -909,7 +962,9 @@
   const focusSearch = () => { if (isMobile()) openSearch(); else $('#search').focus(); };
 
   function wire() {
-    $$('.nav-item').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
+    $$('.nav-item').forEach(b => b.addEventListener('click', () => { if (b.dataset.act === 'search') { closeSidebar(); focusSearch(); } else go(b.dataset.view); }));
+    $('#themeToggle').onclick = () => { setPref('mode', state.prefs.mode === 'dark' ? 'light' : 'dark'); paintTheme(); if (state.view === 'settings') renderSettings(); };
+    $('#avatarBtn').onclick = () => go('settings');
     $('#openSidebar').onclick = () => { if (state.view === 'settings') { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); } else openSidebar(); }; $('#scrim').onclick = requestCloseSidebar;
     $('#addFolderBtn').onclick = () => createFolder(null);
     $('#newNote').onclick = createAndOpen;
@@ -1016,7 +1071,7 @@
     document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
     window.addEventListener('pagehide', flush);
     window.addEventListener('beforeunload', e => { if (state.openId && state.dirty) { flush(); e.preventDefault(); e.returnValue = ''; } });
-    window.matchMedia && window.matchMedia('(min-width: 900px)').addEventListener && window.matchMedia('(min-width: 900px)').addEventListener('change', () => { closeSidebar(); if (!isMobile() && (state.view === 'folders' || state.view === 'notes')) go('all'); else render(); });
+    window.matchMedia && window.matchMedia('(min-width: 900px)').addEventListener && window.matchMedia('(min-width: 900px)').addEventListener('change', () => { closeSidebar(); if (!isMobile() && state.view === 'folders') go('all'); else render(); });
   }
 
   /* ---------- boot ---------- */
