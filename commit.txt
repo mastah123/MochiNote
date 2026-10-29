@@ -8,6 +8,21 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.1.0 → 39.2.0 — New design, batch 3: Notes, Categories, Settings and editor
+
+Added
+- Phone page titles in the header on Notes, Pinned, Archive, Trash and folder pages.
+- Categories page: big tinted tiles (icon, name, "N notes") in two columns.
+- Settings: switches instead of checkboxes, rounded cards, accent-tinted selected theme.
+
+Changed
+- Before → "Folders" page and heading; after → "Categories" (page, header and sidebar).
+- Note cards, menus, dialogs, editor header and format buttons use the new rounded look, Poppins and softer borders.
+- Settings → About shows 39.2.0.
+
+Impact
+- Every phone page now matches the new Home. Desktop pages other than Home get the same card, dialog, settings and editor styling. Next: dark mode polish and the new logo.
+
 feat: 39.0.0 → 39.1.0 — New design, batch 2: desktop Home
 
 Added

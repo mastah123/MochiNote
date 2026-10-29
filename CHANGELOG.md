@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.2.0 — New design, batch 3 (Notes, Categories, Settings, editor)
+- Page titles in the phone header, a tinted Categories page, switch toggles in Settings, and the rounded look on cards, menus, dialogs and the editor. "Folders" is now called "Categories".
+
 ### v39.1.0 — New design, batch 2 (desktop Home)
 - Desktop Home dashboard: search with Ctrl K, light/dark toggle, profile button, greeting, quick-action cards, Recent Notes, banner, and a right column with Today, Quick Tip and Recent Categories.
 - Sidebar redesigned (Home, All notes, Search, Pinned, Archive, Trash, Categories with dots, Tags, Settings at the bottom). "All notes" is now its own page.

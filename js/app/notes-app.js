@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.1.0';
+  const APP_VERSION = '39.2.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -124,7 +124,7 @@
   }
 
   /* ---------- navigation + rendering ---------- */
-  const VIEW_TITLES = { all: 'Home', notes: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Folders' };
+  const VIEW_TITLES = { all: 'Home', notes: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Categories' };
 
   function go(view, opts) {
     if (state.openId) closeEditor();
@@ -348,18 +348,18 @@
   function paintTheme() { const b = $('#themeToggle'); if (!b) return; b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (state.prefs.mode === 'dark' ? MOON_SVG : SUN_SVG) + '</svg>'; }
 
   const TILE_ICONS = ['doc', 'folder', 'tag', 'bulb'], ROW_ICONS = ['doc', 'folder', 'tag', 'file', 'bulb'];
-  function folderTile(fo, i) {
+  function folderTile(fo, i, big) {
     const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
-    const t = el('button', { class: 'folder-card tile t' + (i % 4), title: fo.name, 'aria-label': fo.name + ', ' + c + (c === 1 ? ' note' : ' notes'), onclick: () => go('all', { folderId: fo.id }) },
-      el('span', { class: 't-ico' }, icon(svgIco(TILE_ICONS[i % 4], 28, 1.7))), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: String(c) }));
+    const t = el('button', { class: 'folder-card tile t' + (i % 4) + (big ? ' big' : ''), title: fo.name, 'aria-label': fo.name + ', ' + c + (c === 1 ? ' note' : ' notes'), onclick: () => go('all', { folderId: fo.id }) },
+      el('span', { class: 't-ico' }, icon(svgIco(TILE_ICONS[i % 4], 28, 1.7))), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: big ? c + (c === 1 ? ' note' : ' notes') : String(c) }));
     onLongPress(t, () => folderSheet(fo, t));
     return t;
   }
   function renderFoldersPage() {
-    const box = $('#allFolders'); box.textContent = ''; box.className = 'folder-strip grid';
+    const box = $('#allFolders'); box.textContent = ''; box.className = 'folder-strip grid' + (isMobile() ? ' tiles-page' : '');
     const tree = L.folderTree(state.folders);
     if (!tree.length) { box.append(el('div', { class: 'empty', style: 'grid-column:1/-1' }, el('b', { text: 'No folders yet' }), 'Tap “+ New folder” to make one.')); return; }
-    tree.forEach(({ folder }, i) => box.append(folderCard(folder, i)));
+    tree.forEach(({ folder }, i) => box.append(isMobile() ? folderTile(folder, i, true) : folderCard(folder, i)));
   }
 
   /* Structured preview for cards: keeps bullets, numbering and checklists instead of flattening to text.

@@ -220,3 +220,59 @@ html[data-theme="mochi"][data-mode="dark"] {
   .hc-n { margin-left: auto; color: var(--muted); }
   .hw-empty { margin: 8px 0 0; color: var(--muted); font-size: .9rem; }
 }
+
+/* ======== v39.2: Notes, Categories, Settings, editor ======== */
+.note { border-radius: 22px; border-color: var(--border); }
+.note .n-title { font-weight: 500; }
+.note:hover { border-color: var(--border); box-shadow: 0 8px 20px rgba(60, 50, 40, .08); }
+select { border-radius: 14px; border-color: var(--border); }
+.pill { background: var(--accent-soft); color: var(--text); }
+.tag { background: var(--chip); }
+
+/* Settings */
+.set-card { border-radius: 22px; padding: 20px; background: var(--surface); }
+.set-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+.set-row { min-height: 52px; }
+.set-row small { font-size: .78rem; margin-top: 2px; }
+.set-card input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 48px; height: 28px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); position: relative; flex: none; margin: 0; transition: background var(--dur); cursor: pointer; }
+.set-card input[type=checkbox]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform var(--dur); }
+.set-card input[type=checkbox]:checked { background: var(--accent); border-color: var(--accent); }
+.set-card input[type=checkbox]:checked::after { transform: translateX(20px); }
+.set-card input[type=text], .set-card input[type=number] { min-height: 42px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); padding: 0 12px; }
+.set-card input[type=text] { width: min(220px, 100%); }
+.theme-btn { border-width: 1.5px; font-size: .9rem; }
+.theme-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.btn-primary, .btn-ghost, .btn-danger { border-radius: 16px; }
+.about-logo { border-radius: 20px; }
+.dlg { border-radius: 26px; box-shadow: 0 20px 60px rgba(30, 25, 20, .25); }
+.dlg input, .dlg select { border-radius: 14px; }
+
+/* editor */
+.editor { background: var(--bg); }
+.ed-top { border-bottom-color: transparent; }
+.icon-btn { border-radius: 14px; }
+.ed-title { font-weight: 600; letter-spacing: -.01em; }
+.menu { border-radius: 20px; box-shadow: 0 14px 40px rgba(30, 25, 20, .16); padding: 8px; }
+.menu button { border-radius: 12px; }
+.toolbar button, .bar-btn { border-radius: 12px; }
+.toolbar button[aria-pressed="true"], .bar-btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
+.sheet, #sheet { border-radius: 20px; }
+
+@media (max-width: 899px) {
+  /* page titles in the header on Notes, Pinned, Archive, Trash and folder pages */
+  .main:not([data-home="1"]):not([data-view="settings"]):not([data-view="folders"]) .view-title { display: block; grid-column: 2; grid-row: 1; font-size: 1.25rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .head-fixed.searching .view-title { display: none !important; }
+  .main:not([data-home="1"]) .notes-label { display: none; }
+  .main:not([data-home="1"]) .controls { justify-content: flex-end; }
+  .main[data-view="settings"] .view-title { font-weight: 600; }
+  .notes.grid .note, .notes.list .note { background: var(--nc, var(--surface)); }
+
+  /* Categories page */
+  .page-head h2 { font-size: 1.25rem; font-weight: 600; }
+  .folder-strip.tiles-page { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 6px; }
+  .tile.big { height: 124px; padding: 16px 14px 14px; border-radius: 22px; }
+  .tile.big .fname { font-size: .98rem; }
+  .tile.big .fcount { font-size: .82rem; font-weight: 400; margin-top: 2px; }
+  .tile.big .t-ico svg { width: 32px; height: 32px; }
+  #foldersNew { color: var(--accent); font-weight: 500; }
+}
