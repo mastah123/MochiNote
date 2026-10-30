@@ -3,7 +3,7 @@
 Handoff notes for another AI or account. Keep this file short and current; update it with every release.
 
 ## Status
-- Version **39.6.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
+- Version **39.7.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
 - Personal notes web app: vanilla HTML/CSS/JS, no build tools, no backend, local-first (IndexedDB, in-memory fallback). Mobile-first; desktop (≥900px) adapts.
 - Work arrives as lists of changes; the owner says "Next" to build a batch. One zip per version, named `mochinote-vX.Y.Z.zip`, tests excluded.
 

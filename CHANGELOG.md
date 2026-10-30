@@ -10,6 +10,10 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.7.0 — New logo
+- New MochiNote cat logo everywhere: sidebar menu, About card, profile avatar, Home banner and widget mascot, browser favicon, home-screen and PWA icons (180/192/512) and the manifest colours.
+- Dark mode reviewed on Home, All notes, Categories, Settings, About and the note view; no further changes needed.
+
 ### v39.6.0 — Categories like All notes
 - Categories page copies the All notes layout: page title in the header, "N categories" with "+ New folder" and the List/Grid toggle, rows (list) or cards (grid) with the category icon and colour, and a ⋮ menu on rows.
 - Long-press highlight on list rows is now a full rounded box with room around the content.

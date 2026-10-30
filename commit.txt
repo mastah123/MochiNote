@@ -8,6 +8,19 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.6.0 → 39.7.0 — New MochiNote logo across the app, dark mode review
+
+Added
+- assets/logo.svg is the new cat app icon; assets/mascot.svg is the cat without a background for the Home banner, the desktop widget and the profile avatar.
+
+Changed
+- Before → old notebook logo; after → new cat logo in the menu, About card, avatar, favicon, apple-touch icon, PWA icons (180/192/512) and manifest colours (#FFF6EC background, #fbf9f6 theme).
+- Profile avatar button now says "Your profile" and uses the mascot.
+- Settings → About shows 39.7.0.
+
+Impact
+- Dark mode was checked on every main page and needed no changes. This finishes the redesign batches (1–4).
+
 feat: 39.5.0 → 39.6.0 — Categories page uses the All notes layout, complete long-press highlight
 
 Fixed

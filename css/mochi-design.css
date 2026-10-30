@@ -480,3 +480,4 @@ select { border-radius: 14px; border-color: var(--border); }
 .cat-controls .seg { margin-left: 0; }
 .fcard .n-count { display: block; color: var(--muted); font-size: .9rem; margin-top: 2px; }
 .fcard { min-height: 0; }
+.avatar-btn img { padding: 4px; }

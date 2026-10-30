@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.6.0';
+  const APP_VERSION = '39.7.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -336,7 +336,7 @@
     const today = $('#hwToday'); today.textContent = '';
     today.append(el('div', { class: 'hw-row' }, el('h3', { text: 'Today' }), el('span', { class: 'hw-date', text: new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) })),
       el('div', { class: 'hw-stats' }, el('div', {}, el('b', { text: String(added) }), el('span', { text: 'Notes added' })), el('div', {}, el('b', { text: String(live.length) }), el('span', { text: 'Total notes' }))),
-      el('div', { class: 'hw-mascot', 'aria-hidden': 'true' }, el('img', { src: 'assets/logo.svg', alt: '', width: 64, height: 64 }), el('span', { class: 'hw-heart', text: '♥' })));
+      el('div', { class: 'hw-mascot', 'aria-hidden': 'true' }, el('img', { src: 'assets/mascot.svg', alt: '', width: 64, height: 64 }), el('span', { class: 'hw-heart', text: '♥' })));
     const ti = Math.floor(Date.now() / 86400000) % TIPS.length, tip = $('#hwTip'); tip.textContent = '';
     tip.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('bulb', 24, 1.7))), el('h3', { text: 'Quick Tip' })), el('p', { text: TIPS[ti] }),
       el('button', { class: 'learn', type: 'button', onclick: () => dialog({ title: 'Quick tips', message: TIPS.map(x => '• ' + x).join('\n'), ok: 'Got it', hideCancel: true }) }, 'Learn more ', icon(svgIco('arrow', 16, 1.8))));
