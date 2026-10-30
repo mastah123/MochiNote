@@ -3,7 +3,7 @@
 Handoff notes for another AI or account. Keep this file short and current; update it with every release.
 
 ## Status
-- Version **39.7.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
+- Version **39.8.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
 - Personal notes web app: vanilla HTML/CSS/JS, no build tools, no backend, local-first (IndexedDB, in-memory fallback). Mobile-first; desktop (≥900px) adapts.
 - Work arrives as lists of changes; the owner says "Next" to build a batch. One zip per version, named `mochinote-vX.Y.Z.zip`, tests excluded.
 
@@ -37,7 +37,7 @@ Handoff notes for another AI or account. Keep this file short and current; updat
 
 ## Redesign (branch for the new design)
 - v39.0.0 = batch 1: phone Home (header, search, greeting + New Note, 4 tiles, Recent Notes card, banner) and the bottom bar (Home/Notes/Categories/Settings). New view `notes` = the Notes tab; Categories = the folders page.
-- Fonts: Poppins in `assets/fonts` (the mockup font is not available offline). Styles: `css/mochi-design.css` (linked last), theme `mochi`.
+- Fonts: the Mochi theme uses the same font stack as the other themes (system/Roboto); no bundled fonts. Styles: `css/mochi-design.css` (linked last), theme `mochi`.
 - v39.1.0 = batch 2: desktop Home (dashboard + right column widgets, new sidebar). `#notesView` has `.nv-main` + `#homeAside`; `data-home=1` on `.main` on both widths; Add Tag stands in for the mockup's "Add Category" (categories are folders).
 - v39.2.0 = batch 3: Notes/Categories/Settings/editor restyle (no mockup; derived from Home). Categories page uses `folderTile(..., big)`.
 - Next batch: 4 dark mode polish + new logo (logo still the old placeholder).

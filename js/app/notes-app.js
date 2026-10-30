@@ -4,9 +4,9 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.7.0';
+  const APP_VERSION = '39.8.0';
   const PREFS_KEY = 'mochinote:prefs';
-  const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
+  const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: '', welcomed: false, tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
   const THEMES = [['mochi', '#f4b7ae', 'Mochi'], ['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
   const FONTS = [['', 'Default (sans)'], ['Georgia, serif', 'Serif'], ["'Courier New', monospace", 'Mono'], ["'Comic Sans MS', 'Trebuchet MS', cursive", 'Playful']];
@@ -95,7 +95,7 @@
       sel.textContent = '';
       (o.options || []).forEach(([v, label]) => sel.append(el('option', { value: v, text: label })));
       if (o.kind === 'select') sel.value = o.value == null ? '' : o.value;
-      $('#dlgCancel').hidden = o.hideCancel === true;
+      $('#dlgCancel').hidden = o.hideCancel === true; $('#dlgCancel').textContent = o.cancel || 'Cancel';
       const ok = $('#dlgOk'); ok.textContent = o.ok || 'OK'; ok.className = o.danger ? 'btn-danger' : 'btn-primary';
       const done = () => {
         d.removeEventListener('close', done);
@@ -591,6 +591,12 @@
     if (!v) return;
     setPref('userName', v[0].trim()); setPref('tagline', v[1].trim() || DEFAULT_TAGLINE);
     renderNotes(); if (state.view === 'settings') renderSettings(); toast('Saved');
+  }
+  // first opening: ask for the name once (Esc or Skip leaves it empty; it can be set later from the profile icon)
+  async function welcome() {
+    const v = await dialog({ kind: 'prompt', title: 'Welcome to MochiNote', message: 'What should we call you? Your name shows in the Home greeting. You can change it any time from the profile icon.', placeholder: 'Your name', value: state.prefs.userName || '', ok: 'Get started', cancel: 'Skip' });
+    if (v != null && v.trim()) setPref('userName', v.trim().slice(0, 30));
+    setPref('welcomed', true); renderNotes();
   }
   function resetHero() { setPref('userName', DEFAULT_PREFS.userName); setPref('tagline', DEFAULT_TAGLINE); renderNotes(); toast('Back to the default'); }
   async function togglePin(id) {
@@ -1170,8 +1176,9 @@
     if (!ok) await dialog({ title: 'Storage unavailable', message: 'Your browser is blocking local storage, so notes will only last until this tab closes. Use Settings → Export backup to keep your work.', ok: 'Got it', hideCancel: true });
     NotesDB.requestPersist();
     render();
+    if (!state.prefs.welcomed && !navigator.webdriver) welcome();
   }
   boot();
-  window.__mochiNote = { state, go, render };
+  window.__mochiNote = { state, go, render, welcome };
   window.__littleNotes = window.__mochiNote; // backwards compat
 })();

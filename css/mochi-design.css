@@ -1,8 +1,5 @@
-/* mochi-design.css — the MochiNote look (v39): Poppins, soft navy text, coral accent, pastel tints.
+/* mochi-design.css — the MochiNote look (v39): same font as the other themes, soft navy text, coral accent, pastel tints.
    Linked last. The phone Home, bottom bar and tiles live in the media block at the bottom. */
-@font-face { font-family: 'Poppins'; font-weight: 400; font-style: normal; font-display: swap; src: url('../assets/fonts/poppins-400.woff') format('woff'); }
-@font-face { font-family: 'Poppins'; font-weight: 500; font-style: normal; font-display: swap; src: url('../assets/fonts/poppins-500.woff') format('woff'); }
-@font-face { font-family: 'Poppins'; font-weight: 700; font-style: normal; font-display: swap; src: url('../assets/fonts/poppins-700.woff') format('woff'); }
 
 /* ---- tokens ---- */
 :root {
@@ -18,7 +15,7 @@ html[data-theme="mochi"] {
   --text: #16233b; --muted: #78879d; --accent: #e07a73; --accent-ink: #ffffff; --accent-soft: #fdeeeb;
   --sage: #eaf5e8; --sage-ink: #3f6b38; --danger: #c5493a; --chip: #f1ece6; --chip-ink: #3a465c;
   --radius: 20px;
-  --font: 'Poppins', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --c-default: #fffdfb; --c-yellow: #fcf3dc; --c-green: #eaf5e8; --c-blue: #eaf1fd; --c-pink: #fdeeeb; --c-lilac: #f1ecfc;
 }
 html[data-mode="dark"] {

@@ -10,6 +10,10 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.8.0 — Welcome and lighter Mochi font
+- First opening asks for your name (Skip is fine); it is used in the Home greeting and can be changed later from the profile icon. No default name any more.
+- The Mochi theme uses the same font as the other themes instead of the bolder Poppins; the bundled Poppins files are removed.
+
 ### v39.7.0 — New logo
 - New MochiNote cat logo everywhere: sidebar menu, About card, profile avatar, Home banner and widget mascot, browser favicon, home-screen and PWA icons (180/192/512) and the manifest colours.
 - Dark mode reviewed on Home, All notes, Categories, Settings, About and the note view; no further changes needed.

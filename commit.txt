@@ -8,6 +8,19 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.7.0 → 39.8.0 — Ask for the name on first opening, Mochi theme font like the other themes
+
+Added
+- A "Welcome to MochiNote" dialog on the first opening asks for your name (Get started or Skip). It is asked once.
+
+Changed
+- Before → the greeting defaulted to "James"; after → no default name ("Good morning!") until one is entered; the profile icon still edits it.
+- Before → the Mochi theme used the bundled Poppins font, which looked bold; after → it uses the same font stack and weights as the other themes. The bundled Poppins files are removed, so the app is smaller.
+- Settings → About shows 39.8.0.
+
+Impact
+- Existing installs see the welcome dialog once after updating, with their current name filled in.
+
 feat: 39.6.0 → 39.7.0 — New MochiNote logo across the app, dark mode review
 
 Added
