@@ -10,6 +10,10 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.6.0 — Categories like All notes
+- Categories page copies the All notes layout: page title in the header, "N categories" with "+ New folder" and the List/Grid toggle, rows (list) or cards (grid) with the category icon and colour, and a ⋮ menu on rows.
+- Long-press highlight on list rows is now a full rounded box with room around the content.
+
 ### v39.5.0 — Header, profile and menu
 - Phone header: menu, search, profile. Name and tagline are edited from the profile icon. The phone menu no longer lists Categories or Settings.
 

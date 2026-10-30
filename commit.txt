@@ -8,6 +8,18 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.5.0 → 39.6.0 — Categories page uses the All notes layout, complete long-press highlight
+
+Fixed
+- The long-press highlight on a Recent Notes / list row was a thin square outline hugging the text; it is now a complete rounded box with padding around the row.
+
+Changed
+- Before → Categories had its own back-arrow header and large coloured tiles; after → it matches All notes: title in the header, "N categories" next to "+ New folder" and the List/Grid toggle, rows or cards with the category's icon and colour. The view choice is shared with All notes.
+- Settings → About shows 39.6.0.
+
+Impact
+- Pages look the same across the app. Next (batch 4): dark mode polish and swapping in the new logo (the separate logo versions were delivered).
+
 feat: 39.4.0 → 39.5.0 — Phone header with menu and search, profile on the account icon, simpler menu
 
 Added

@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.5.0';
+  const APP_VERSION = '39.6.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -401,11 +401,39 @@
     onLongPress(t, () => folderSheet(fo, t));
     return t;
   }
+  // Categories page: same layout as All notes (count + view toggle, rows or cards with a tinted icon)
+  function folderNoteCount(fo) { return state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length; }
+  function folderRow(fo, i) {
+    const c = folderNoteCount(fo), tn = okTint(fo.color) || ROW_TINTS[i % ROW_TINTS.length], lbl = c + (c === 1 ? ' note' : ' notes');
+    const more = el('button', { class: 'n-more', type: 'button', 'aria-label': 'Category options', title: 'Options', onclick: e => { e.stopPropagation(); folderSheet(fo, more); } }, icon(svgIco('more', 20)));
+    const row = el('article', { class: 'note hrow fcat c-' + tn, tabindex: '0', role: 'button', 'aria-label': fo.name + ', ' + lbl,
+      onclick: () => go('all', { folderId: fo.id }),
+      onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === row) { e.preventDefault(); go('all', { folderId: fo.id }); } } },
+      el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(okIco(fo.icon) || TILE_ICONS[i % 4], 26, 1.7))),
+      el('div', { class: 'n-main' }, el('div', { class: 'n-title', text: fo.name }), el('div', { class: 'n-sub', text: lbl })),
+      el('span', { class: 'n-side' }), more);
+    onLongPress(row, () => folderSheet(fo, row));
+    return row;
+  }
+  function folderGridCard(fo, i) {
+    const c = folderNoteCount(fo), tn = okTint(fo.color) || ROW_TINTS[i % ROW_TINTS.length];
+    const card = el('article', { class: 'note fcat fcard', tabindex: '0', role: 'button', 'aria-label': fo.name + ', ' + c + (c === 1 ? ' note' : ' notes'),
+      onclick: () => go('all', { folderId: fo.id }),
+      onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); go('all', { folderId: fo.id }); } } },
+      el('span', { class: 'n-ico c-' + tn, 'aria-hidden': 'true' }, icon(svgIco(okIco(fo.icon) || TILE_ICONS[i % 4], 20, 1.7))),
+      el('div', { class: 'n-title', text: fo.name }),
+      el('div', { class: 'n-count', text: c + (c === 1 ? ' note' : ' notes') }));
+    onLongPress(card, () => folderSheet(fo, card));
+    return card;
+  }
   function renderFoldersPage() {
-    const box = $('#allFolders'); box.textContent = ''; box.className = 'folder-strip grid' + (isMobile() ? ' tiles-page' : '');
-    const tree = L.folderTree(state.folders);
+    const p = state.prefs, box = $('#allFolders'); box.textContent = '';
+    const tree = L.folderTree(state.folders), rows = p.view === 'list';
+    $('#catGrid').setAttribute('aria-pressed', !rows); $('#catList').setAttribute('aria-pressed', rows);
+    $('#catLabel').textContent = tree.length + (tree.length === 1 ? ' category' : ' categories');
+    box.className = 'notes ' + (!tree.length ? 'grid' : rows ? 'home-list rows' : 'grid');
     if (!tree.length) { box.append(el('div', { class: 'empty', style: 'grid-column:1/-1' }, el('b', { text: 'No folders yet' }), 'Tap “+ New folder” to make one.')); return; }
-    tree.forEach(({ folder }, i) => box.append(isMobile() ? folderTile(folder, i, true) : folderCard(folder, i)));
+    tree.forEach(({ folder }, i) => box.append(rows ? folderRow(folder, i) : folderGridCard(folder, i)));
   }
 
   /* Structured preview for cards: keeps bullets, numbering and checklists instead of flattening to text.
@@ -1037,8 +1065,9 @@
       { icon: 'edit', label: 'Edit', fn: editHero },
       { icon: 'restore', label: 'Reset to default', fn: resetHero }
     ], $('#hero')));
-    $('#foldersBack').onclick = () => { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); };
     $('#foldersNew').onclick = () => createFolder(null);
+    $('#catGrid').onclick = () => { setPref('view', 'grid'); renderFoldersPage(); };
+    $('#catList').onclick = () => { setPref('view', 'list'); renderFoldersPage(); };
     $('#fvGrid').onclick = () => { setPref('folderView', 'grid'); renderNotes(); };
     $('#fvList').onclick = () => { setPref('folderView', 'list'); renderNotes(); };
     $('#searchBtn').onclick = () => { if ($('#headFixed').classList.contains('searching')) closeSearch(); else openSearch(); };

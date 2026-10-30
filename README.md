@@ -3,7 +3,7 @@
 A cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript: no build step, no dependencies, no backend.
 Notes live **only in your browser** (IndexedDB). There is no cloud sync.
 
-Current version: **39.5.0** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
+Current version: **39.6.0** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
 
 ## Run it
 

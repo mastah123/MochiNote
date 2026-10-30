@@ -260,7 +260,7 @@ select { border-radius: 14px; border-color: var(--border); }
 
 @media (max-width: 899px) {
   /* page titles in the header on Notes, Pinned, Archive, Trash and folder pages */
-  .main:not([data-home="1"]):not([data-view="settings"]):not([data-view="folders"]) .view-title { display: block; grid-column: 2; grid-row: 1; font-size: 1.25rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .main:not([data-home="1"]):not([data-view="settings"]) .view-title { display: block; grid-column: 2; grid-row: 1; font-size: 1.25rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .head-fixed.searching .view-title { display: none !important; }
   .main:not([data-home="1"]) .notes-label { display: block; font-size: .85rem; font-weight: 400; color: var(--muted); }
   .main[data-view="settings"] .view-title { font-weight: 600; }
@@ -469,3 +469,14 @@ select { border-radius: 14px; border-color: var(--border); }
   .sidebar .side-foot, .sidebar .side-scroll > .side-section:first-child { display: none; }
   .sidebar .side-scroll > .side-section:nth-child(2) { margin-top: 0; padding-top: 0; border-top: 0; }
 }
+
+/* v39.6.0 — long-press highlight on list rows: a complete rounded box with room around the content */
+.hrow.lp-active, .main .notes.home-list .hrow.lp-active { margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 18px; border-bottom-color: transparent; background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent), 0 8px 22px rgba(0,0,0,.14) !important; transform: none; }
+
+/* Categories page copies the All notes layout */
+
+
+.cat-controls #foldersNew { color: var(--accent); font-weight: 500; padding: 0 10px; min-height: 40px; margin-left: auto; }
+.cat-controls .seg { margin-left: 0; }
+.fcard .n-count { display: block; color: var(--muted); font-size: .9rem; margin-top: 2px; }
+.fcard { min-height: 0; }
