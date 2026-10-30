@@ -8,6 +8,21 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.2.5 → 39.3.0 — Note and category icons and colours
+
+Added
+- Notes can have their own icon and colour: ⋮ menu or long-press on a note, or the editor's ⋮ menu → "Icon & colour…". 18 icons (document, file, folder, tag, bulb, star, heart, bookmark, calendar, cart, briefcase, book, code, home, plane, music, check, pin) and 5 colours (pink, blue, lilac, green, yellow); "Default" restores the automatic look.
+- Categories get the same picker: long-press (phone) or right-click (desktop) a category → "Icon & colour…".
+- The chosen icon and colour show on the Home Recent Notes rows, as a small badge before the title in All notes and inside categories (grid and list), on the category tiles and cards, and as the coloured dot in the sidebar and Recent Categories.
+- Backups keep the icons and colours.
+
+Changed
+- Before → Recent Notes rows used an automatic icon and colour only; after → your choice wins, the automatic one is the fallback.
+- Settings → About shows 39.3.0.
+
+Impact
+- Notes and categories without a choice look as before. Next: All notes page (row design, count), then menu cleanup and the profile/account changes.
+
 fix: 39.2.4 → 39.2.5 — Desktop Home keeps its right column on narrower windows
 
 Fixed

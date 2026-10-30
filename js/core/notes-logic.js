@@ -6,6 +6,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  const TINTS = ['pink', 'blue', 'lilac', 'green', 'yellow'];
+  const okIcon = v => (typeof v === 'string' && /^[a-z0-9]{2,12}$/.test(v)) ? v : null;
   const COLORS = ['default', 'yellow', 'green', 'blue', 'pink', 'lilac'];
   const SORTS = ['edited', 'created-desc', 'created-asc', 'title-asc', 'title-desc'];
   const NO_FOLDER = '__none__';
@@ -189,7 +191,9 @@
     (data.folders || []).forEach(f => {
       if (!f || typeof f !== 'object' || typeof f.id !== 'string' || !f.id || !str(f.name, 100).trim() || folderIds.has(f.id)) { skippedFolders++; return; }
       folderIds.add(f.id);
-      folders.push({ id: f.id, name: str(f.name, 100).trim(), parentId: typeof f.parentId === 'string' ? f.parentId : null, created: ts(f.created, now) });
+      const nf = { id: f.id, name: str(f.name, 100).trim(), parentId: typeof f.parentId === 'string' ? f.parentId : null, created: ts(f.created, now) };
+      if (okIcon(f.icon)) nf.icon = f.icon; if (TINTS.includes(f.color)) nf.color = f.color;
+      folders.push(nf);
     });
     folders.forEach(f => { if (f.parentId && (!folderIds.has(f.parentId) || f.parentId === f.id)) f.parentId = null; });
     // break parent cycles
@@ -209,7 +213,7 @@
       const title = str(n.title, 200);
       const text = htmlToText(html);
       const created = ts(n.created, now);
-      notes.push({
+      const nn = {
         id, title, html, text,
         tags: extractTags(title + '\n' + text),
         folderId: typeof n.folderId === 'string' && folderIds.has(n.folderId) ? n.folderId : null,
@@ -217,7 +221,9 @@
         pinned: n.pinned === true, archived: n.archived === true, trashed: n.trashed === true,
         trashedAt: n.trashed === true ? ts(n.trashedAt, now) : null,
         created, updated: ts(n.updated, created)
-      });
+      };
+      if (okIcon(n.icon)) nn.icon = n.icon; if (TINTS.includes(n.tint)) nn.tint = n.tint;
+      notes.push(nn);
     });
     return { notes, folders, skippedNotes, skippedFolders, settings: data.settings && typeof data.settings === 'object' ? data.settings : null };
   }

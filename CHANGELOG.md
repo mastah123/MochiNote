@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.3.0 — Note and category icons and colours
+- Pick an icon and colour for any note or category (18 icons, 5 colours). They show on Home rows, in All notes and categories, on tiles and in the sidebar.
+
 ### v39.2.5 — Desktop right column stays right
 - The right-hand cards stay beside the main column on narrower desktop windows; fonts and cards are smaller there to fit, like the mockup.
 

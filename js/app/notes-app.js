@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.2.5';
+  const APP_VERSION = '39.3.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -196,7 +196,7 @@
       const dn = dotN++;
       const isActive = state.view === 'all' && state.folderId === id;
       const item = el('button', { class: 'side-item' + (isActive ? ' active' : ''), onclick: () => go('all', { folderId: id, tag: state.tag }) },
-        el('span', { class: 'fl-name' }, el('span', { class: 'dot d' + (dn % 5), 'aria-hidden': 'true' }), icon(svgIco('folder', 18)), el('span', { class: 'fl-t', text: label })), el('span', { class: 'count', text: count || '' }));
+        el('span', { class: 'fl-name' }, el('span', { class: 'dot ' + (folder && okTint(folder.color) ? 'c-' + folder.color : 'd' + (dn % 5)), 'aria-hidden': 'true' }), icon(svgIco('folder', 18)), el('span', { class: 'fl-t', text: label })), el('span', { class: 'count', text: count || '' }));
       if (folder) onLongPress(item, () => folderSheet(folder, item));
       sf.append(item);
       if (folder && isActive) {
@@ -294,8 +294,8 @@
   }
   function folderCard(fo, i) {
     const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
-    const fc = el('button', { class: 'folder-card f' + (i % 4), title: fo.name, onclick: () => go('all', { folderId: fo.id }) },
-      icon(ICONS.folder), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') }));
+    const fc = el('button', { class: 'folder-card ' + (okTint(fo.color) ? 'c-' + fo.color : 'f' + (i % 4)), title: fo.name, onclick: () => go('all', { folderId: fo.id }) },
+      okIco(fo.icon) ? icon(svgIco(fo.icon, 26, 1.7).replace('class="ico"', 'class="ico f-ico"')) : icon(ICONS.folder), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') }));
     onLongPress(fc, () => folderSheet(fo, fc));
     return fc;
   }
@@ -342,16 +342,60 @@
     const top = state.folders.slice().sort((a, b) => last(b) - last(a)).slice(0, 4), cats = $('#hwCats'); cats.textContent = '';
     cats.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('folder', 24, 1.7))), el('h3', { text: 'Recent Categories' })));
     if (!top.length) cats.append(el('p', { class: 'hw-empty', text: 'No categories yet. Use New Folder to make one.' }));
-    top.forEach((f, i) => cats.append(el('button', { class: 'hw-cat', type: 'button', onclick: () => go('all', { folderId: f.id }) }, el('span', { class: 'dot d' + (i % 5) }), el('span', { class: 'hc-name', text: f.name }), el('span', { class: 'hc-n', text: String(state.notes.filter(n => !n.trashed && !n.archived && n.folderId === f.id).length) }))));
+    top.forEach((f, i) => cats.append(el('button', { class: 'hw-cat', type: 'button', onclick: () => go('all', { folderId: f.id }) }, el('span', { class: 'dot ' + (okTint(f.color) ? 'c-' + f.color : 'd' + (i % 5)) }), el('span', { class: 'hc-name', text: f.name }), el('span', { class: 'hc-n', text: String(state.notes.filter(n => !n.trashed && !n.archived && n.folderId === f.id).length) }))));
   }
   const SUN_SVG = '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>', MOON_SVG = '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>';
   function paintTheme() { const b = $('#themeToggle'); if (!b) return; b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (state.prefs.mode === 'dark' ? MOON_SVG : SUN_SVG) + '</svg>'; }
 
   const TILE_ICONS = ['doc', 'folder', 'tag', 'bulb'], ROW_ICONS = ['doc', 'folder', 'tag', 'file', 'bulb'];
+  const TINTS = ['pink', 'blue', 'lilac', 'green', 'yellow'], TILE_TINTS = ['pink', 'blue', 'lilac', 'green'], ROW_TINTS = ['pink', 'blue', 'green', 'lilac', 'yellow'];
+  const PICK_ICONS = ['doc', 'file', 'folder', 'tag', 'bulb', 'star', 'heart', 'bookmark', 'calendar', 'cart', 'briefcase', 'book', 'code', 'home', 'plane', 'music', 'check', 'pin'];
+  const okTint = t => TINTS.includes(t) ? t : null, okIco = n => (n && IPATHS[n]) ? n : null;
+  const folderIdx = f => Math.max(0, state.folders.filter(x => !x.parentId).sort((a, b) => (a.created || 0) - (b.created || 0)).findIndex(x => x.id === f.id));
+  /* icon + colour picker: resolves {icon, tint} (null = default) or null when cancelled */
+  function pickIcon(o) {
+    return new Promise(resolve => {
+      let curIcon = okIco(o.icon), curTint = okTint(o.tint), out = null;
+      const d = el('dialog', { class: 'dlg pick' }), prev = el('span', { class: 'pk-prev' });
+      const gi = PICK_ICONS.map(n => [el('button', { type: 'button', class: 'pk-i', 'aria-label': n, onclick: () => { curIcon = n; paint(); } }, icon(svgIco(n, 22, 1.7))), n]);
+      const gc = TINTS.map(n => [el('button', { type: 'button', class: 'pk-c c-' + n, 'aria-label': n + ' colour', onclick: () => { curTint = n; paint(); } }), n]);
+      const paint = () => {
+        prev.className = 'pk-prev c-' + (curTint || o.defTint); prev.textContent = ''; prev.append(icon(svgIco(curIcon || o.defIcon, 28, 1.7)));
+        gi.forEach(([b, n]) => b.setAttribute('aria-pressed', String(n === curIcon))); gc.forEach(([b, n]) => b.setAttribute('aria-pressed', String(n === curTint)));
+      };
+      d.append(el('h2', { text: o.title }), el('div', { class: 'pk-top' }, prev, el('span', { class: 'pk-name', text: o.name || '' })),
+        el('div', { class: 'pk-grid' }, gi.map(x => x[0])), el('div', { class: 'pk-colors' }, gc.map(x => x[0])),
+        el('div', { class: 'dlg-btns' },
+          el('button', { type: 'button', class: 'btn-ghost', onclick: () => { out = { icon: null, tint: null }; d.close(); } }, 'Default'),
+          el('button', { type: 'button', class: 'btn-ghost', onclick: () => d.close() }, 'Cancel'),
+          el('button', { type: 'button', class: 'btn-primary', onclick: () => { out = { icon: curIcon, tint: curTint }; d.close(); } }, 'Save')));
+      d.addEventListener('close', () => { d.remove(); resolve(out); });
+      document.body.append(d); paint(); d.showModal();
+    });
+  }
+  async function noteIconDialog(id) {
+    const n = noteById(id); if (!n) return;
+    const k = hashIdx(n.id, ROW_ICONS.length);
+    const r = await pickIcon({ title: 'Note icon', name: n.title.trim() || 'Untitled', icon: n.icon, tint: n.tint, defIcon: ROW_ICONS[k], defTint: ROW_TINTS[k] });
+    if (!r) return;
+    await patchNote(n, { icon: r.icon || undefined, tint: r.tint || undefined }, false);
+    if (!r.icon) delete n.icon; if (!r.tint) delete n.tint; await persistNote(n);
+    toast('Saved'); render();
+  }
+  async function folderIconDialog(id) {
+    const f = folderById(id); if (!f) return;
+    const i = folderIdx(f);
+    const r = await pickIcon({ title: 'Category icon', name: f.name, icon: f.icon, tint: f.color, defIcon: TILE_ICONS[i % 4], defTint: TILE_TINTS[i % 4] });
+    if (!r) return;
+    if (r.icon) f.icon = r.icon; else delete f.icon;
+    if (r.tint) f.color = r.tint; else delete f.color;
+    await NotesDB.put('folders', f); toast('Saved'); render();
+  }
   function folderTile(fo, i, big) {
     const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
-    const t = el('button', { class: 'folder-card tile t' + (i % 4) + (big ? ' big' : ''), title: fo.name, 'aria-label': fo.name + ', ' + c + (c === 1 ? ' note' : ' notes'), onclick: () => go('all', { folderId: fo.id }) },
-      el('span', { class: 't-ico' }, icon(svgIco(TILE_ICONS[i % 4], 28, 1.7))), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: big ? c + (c === 1 ? ' note' : ' notes') : String(c) }));
+    const tn = okTint(fo.color);
+    const t = el('button', { class: 'folder-card tile ' + (tn ? 'c-' + tn : 't' + (i % 4)) + (big ? ' big' : ''), title: fo.name, 'aria-label': fo.name + ', ' + c + (c === 1 ? ' note' : ' notes'), onclick: () => go('all', { folderId: fo.id }) },
+      el('span', { class: 't-ico' }, icon(svgIco(okIco(fo.icon) || TILE_ICONS[i % 4], 28, 1.7))), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: big ? c + (c === 1 ? ' note' : ' notes') : String(c) }));
     onLongPress(t, () => folderSheet(fo, t));
     return t;
   }
@@ -496,6 +540,7 @@
       items.push({ icon: 'close', label: 'Delete forever', danger: true, fn: () => deleteForever(n.id) });
     } else {
       if (!n.archived) items.push({ icon: 'pin', label: n.pinned ? 'Unpin' : 'Pin', fn: () => togglePin(n.id) });
+      items.push({ icon: 'tag', label: 'Icon & colour…', fn: () => noteIconDialog(n.id) });
       items.push({ icon: 'folder', label: 'Move to folder…', fn: () => moveNoteDialog(n.id) });
       items.push({ icon: 'archive', label: n.archived ? 'Unarchive' : 'Archive', fn: () => archiveNote(n.id, !n.archived) });
       items.push({ icon: 'trash', label: 'Move to Trash', danger: true, fn: () => trashNote(n.id) });
@@ -505,6 +550,7 @@
   function folderSheet(f, anchor) {
     openSheet(f.name, [
       { icon: 'edit', label: 'Rename', fn: () => renameFolder(f.id) },
+      { icon: 'tag', label: 'Icon & colour…', fn: () => folderIconDialog(f.id) },
       { icon: 'trash', label: 'Delete folder', danger: true, fn: () => deleteFolder(f.id) }
     ], anchor);
   }
@@ -537,7 +583,7 @@
       onclick: e => { if (!e.target.closest('.row-actions')) openEditor(n.id); },
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
       n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned' }, el('span', { class: 'pm-emoji', text: '📌' }), icon(ICONS.pin)) : null,
-      el('div', { class: 'n-title', text: n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled') }),
+      el('div', { class: 'n-title' }, (okIco(n.icon) || okTint(n.tint)) ? el('span', { class: 'n-badge c-' + (okTint(n.tint) || 'pink') }, icon(svgIco(okIco(n.icon) || 'doc', 15, 1.8))) : null, n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled')),
       pv ? el('div', { class: 'n-prev', text: n.title.trim() ? pv : '' }) : null,
       rich,
       (n.tags || []).length ? el('div', { class: 'n-tags' }, n.tags.slice(0, 5).map(t => el('span', { class: 'tag', text: '#' + t }))) : null,
@@ -565,12 +611,12 @@
   function homeRow(n) {
     const lines = previewLines(n.html, 5).lines.map(l => l.t);
     const title = n.title.trim() || lines.shift() || 'Untitled';
-    const k = hashIdx(n.id, ROW_ICONS.length);
+    const k = hashIdx(n.id, ROW_ICONS.length), tn = okTint(n.tint) || ROW_TINTS[k];
     const more = el('button', { class: 'n-more', type: 'button', 'aria-label': 'Note options', title: 'Options', onclick: e => { e.stopPropagation(); noteSheet(n, more); } }, icon(svgIco('more', 20)));
-    const card = el('article', { class: 'note hrow r' + k, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
+    const card = el('article', { class: 'note hrow c-' + tn, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
       onclick: () => openEditor(n.id),
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
-      el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(ROW_ICONS[k], 26, 1.7))),
+      el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[k], 26, 1.7))),
       el('div', { class: 'n-main' }, el('div', { class: 'n-title', text: title }), el('div', { class: 'n-sub', text: lines.join('  •  ') })),
       el('span', { class: 'n-side' }, el('span', { class: 'n-date', text: (n.pinned ? '📌 ' : '') + homeDate(n.updated) })),
       more);
@@ -798,6 +844,8 @@
       let target = v || null;
       if (v === '__new__') { const f = await createFolder(null); if (!f) return; target = f.id; }
       n.folderId = target; state.dirty = true; await saveOpen(); toast('Moved');
+    } else if (act === 'icon') {
+      state.dirty = true; await saveOpen(); await noteIconDialog(n.id);
     } else if (act === 'pin') {
       n.pinned = !n.pinned; state.dirty = true; await saveOpen(); paintEditorMeta(n);
     }
