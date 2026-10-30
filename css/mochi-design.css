@@ -337,12 +337,6 @@ select { border-radius: 14px; border-color: var(--border); }
   .act .a-name { max-width: 100%; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .main[data-home="1"] .hero-title { font-size: 1.9rem; }
 }
-@media (min-width: 900px) and (max-width: 1180px) {
-  .main[data-home="1"] #notesView { grid-template-columns: minmax(0, 1fr); }
-  .main[data-home="1"] .home-aside { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 20px; align-items: start; }
-  .main[data-home="1"] .home-aside { order: 2; }
-}
-
 /* ======== v39.2.4: category tiles never overlap their text ======== */
 @media (max-width: 899px) {
   .tile { height: 94px; padding: 10px 10px 9px; }
@@ -354,4 +348,58 @@ select { border-radius: 14px; border-color: var(--border); }
   .tile.big .t-ico svg { width: 30px; height: 30px; }
   .tile.big .fname { font-size: .95rem; }
   .tile.big .fcount { font-size: .8rem; }
+}
+
+/* ======== v39.2.5: the right column stays on the right at every desktop width ======== */
+@media (min-width: 900px) and (max-width: 1180px) {
+  .app { grid-template-columns: 218px minmax(0, 1fr); }
+  .brand-name { font-size: 1.05rem; }
+  .brand .logo { width: 40px; height: 40px; }
+  .nav-item, .side-item { font-size: .88rem; padding: 0 10px; gap: 11px; min-height: 38px; }
+  .main { padding: 16px 20px 40px; }
+  .main[data-home="1"] #notesView { grid-template-columns: minmax(0, 1fr) 232px; column-gap: 16px; margin-top: 20px; }
+  .main[data-home="1"] .home-aside { display: flex; flex-direction: column; gap: 12px; margin-top: 0; }
+  #search { min-height: 44px; font-size: .88rem; }
+  .main[data-home="1"] .hero-title { font-size: 1.6rem; }
+  .main[data-home="1"] .hero-sun { width: 30px; height: 30px; vertical-align: -5px; }
+  .main[data-home="1"] .hero-sub { font-size: .88rem; margin-top: 8px; }
+  .main[data-home="1"] .hero { margin-bottom: 16px; }
+  .main[data-home="1"] .folder-strip.actions { gap: 8px; }
+  .main[data-home="1"] .folder-section { margin-bottom: 16px; }
+  .act { height: 108px; padding: 12px 10px 10px; border-radius: 16px; }
+  .act .a-ico svg { width: 24px; height: 24px; }
+  .act .a-name { font-size: .78rem; }
+  .act .a-go svg { width: 16px; height: 16px; }
+  .act .a-go { margin-top: 6px; }
+  .main[data-home="1"] .controls { padding: 14px 16px 2px; }
+  .main[data-home="1"] .notes-label { font-size: .98rem; }
+  .main[data-home="1"] .controls .view-all { font-size: .8rem; }
+  .notes.home-list { padding: 0 16px 2px; }
+  .hrow, .main .notes.home-list .hrow { padding: 8px 0; grid-template-columns: 40px minmax(0, 1fr) auto 28px; column-gap: 10px; }
+  .hrow .n-ico { width: 40px; height: 40px; border-radius: 12px; }
+  .hrow .n-ico svg { width: 22px; height: 22px; }
+  .hrow .n-title { font-size: .85rem; }
+  .hrow .n-sub { font-size: .72rem; }
+  .hrow .n-date { font-size: .68rem; }
+  .home-footer { padding: 10px 16px; margin-top: 12px; }
+  .hf-mascot { width: 40px; height: 40px; }
+  .hf-text { font-size: .8rem; }
+  .hf-hand { font-size: .85rem; }
+  .hw { padding: 14px; border-radius: 16px; }
+  .hw h3 { font-size: .9rem; }
+  .hw-date { font-size: .72rem; }
+  .hw-stats { gap: 8px; margin-top: 10px; }
+  .hw-stats b { font-size: 1.2rem; }
+  .hw-stats span { font-size: .75rem; }
+  .hw-mascot { right: 14px; bottom: 14px; } .hw-mascot img { width: 46px; height: 46px; border-radius: 16px; }
+  .hw-tip p { font-size: .78rem; margin: 10px 0 12px; line-height: 1.55; }
+  .learn { min-height: 34px; font-size: .78rem; padding: 0 14px; }
+  .hw-cat { padding: 6px 2px; font-size: .8rem; gap: 10px; }
+  .hw-cat .dot, .sidebar .dot { width: 13px; height: 13px; }
+  .hw-cats .hw-row { margin-bottom: 4px; }
+}
+
+@media (min-width: 900px) {
+  .side-head { gap: 6px; white-space: nowrap; }
+  .side-head .btn-text { white-space: nowrap; padding: 6px 6px; font-size: .8rem; }
 }

@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.2.5 — Desktop right column stays right
+- The right-hand cards stay beside the main column on narrower desktop windows; fonts and cards are smaller there to fit, like the mockup.
+
 ### v39.2.4 — Category tiles
 - Name and number on the phone category tiles no longer overlap.
 

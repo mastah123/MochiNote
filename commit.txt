@@ -8,6 +8,18 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 39.2.4 → 39.2.5 — Desktop Home keeps its right column on narrower windows
+
+Fixed
+- Before → on desktop windows narrower than 1180px the Today / Quick Tip / Recent Categories cards dropped below the main column; after → they stay on the right at every width from 900px up, like the mockup.
+
+Changed
+- On windows between 900px and 1180px wide the fonts and cards are smaller: sidebar 218px, right column 232px, quick-action cards 108px tall, Recent Notes rows, banner and right-hand cards tightened; "+ New folder" stays on one line. Wider windows keep the larger sizes.
+- Settings → About shows 39.2.5.
+
+Impact
+- Desktop Home matches the mockup's two-column layout on laptops and small windows. Phones are unaffected.
+
 fix: 39.2.3 → 39.2.4 — Category tiles: name and number no longer overlap
 
 Fixed
