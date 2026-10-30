@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.4.0';
+  const APP_VERSION = '39.5.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -149,8 +149,7 @@
     $('#viewTitle').textContent = title;
     const mb = $('#openSidebar'); // phones: Settings shows a back arrow instead of the menu icon
     if (mb.dataset.menuSvg === undefined) mb.dataset.menuSvg = mb.innerHTML;
-    mb.innerHTML = settings ? svgIco('back', 24) : homeMode ? svgIco('user', 24, 1.8) : mb.dataset.menuSvg;
-    mb.classList.toggle('profile', homeMode);
+    mb.innerHTML = settings ? svgIco('back', 24) : mb.dataset.menuSvg;
     mb.setAttribute('aria-label', settings ? 'Back' : 'Open menu'); mb.title = settings ? 'Back' : 'Menu';
     paintBottomNav(homeMode); paintTheme();
     document.title = 'MochiNote';
@@ -559,7 +558,7 @@
   }
   async function editHero() {
     const p = state.prefs;
-    const v = await dialog({ kind: 'form', title: 'Edit your greeting', ok: 'Save', fields: [
+    const v = await dialog({ kind: 'form', title: 'Your profile', ok: 'Save', fields: [
       { value: p.userName, placeholder: 'Your name', label: 'Your name', max: 30 }, { value: p.tagline, placeholder: 'Tagline', label: 'Tagline', max: 70 }] });
     if (!v) return;
     setPref('userName', v[0].trim()); setPref('tagline', v[1].trim() || DEFAULT_TAGLINE);
@@ -874,9 +873,6 @@
     const p = state.prefs, root = $('#settingsView'); root.textContent = '';
     const themeBtns = el('div', { class: 'theme-grid' }, THEMES.map(([id, dot, name]) => el('button', { class: 'theme-btn', 'aria-pressed': p.theme === id, onclick: () => { setPref('theme', id); renderSettings(); } }, el('span', { class: 'theme-dot', style: '--d:' + dot }), name)));
     root.append(
-      el('section', { class: 'set-card' }, el('h2', { text: 'Profile' }),
-        row('Your name', 'Shown in the greeting on Home', el('input', { type: 'text', maxlength: 30, value: p.userName || '', placeholder: 'Your name', 'aria-label': 'Your name', onchange: e => { setPref('userName', e.target.value.trim()); } })),
-        row('Tagline', 'The line under your greeting', el('input', { type: 'text', maxlength: 70, value: p.tagline || '', placeholder: DEFAULT_TAGLINE, 'aria-label': 'Tagline', onchange: e => { setPref('tagline', e.target.value.trim() || DEFAULT_TAGLINE); } }))),
       el('section', { class: 'set-card' }, el('h2', { text: 'Appearance' }),
         row('Mode', 'Light or dark', sel([['light', 'Light'], ['dark', 'Dark']], p.mode, v => { setPref('mode', v); renderSettings(); }, 'Mode')),
         el('div', { class: 'set-row', style: 'display:block' }, el('div', { text: 'Theme', style: 'margin-bottom:8px' }), themeBtns)),
@@ -1016,7 +1012,7 @@
   function wire() {
     $$('.nav-item').forEach(b => b.addEventListener('click', () => { if (b.dataset.act === 'search') { closeSidebar(); focusSearch(); } else go(b.dataset.view); }));
     $('#themeToggle').onclick = () => { setPref('mode', state.prefs.mode === 'dark' ? 'light' : 'dark'); paintTheme(); if (state.view === 'settings') renderSettings(); };
-    $('#avatarBtn').onclick = () => go('settings');
+    $('#avatarBtn').onclick = editHero; $('#profileBtn').onclick = editHero;
     $('#openSidebar').onclick = () => { if (state.view === 'settings') { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); } else openSidebar(); }; $('#scrim').onclick = requestCloseSidebar;
     $('#addFolderBtn').onclick = () => createFolder(null);
     $('#newNote').onclick = createAndOpen;

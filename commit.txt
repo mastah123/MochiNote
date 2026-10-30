@@ -8,6 +8,20 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.4.0 → 39.5.0 — Phone header with menu and search, profile on the account icon, simpler menu
+
+Added
+- Phone Home header is one row: menu icon, search field, profile icon. The logo and "MochiNote" text in the header are gone (the menu keeps the logo).
+- The profile icon (and the desktop avatar) opens "Your profile" to edit your name and tagline.
+
+Changed
+- Before → name and tagline lived in Settings → Profile; after → they live behind the profile icon, and the Profile card is removed from Settings.
+- Phone menu: the Categories list and the Settings button below the tags are removed (Categories and Settings are in the bottom bar). The desktop sidebar keeps its Categories, as in the mockup.
+- Settings → About shows 39.5.0.
+
+Impact
+- Phone Home has more room. Next (batch 4): dark mode polish and the new logo.
+
 feat: 39.3.0 → 39.4.0 — All notes: row design for list view, tile cards for grid view, note count
 
 Added

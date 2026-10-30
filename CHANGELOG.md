@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.5.0 — Header, profile and menu
+- Phone header: menu, search, profile. Name and tagline are edited from the profile icon. The phone menu no longer lists Categories or Settings.
+
 ### v39.4.0 — All notes redesign
 - List view uses the Recent Notes rows; grid cards start with the note's icon tile; phones show the note count beside sort and view.
 

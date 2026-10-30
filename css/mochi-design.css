@@ -454,3 +454,18 @@ select { border-radius: 14px; border-color: var(--border); }
 .notes .note .n-ico.c-yellow { background: var(--yellow-bg); color: var(--yellow-fg); }
 .main .notes.grid .note .pin-mark { position: absolute; top: 12px; right: 12px; height: auto; margin: 0; }
 .notes.grid .note .pin-mark .pm-emoji { display: none; }
+
+/* ======== v39.5.0: phone header = menu, search, profile; menu without Categories and Settings ======== */
+#profileBtn { display: none; }
+@media (max-width: 899px) {
+  .main[data-home="1"] .head-fixed { grid-template-columns: 44px minmax(0, 1fr) 44px; grid-template-rows: auto; row-gap: 0; column-gap: 6px; padding: 8px 12px 0; }
+  .main[data-home="1"] .home-brand { display: none; }
+  .main[data-home="1"] #openSidebar { grid-column: 1; grid-row: 1; justify-self: start; width: 44px; height: 44px; border: 0; border-radius: 14px; background: none; }
+  .main[data-home="1"] .search-wrap { grid-column: 2; grid-row: 1; }
+  .main[data-home="1"] .search-ico { left: 14px; }
+  .main[data-home="1"] #search { min-height: 44px; padding: 0 12px 0 42px; font-size: .88rem; border-radius: 16px; }
+  .main[data-home="1"] #profileBtn { display: grid; grid-column: 3; grid-row: 1; justify-self: end; width: 42px; height: 42px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); }
+  .main[data-home="1"] .hero { margin-top: 18px; }
+  .sidebar .side-foot, .sidebar .side-scroll > .side-section:first-child { display: none; }
+  .sidebar .side-scroll > .side-section:nth-child(2) { margin-top: 0; padding-top: 0; border-top: 0; }
+}
