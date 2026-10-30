@@ -262,8 +262,7 @@ select { border-radius: 14px; border-color: var(--border); }
   /* page titles in the header on Notes, Pinned, Archive, Trash and folder pages */
   .main:not([data-home="1"]):not([data-view="settings"]):not([data-view="folders"]) .view-title { display: block; grid-column: 2; grid-row: 1; font-size: 1.25rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .head-fixed.searching .view-title { display: none !important; }
-  .main:not([data-home="1"]) .notes-label { display: none; }
-  .main:not([data-home="1"]) .controls { justify-content: flex-end; }
+  .main:not([data-home="1"]) .notes-label { display: block; font-size: .85rem; font-weight: 400; color: var(--muted); }
   .main[data-view="settings"] .view-title { font-weight: 600; }
   .notes.grid .note, .notes.list .note { background: var(--nc, var(--surface)); }
 
@@ -441,3 +440,17 @@ select { border-radius: 14px; border-color: var(--border); }
 .pk-c.c-yellow { background: var(--yellow-fg); }
 .folder-card.c-yellow:not(.tile) { background: var(--yellow-bg); color: var(--yellow-ink); }
 .dot.c-yellow { background: var(--yellow-fg); }
+
+/* ======== v39.4.0: All notes — rows for list view, tile cards for grid view ======== */
+.notes.home-list.rows { border-top: 1px solid var(--border); border-radius: 22px; }
+.main:not([data-home="1"]) .notes.home-list.rows { margin-top: 4px; }
+.notes:not(.home-list) .note .n-ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 8px; flex: none; }
+.notes.list .note .n-ico { display: none; }
+.notes.grid .n-badge { display: none; }
+.notes.grid .note .n-ico.c-pink, .notes .note .n-ico.c-pink { background: var(--pink-bg); color: var(--pink-fg); }
+.notes .note .n-ico.c-blue { background: var(--blue-bg); color: var(--blue-fg); }
+.notes .note .n-ico.c-lilac { background: var(--lilac-bg); color: var(--lilac-fg); }
+.notes .note .n-ico.c-green { background: var(--green-bg); color: var(--green-fg); }
+.notes .note .n-ico.c-yellow { background: var(--yellow-bg); color: var(--yellow-fg); }
+.main .notes.grid .note .pin-mark { position: absolute; top: 12px; right: 12px; height: auto; margin: 0; }
+.notes.grid .note .pin-mark .pm-emoji { display: none; }

@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.4.0 — All notes redesign
+- List view uses the Recent Notes rows; grid cards start with the note's icon tile; phones show the note count beside sort and view.
+
 ### v39.3.0 — Note and category icons and colours
 - Pick an icon and colour for any note or category (18 icons, 5 colours). They show on Home rows, in All notes and categories, on tiles and in the sidebar.
 

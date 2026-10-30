@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.3.0';
+  const APP_VERSION = '39.4.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: 'James', tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -270,9 +270,12 @@
     $('#trashBar').hidden = state.view !== 'trash' || !state.notes.some(n => n.trashed);
 
     const list = homeAny ? homeList() : currentList(), box = $('#notes');
-    box.className = 'notes ' + (homeAny ? 'home-list' : p.view); box.textContent = '';
+    // list view uses the Recent Notes row design (Trash and Archive keep cards: they carry Restore / Delete buttons)
+    const rowsMode = homeAny || (p.view === 'list' && state.view !== 'trash' && state.view !== 'archive');
+    box.className = 'notes ' + (homeAny ? 'home-list' : rowsMode ? 'home-list rows' : p.view); box.textContent = '';
+    if (!homeAny && mobile) $('#notesLabel').textContent = list.length + (list.length === 1 ? ' note' : ' notes');
     const frag = document.createDocumentFragment();
-    list.forEach(n => frag.append(homeAny ? homeRow(n) : noteCard(n)));
+    list.forEach(n => frag.append(rowsMode ? homeRow(n) : noteCard(n)));
     box.append(frag);
     const empty = $('#empty'); empty.hidden = list.length > 0;
     if (!list.length) {
@@ -582,6 +585,7 @@
     const card = el('article', { class: 'note', style: n.color !== 'default' ? '--nc:var(' + COLOR_VAR[n.color] + ')' : false, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
       onclick: e => { if (!e.target.closest('.row-actions')) openEditor(n.id); },
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
+      el('span', { class: 'n-ico c-' + (okTint(n.tint) || ROW_TINTS[hashIdx(n.id, ROW_ICONS.length)]), 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[hashIdx(n.id, ROW_ICONS.length)], 20, 1.7))),
       n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned' }, el('span', { class: 'pm-emoji', text: '📌' }), icon(ICONS.pin)) : null,
       el('div', { class: 'n-title' }, (okIco(n.icon) || okTint(n.tint)) ? el('span', { class: 'n-badge c-' + (okTint(n.tint) || 'pink') }, icon(svgIco(okIco(n.icon) || 'doc', 15, 1.8))) : null, n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled')),
       pv ? el('div', { class: 'n-prev', text: n.title.trim() ? pv : '' }) : null,

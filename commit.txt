@@ -8,6 +8,20 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.3.0 → 39.4.0 — All notes: row design for list view, tile cards for grid view, note count
+
+Added
+- List view (All notes, Pinned, folder and tag pages, search results) uses the Recent Notes row design: tinted icon, title, one-line preview, date and a ⋮ menu, in one rounded card.
+- Grid view cards start with the note's tinted icon tile; the pin moves to the top-right corner of the card.
+- Phones: the total number of notes shown ("12 notes") sits on the left of the sort and view buttons; the "All notes" title stays in the header.
+
+Changed
+- Before → list view showed full-width cards and grid cards had no icon; after → as above. Trash and Archive keep cards because they carry Restore / Delete buttons.
+- Settings → About shows 39.4.0.
+
+Impact
+- Notes you chose an icon and colour for show them everywhere. Desktop list view uses the same rows. Next: menu cleanup, the profile from the account icon, the header with a menu icon and search, and removing Categories from the side menu.
+
 feat: 39.2.5 → 39.3.0 — Note and category icons and colours
 
 Added
