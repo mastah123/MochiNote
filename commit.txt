@@ -8,6 +8,209 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.7.0 → 39.8.0 — Ask for the name on first opening, Mochi theme font like the other themes
+
+Added
+- A "Welcome to MochiNote" dialog on the first opening asks for your name (Get started or Skip). It is asked once.
+
+Changed
+- Before → the greeting defaulted to "James"; after → no default name ("Good morning!") until one is entered; the profile icon still edits it.
+- Before → the Mochi theme used the bundled Poppins font, which looked bold; after → it uses the same font stack and weights as the other themes. The bundled Poppins files are removed, so the app is smaller.
+- Settings → About shows 39.8.0.
+
+Impact
+- Existing installs see the welcome dialog once after updating, with their current name filled in.
+
+feat: 39.6.0 → 39.7.0 — New MochiNote logo across the app, dark mode review
+
+Added
+- assets/logo.svg is the new cat app icon; assets/mascot.svg is the cat without a background for the Home banner, the desktop widget and the profile avatar.
+
+Changed
+- Before → old notebook logo; after → new cat logo in the menu, About card, avatar, favicon, apple-touch icon, PWA icons (180/192/512) and manifest colours (#FFF6EC background, #fbf9f6 theme).
+- Profile avatar button now says "Your profile" and uses the mascot.
+- Settings → About shows 39.7.0.
+
+Impact
+- Dark mode was checked on every main page and needed no changes. This finishes the redesign batches (1–4).
+
+feat: 39.5.0 → 39.6.0 — Categories page uses the All notes layout, complete long-press highlight
+
+Fixed
+- The long-press highlight on a Recent Notes / list row was a thin square outline hugging the text; it is now a complete rounded box with padding around the row.
+
+Changed
+- Before → Categories had its own back-arrow header and large coloured tiles; after → it matches All notes: title in the header, "N categories" next to "+ New folder" and the List/Grid toggle, rows or cards with the category's icon and colour. The view choice is shared with All notes.
+- Settings → About shows 39.6.0.
+
+Impact
+- Pages look the same across the app. Next (batch 4): dark mode polish and swapping in the new logo (the separate logo versions were delivered).
+
+feat: 39.4.0 → 39.5.0 — Phone header with menu and search, profile on the account icon, simpler menu
+
+Added
+- Phone Home header is one row: menu icon, search field, profile icon. The logo and "MochiNote" text in the header are gone (the menu keeps the logo).
+- The profile icon (and the desktop avatar) opens "Your profile" to edit your name and tagline.
+
+Changed
+- Before → name and tagline lived in Settings → Profile; after → they live behind the profile icon, and the Profile card is removed from Settings.
+- Phone menu: the Categories list and the Settings button below the tags are removed (Categories and Settings are in the bottom bar). The desktop sidebar keeps its Categories, as in the mockup.
+- Settings → About shows 39.5.0.
+
+Impact
+- Phone Home has more room. Next (batch 4): dark mode polish and the new logo.
+
+feat: 39.3.0 → 39.4.0 — All notes: row design for list view, tile cards for grid view, note count
+
+Added
+- List view (All notes, Pinned, folder and tag pages, search results) uses the Recent Notes row design: tinted icon, title, one-line preview, date and a ⋮ menu, in one rounded card.
+- Grid view cards start with the note's tinted icon tile; the pin moves to the top-right corner of the card.
+- Phones: the total number of notes shown ("12 notes") sits on the left of the sort and view buttons; the "All notes" title stays in the header.
+
+Changed
+- Before → list view showed full-width cards and grid cards had no icon; after → as above. Trash and Archive keep cards because they carry Restore / Delete buttons.
+- Settings → About shows 39.4.0.
+
+Impact
+- Notes you chose an icon and colour for show them everywhere. Desktop list view uses the same rows. Next: menu cleanup, the profile from the account icon, the header with a menu icon and search, and removing Categories from the side menu.
+
+feat: 39.2.5 → 39.3.0 — Note and category icons and colours
+
+Added
+- Notes can have their own icon and colour: ⋮ menu or long-press on a note, or the editor's ⋮ menu → "Icon & colour…". 18 icons (document, file, folder, tag, bulb, star, heart, bookmark, calendar, cart, briefcase, book, code, home, plane, music, check, pin) and 5 colours (pink, blue, lilac, green, yellow); "Default" restores the automatic look.
+- Categories get the same picker: long-press (phone) or right-click (desktop) a category → "Icon & colour…".
+- The chosen icon and colour show on the Home Recent Notes rows, as a small badge before the title in All notes and inside categories (grid and list), on the category tiles and cards, and as the coloured dot in the sidebar and Recent Categories.
+- Backups keep the icons and colours.
+
+Changed
+- Before → Recent Notes rows used an automatic icon and colour only; after → your choice wins, the automatic one is the fallback.
+- Settings → About shows 39.3.0.
+
+Impact
+- Notes and categories without a choice look as before. Next: All notes page (row design, count), then menu cleanup and the profile/account changes.
+
+fix: 39.2.4 → 39.2.5 — Desktop Home keeps its right column on narrower windows
+
+Fixed
+- Before → on desktop windows narrower than 1180px the Today / Quick Tip / Recent Categories cards dropped below the main column; after → they stay on the right at every width from 900px up, like the mockup.
+
+Changed
+- On windows between 900px and 1180px wide the fonts and cards are smaller: sidebar 218px, right column 232px, quick-action cards 108px tall, Recent Notes rows, banner and right-hand cards tightened; "+ New folder" stays on one line. Wider windows keep the larger sizes.
+- Settings → About shows 39.2.5.
+
+Impact
+- Desktop Home matches the mockup's two-column layout on laptops and small windows. Phones are unaffected.
+
+fix: 39.2.3 → 39.2.4 — Category tiles: name and number no longer overlap
+
+Fixed
+- Before → on phones the category tile's name and note count touched or overlapped (tile height 88px was less than icon + name + number); after → tiles are 94px tall with a 24px icon and tighter lines, so icon, name and number each have their own space; checked at 360px and 390px wide on Home and on the Categories page (big tiles 128px).
+
+Changed
+- Settings → About shows 39.2.4.
+
+Impact
+- Phone Home still fits one screen. Desktop is unaffected.
+
+fix: 39.2.2 → 39.2.3 — Long category names no longer overflow; slimmer right column
+
+Fixed
+- Before → a long category name pushed past its row in the desktop sidebar and in Recent Categories, and quick-action labels could spill out of their cards; after → names are cut with "…" and stay inside their rows and cards.
+- Before → the right column was 320px wide and squeezed the main column on mid-size windows; after → it is 276px, with tighter cards, and below 1180px wide it moves under the main column in three across.
+
+Changed
+- Sidebar is 248px wide (was 264px), page padding and the quick-action cards are slightly smaller so everything fits.
+- Settings → About shows 39.2.3.
+
+Impact
+- Desktop Home fits at any window width from 900px up. Phones are unaffected.
+
+fix: 39.2.1 → 39.2.2 — Desktop sidebar fits the screen like the mockup
+
+Fixed
+- Before → on desktop the sidebar grew taller than the window as Categories and Tags piled up, so Settings dropped off-screen and the whole menu scrolled; after → the sidebar is exactly the window height: logo and navigation on top, Settings pinned at the bottom, and Categories and Tags scroll in the space between.
+- Categories keep the coloured dots and counts from the mockup with tighter rows; the list still shows 4 rows with "Show all".
+
+Changed
+- Settings → About shows 39.2.2.
+
+Impact
+- Desktop menu always fits, whatever number of categories and tags. Phones are unaffected.
+
+fix: 39.2.0 → 39.2.1 — Phone Home fits the screen, no extra space below
+
+Fixed
+- Before → on a 390×844 phone the Home page was 970px tall (reserved safe-area space under the content, loose spacing), so the banner was cut off and the page scrolled; after → everything (header, search, greeting, tiles, five Recent Notes rows, banner and bottom bar) fits in one screen like the mockup.
+- How: the bottom bar and page no longer add the device safe-area padding; header, greeting, tiles, rows (40px icons), card header and banner are tighter. Other pages and desktop are unaffected.
+
+Changed
+- Settings → About shows 39.2.1.
+
+Impact
+- Phone Home matches the mockup's one-screen layout. Shorter screens still scroll.
+
+feat: 39.1.0 → 39.2.0 — New design, batch 3: Notes, Categories, Settings and editor
+
+Added
+- Phone page titles in the header on Notes, Pinned, Archive, Trash and folder pages.
+- Categories page: big tinted tiles (icon, name, "N notes") in two columns.
+- Settings: switches instead of checkboxes, rounded cards, accent-tinted selected theme.
+
+Changed
+- Before → "Folders" page and heading; after → "Categories" (page, header and sidebar).
+- Note cards, menus, dialogs, editor header and format buttons use the new rounded look, Poppins and softer borders.
+- Settings → About shows 39.2.0.
+
+Impact
+- Every phone page now matches the new Home. Desktop pages other than Home get the same card, dialog, settings and editor styling. Next: dark mode polish and the new logo.
+
+feat: 39.0.0 → 39.1.0 — New design, batch 2: desktop Home
+
+Added
+- Desktop Home like the mockup: top bar with a rounded search field (Ctrl K hint), a light/dark toggle and a profile button; greeting with the sun; four quick-action cards (New Note, New Folder, Add Tag, Quick Capture); a Recent Notes card (five rows, "View all →"); the encouragement banner.
+- Right-hand column on Home: Today (notes added today, total notes), Quick Tip (with "Learn more") and Recent Categories.
+- Sidebar: Home, All notes, Search, Pinned, Archive, Trash, then Categories with coloured dots and counts, Tags, and Settings at the bottom.
+- Quick Capture saves a one-line note without opening the editor; Add Tag starts a new note with a tag.
+
+Changed
+- Before → "All notes" on desktop was the Home page (compact folder row, sort and grid/list controls); after → Home is the dashboard above, and "All notes" is its own page with the folder row, sort and grid/list controls.
+- The sidebar "Folders" heading reads "Categories" and shows coloured dots instead of folder icons on desktop.
+- The floating New note button is hidden on Home (the New Note card replaces it); other pages keep it.
+- Settings → About shows 39.1.0.
+
+Impact
+- Desktop gets the new Home. Phones are unchanged from 39.0.0. Next: Notes / Categories / Settings / editor restyle, then dark mode polish and the new logo.
+
+feat!: 38.4.3 → 39.0.0 — New MochiNote design, batch 1: phone Home, bottom bar, Poppins
+
+Added
+- Phone Home redesigned: logo + MochiNote header with a profile button, an always-visible search field, a time-of-day greeting ("Good morning, James!" with a sun) with a lavender New Note button, the tagline, four coloured folder tiles (icon, name, note count), a "Recent Notes" card (five rows with tinted icon, title, one-line preview, date, ⋮ menu, and "View all →") and an encouragement banner.
+- Bottom bar on phones: Home, Notes, Categories, Settings. It hides while a text field is focused.
+- Poppins font (400/500/700, bundled), new "Mochi" theme (default, with a dark variant), new line icons (user, home, grid, gear, doc, file, tag, bulb, arrow).
+- Settings → Profile: your name and tagline.
+
+Changed
+- Before → the phone Home had a "Your space" card, 2 folder cards, a sort/grid controls row and note cards; after → the layout above. The Notes tab holds the full notes list (sort, grid/list); Categories opens the folders page.
+- The floating New note button is replaced on Home by the New Note button in the greeting; other phone pages keep it, raised above the bottom bar.
+- Everyone starts on the Mochi theme once; themes picked afterwards are kept.
+- Long-press the greeting to edit or reset it. Settings → About shows 39.0.0.
+
+Impact
+- Phones get the new look. Desktop is unchanged until the next batch (desktop Home, then Notes/Categories/Settings/editor, then dark mode polish and the new logo).
+
+fix: 38.4.2 → 38.4.3 — Android Back button goes back one screen instead of closing the app
+
+Fixed
+- Android app (Capacitor wrapper): before → the hardware Back button closed the app from Settings, an open note or editing; after → it closes the menu, a sheet or search, goes from editing back to viewing, closes the note, leaves a folder or Settings, and exits only from the plain home screen.
+- How: notes-app.js registers a Capacitor `backButton` listener (needs @capacitor/app). It calls history.back(); if the WebView has no history entry to go back to, the same step is applied directly. The popstate handler's logic moved into applyBack(). Browsers are unaffected.
+
+Changed
+- Android build (android-apk branch): adds the @capacitor/app dependency, takes the web files from master during the build, and uses a proper adaptive launcher icon (paper-coloured background plus the logo) instead of the plain resized image.
+- Settings → About shows 38.4.3.
+
+Impact
+- The Android app navigates like the phone browser version; the web app behaves as before.
+
 fix: 38.4.1 → 38.4.2 — Saved status shows no time
 
 Fixed

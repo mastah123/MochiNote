@@ -3,7 +3,7 @@
 A cozy, mobile-first personal notes app. Plain HTML, CSS and JavaScript: no build step, no dependencies, no backend.
 Notes live **only in your browser** (IndexedDB). There is no cloud sync.
 
-Current version: **38.4.2** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
+Current version: **39.8.0** · [Changelog](CHANGELOG.md) · [Project context](PROJECT_CONTEXT.md)
 
 ## Run it
 
@@ -62,6 +62,10 @@ Semantic versioning, `MAJOR.MINOR.PATCH`:
 | `fix:` | patch | 1.0.0 → 1.0.1 | Bug fixes |
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
+
+## Android app
+
+The `android-apk` branch wraps the web app with Capacitor, and a GitHub Actions workflow builds `app-debug.apk` from the files on `master`. The hardware Back button goes back one screen and only leaves the app from the plain home screen.
 
 ## Limitations
 

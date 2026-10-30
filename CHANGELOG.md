@@ -10,6 +10,57 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.8.0 — Welcome and lighter Mochi font
+- First opening asks for your name (Skip is fine); it is used in the Home greeting and can be changed later from the profile icon. No default name any more.
+- The Mochi theme uses the same font as the other themes instead of the bolder Poppins; the bundled Poppins files are removed.
+
+### v39.7.0 — New logo
+- New MochiNote cat logo everywhere: sidebar menu, About card, profile avatar, Home banner and widget mascot, browser favicon, home-screen and PWA icons (180/192/512) and the manifest colours.
+- Dark mode reviewed on Home, All notes, Categories, Settings, About and the note view; no further changes needed.
+
+### v39.6.0 — Categories like All notes
+- Categories page copies the All notes layout: page title in the header, "N categories" with "+ New folder" and the List/Grid toggle, rows (list) or cards (grid) with the category icon and colour, and a ⋮ menu on rows.
+- Long-press highlight on list rows is now a full rounded box with room around the content.
+
+### v39.5.0 — Header, profile and menu
+- Phone header: menu, search, profile. Name and tagline are edited from the profile icon. The phone menu no longer lists Categories or Settings.
+
+### v39.4.0 — All notes redesign
+- List view uses the Recent Notes rows; grid cards start with the note's icon tile; phones show the note count beside sort and view.
+
+### v39.3.0 — Note and category icons and colours
+- Pick an icon and colour for any note or category (18 icons, 5 colours). They show on Home rows, in All notes and categories, on tiles and in the sidebar.
+
+### v39.2.5 — Desktop right column stays right
+- The right-hand cards stay beside the main column on narrower desktop windows; fonts and cards are smaller there to fit, like the mockup.
+
+### v39.2.4 — Category tiles
+- Name and number on the phone category tiles no longer overlap.
+
+### v39.2.3 — Desktop Home fits
+- Long category names are cut with "…" instead of overflowing; the right column is slimmer and moves below the main column on narrower windows.
+
+### v39.2.2 — Desktop sidebar fits the screen
+- The desktop sidebar is always the window height: navigation on top, Settings at the bottom, Categories and Tags scroll in between.
+
+### v39.2.1 — Phone Home fits one screen
+- Removed the extra space below the content and tightened spacing so the whole phone Home fits the screen like the mockup.
+
+### v39.2.0 — New design, batch 3 (Notes, Categories, Settings, editor)
+- Page titles in the phone header, a tinted Categories page, switch toggles in Settings, and the rounded look on cards, menus, dialogs and the editor. "Folders" is now called "Categories".
+
+### v39.1.0 — New design, batch 2 (desktop Home)
+- Desktop Home dashboard: search with Ctrl K, light/dark toggle, profile button, greeting, quick-action cards, Recent Notes, banner, and a right column with Today, Quick Tip and Recent Categories.
+- Sidebar redesigned (Home, All notes, Search, Pinned, Archive, Trash, Categories with dots, Tags, Settings at the bottom). "All notes" is now its own page.
+
+### v39.0.0 — New design, batch 1 (phone Home)
+- New MochiNote look on phones: header with profile button, always-visible search, greeting with a New Note button, four folder tiles, Recent Notes card, encouragement banner and a Home / Notes / Categories / Settings bottom bar.
+- Poppins font, new Mochi theme (default, light and dark) and new icons. Settings → Profile sets your name and tagline.
+- Desktop is unchanged for now; more batches follow.
+
+### v38.4.3 — Android Back button
+- In the Android app, the hardware Back button closes the menu, a sheet, the editor or search, goes from editing to viewing, and leaves a folder or Settings. It only exits the app from the plain home screen.
+
 ### v38.4.2 — Plain "Saved"
 - The note's info line says just "Saved" (no time) after saving.
 
