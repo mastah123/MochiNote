@@ -478,3 +478,16 @@ select { border-radius: 14px; border-color: var(--border); }
 .fcard .n-count { display: block; color: var(--muted); font-size: .9rem; margin-top: 2px; }
 .fcard { min-height: 0; }
 .avatar-btn img { padding: 4px; }
+
+/* v39.9.0 — tag chips, search filters, match highlight */
+.tag-row { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; margin: 2px -16px 8px; padding: 2px 16px 4px; scrollbar-width: none; }
+.tag-row::-webkit-scrollbar { display: none; }
+.tag-row .tag, .cat-tag-list .tag { flex: none; white-space: nowrap; min-height: 34px; padding: 4px 13px; font-size: .86rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.tag-row .tag.active, .cat-tag-list .tag.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 500; }
+.cat-tags { margin-top: 22px; }
+.cat-tags-title { font-size: 1rem; font-weight: 600; margin: 0 0 10px; }
+.cat-tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+mark.hit { background: var(--yellow-bg); color: inherit; border-radius: 4px; padding: 0 2px; box-shadow: 0 0 0 1px var(--yellow-bd); }
+@media (min-width: 900px) { .tag-row { margin: 0 0 8px; padding: 2px 0 4px; flex-wrap: wrap; overflow: visible; } }
+.main[data-home="1"] .tag-row { margin-bottom: 6px; }
+@media (max-width: 899px) { .main[data-home="1"] .tag-row { order: 1; margin-top: 10px; } }

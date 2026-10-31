@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.8.0';
+  const APP_VERSION = '39.9.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: '', welcomed: false, tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -14,7 +14,7 @@
 
   const state = {
     notes: [], folders: [], prefs: Object.assign({}, DEFAULT_PREFS),
-    view: 'all', folderId: null, tag: null, query: '',
+    view: 'all', folderId: null, tag: null, query: '', qfilter: null,
     openId: null, dirty: false, saveTimer: null, saving: Promise.resolve()
   };
 
@@ -154,7 +154,7 @@
     paintBottomNav(homeMode); paintTheme();
     document.title = 'MochiNote';
     renderSidebar();
-    if (settings) renderSettings(); else if (foldersPage) renderFoldersPage(); else renderNotes();
+    if (settings) renderSettings(); else if (foldersPage) { renderFoldersPage(); renderCatTags(); } else renderNotes();
   }
 
   /* phone bottom bar: Home, Notes, Categories, Settings */
@@ -219,13 +219,28 @@
     tags.forEach(([t, c]) => st.append(el('button', { class: 'tag' + (state.tag === t ? ' active' : ''), onclick: () => go('all', { tag: state.tag === t ? null : t, folderId: state.folderId }) }, '#' + t + ' ' + c)));
   }
 
+  // search filters (shown as chips while searching): pinned, has a checklist, has an image
+  const QFILTERS = [['pinned', 'Pinned'], ['check', 'Checklists'], ['img', 'Images']];
+  const passQF = n => !state.query || !state.qfilter || (state.qfilter === 'pinned' ? n.pinned : state.qfilter === 'check' ? /\bchecklist\b/.test(n.html || '') : /<img\b/i.test(n.html || ''));
+  // wraps the words you searched for in <mark>
+  function hl(text) {
+    const terms = String(state.query || '').toLowerCase().split(/\s+/).filter(t => t && t[0] !== '#');
+    text = String(text == null ? '' : text);
+    if (!terms.length) return [text];
+    const esc = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    return text.split(new RegExp('(' + esc + ')', 'ig')).map((part, i) => i % 2 ? el('mark', { class: 'hit', text: part }) : part).filter(p => p !== '');
+  }
+  function tagChip(t, c) {
+    return el('button', { class: 'tag' + (state.tag === t ? ' active' : ''), type: 'button', 'aria-pressed': String(state.tag === t),
+      onclick: () => go(state.view === 'notes' ? 'notes' : state.view === 'folders' ? 'all' : 'all', { tag: state.tag === t ? null : t, folderId: state.view === 'folders' ? null : state.folderId }) }, '#' + t + ' ' + c);
+  }
   function currentList() {
-    const list = L.filterNotes(state.notes, state.folders, { view: state.view === 'notes' ? 'all' : state.view, folderId: state.folderId, tag: state.tag, query: state.query });
+    const list = L.filterNotes(state.notes, state.folders, { view: state.view === 'notes' ? 'all' : state.view, folderId: state.folderId, tag: state.tag, query: state.query }).filter(passQF);
     return L.sortNotes(list, state.prefs.sort, state.view !== 'trash');
   }
   // the phone Home shows the five most recently edited notes (all matches while searching)
   function homeList() {
-    const list = L.filterNotes(state.notes, state.folders, { view: 'all', folderId: null, tag: null, query: state.query });
+    const list = L.filterNotes(state.notes, state.folders, { view: 'all', folderId: null, tag: null, query: state.query }).filter(passQF);
     return state.query ? L.sortNotes(list, state.prefs.sort, true) : L.sortNotes(list, 'edited', true).slice(0, 5);
   }
 
@@ -236,7 +251,12 @@
     // filter pills
     const f = $('#filters'); f.textContent = '';
     if (state.folderId) f.append(el('button', { class: 'pill', onclick: () => go('all', { folderId: null, tag: state.tag }) }, 'Folder: ', el('b', { text: state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || {}).name }), ' ✕'));
-    if (state.tag) f.append(el('button', { class: 'pill', onclick: () => go('all', { tag: null, folderId: state.folderId }) }, 'Tag: ', el('b', { text: '#' + state.tag }), ' ✕'));
+    // the active tag is shown (and cleared) with the tag chips below
+    // chips: search filters while searching, otherwise the tags (All notes and tag/category lists)
+    const tr = $('#tagRow'); tr.textContent = '';
+    if (state.query) QFILTERS.forEach(([k, l]) => tr.append(el('button', { class: 'tag' + (state.qfilter === k ? ' active' : ''), type: 'button', 'aria-pressed': String(state.qfilter === k), onclick: () => { state.qfilter = state.qfilter === k ? null : k; renderNotes(); } }, l)));
+    else if (state.view === 'notes' || (state.view === 'all' && (state.tag || state.folderId))) allTags().forEach(([t, c]) => tr.append(tagChip(t, c)));
+    tr.hidden = !tr.childNodes.length;
     // labels + "Your space" card (phones; desktop hides them in CSS)
     const plainHome = state.view === 'all' && !state.folderId && !state.tag && !state.query;
     const homeAny = state.view === 'all' && !state.folderId && !state.tag, homeMode = isMobile() && homeAny;
@@ -272,7 +292,8 @@
     // list view uses the Recent Notes row design (Trash and Archive keep cards: they carry Restore / Delete buttons)
     const rowsMode = homeAny || (p.view === 'list' && state.view !== 'trash' && state.view !== 'archive');
     box.className = 'notes ' + (homeAny ? 'home-list' : rowsMode ? 'home-list rows' : p.view); box.textContent = '';
-    if (!homeAny && mobile) $('#notesLabel').textContent = list.length + (list.length === 1 ? ' note' : ' notes');
+    if (state.query && state.view !== 'trash') $('#notesLabel').textContent = list.length + (list.length === 1 ? ' result' : ' results');
+    else if (!homeAny && mobile) $('#notesLabel').textContent = list.length + (list.length === 1 ? ' note' : ' notes');
     const frag = document.createDocumentFragment();
     list.forEach(n => frag.append(rowsMode ? homeRow(n) : noteCard(n)));
     box.append(frag);
@@ -434,6 +455,11 @@
     box.className = 'notes ' + (!tree.length ? 'grid' : rows ? 'home-list rows' : 'grid');
     if (!tree.length) { box.append(el('div', { class: 'empty', style: 'grid-column:1/-1' }, el('b', { text: 'No folders yet' }), 'Tap “+ New folder” to make one.')); return; }
     tree.forEach(({ folder }, i) => box.append(rows ? folderRow(folder, i) : folderGridCard(folder, i)));
+  }
+  function renderCatTags() {
+    const sec = $('#catTags'), list = $('#catTagList'); list.textContent = '';
+    const tags = allTags(); sec.hidden = !tags.length;
+    tags.forEach(([t, c]) => list.append(tagChip(t, c)));
   }
 
   /* Structured preview for cards: keeps bullets, numbering and checklists instead of flattening to text.
@@ -620,8 +646,8 @@
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
       el('span', { class: 'n-ico c-' + (okTint(n.tint) || ROW_TINTS[hashIdx(n.id, ROW_ICONS.length)]), 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[hashIdx(n.id, ROW_ICONS.length)], 20, 1.7))),
       n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned' }, el('span', { class: 'pm-emoji', text: '📌' }), icon(ICONS.pin)) : null,
-      el('div', { class: 'n-title' }, (okIco(n.icon) || okTint(n.tint)) ? el('span', { class: 'n-badge c-' + (okTint(n.tint) || 'pink') }, icon(svgIco(okIco(n.icon) || 'doc', 15, 1.8))) : null, n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled')),
-      pv ? el('div', { class: 'n-prev', text: n.title.trim() ? pv : '' }) : null,
+      el('div', { class: 'n-title' }, (okIco(n.icon) || okTint(n.tint)) ? el('span', { class: 'n-badge c-' + (okTint(n.tint) || 'pink') }, icon(svgIco(okIco(n.icon) || 'doc', 15, 1.8))) : null, hl(n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled'))),
+      pv ? el('div', { class: 'n-prev' }, hl(n.title.trim() ? pv : '')) : null,
       rich,
       (n.tags || []).length ? el('div', { class: 'n-tags' }, n.tags.slice(0, 5).map(t => el('span', { class: 'tag', text: '#' + t }))) : null,
       el('div', { class: 'n-meta' + (n.folderId && folderById(n.folderId) ? ' has-folder' : '') }, (n.folderId && folderById(n.folderId) ? [icon(svgIco('folder', 14)), el('span', { class: 'n-fname', text: folderById(n.folderId).name }), el('span', { class: 'n-date', text: ' · ' + L.formatDate(n.updated) })] : [el('span', { class: 'n-date', text: L.formatDate(n.updated) })])));
@@ -654,7 +680,7 @@
       onclick: () => openEditor(n.id),
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
       el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[k], 26, 1.7))),
-      el('div', { class: 'n-main' }, el('div', { class: 'n-title', text: title }), el('div', { class: 'n-sub', text: lines.join('  •  ') })),
+      el('div', { class: 'n-main' }, el('div', { class: 'n-title' }, hl(title)), el('div', { class: 'n-sub' }, hl(lines.join('  •  ')))),
       el('span', { class: 'n-side' }, el('span', { class: 'n-date', text: (n.pinned ? '📌 ' : '') + homeDate(n.updated) })),
       more);
     onLongPress(card, () => noteSheet(n, card));
@@ -1037,7 +1063,7 @@
   }
   function closeSearch() {
     const had = state.query !== '';
-    $('#search').value = ''; state.query = '';
+    $('#search').value = ''; state.query = ''; state.qfilter = null;
     $('#headFixed').classList.remove('searching'); const b = $('#searchBtn'); b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-label', 'Search'); b.title = 'Search';
     if (had) renderNotes();
   }
@@ -1077,7 +1103,7 @@
     $('#fvGrid').onclick = () => { setPref('folderView', 'grid'); renderNotes(); };
     $('#fvList').onclick = () => { setPref('folderView', 'list'); renderNotes(); };
     $('#searchBtn').onclick = () => { if ($('#headFixed').classList.contains('searching')) closeSearch(); else openSearch(); };
-    let st; $('#search').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => { state.query = e.target.value; renderNotes(); }, 80); });
+    let st; $('#search').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => { state.query = e.target.value; if (!state.query) state.qfilter = null; renderNotes(); }, 80); });
     $('#sortSelect').onchange = e => { setPref('sort', e.target.value); renderNotes(); };
     $('#viewGrid').onclick = () => { setPref('view', 'grid'); renderNotes(); };
     $('#viewList').onclick = () => { setPref('view', 'list'); renderNotes(); };

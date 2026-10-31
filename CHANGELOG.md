@@ -10,6 +10,11 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.9.0 — Tag chips and better search
+- Tag chips under the header on All notes and on tag/category lists (tap to filter, tap again to clear); a Tags section on the Categories page.
+- Search: the words you typed are highlighted in titles and previews, the label shows "N results", and Pinned / Checklists / Images chips narrow the results.
+- The "Tag: #x" pill is gone; the active tag chip replaces it.
+
 ### v39.8.0 — Welcome and lighter Mochi font
 - First opening asks for your name (Skip is fine); it is used in the Home greeting and can be changed later from the profile icon. No default name any more.
 - The Mochi theme uses the same font as the other themes instead of the bolder Poppins; the bundled Poppins files are removed.

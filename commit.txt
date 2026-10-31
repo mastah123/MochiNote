@@ -8,6 +8,19 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.8.0 → 39.9.0 — Tag chips, tags on Categories, search highlight and filters
+
+Added
+- Horizontal tag chips on All notes and on tag/category lists; the active chip clears the filter. A Tags section on the Categories page.
+- Search highlights matched words in titles and previews, shows "N results", and has Pinned / Checklists / Images filter chips (shown while searching).
+
+Changed
+- Before → the active tag showed as a "Tag: #x ✕" pill; after → the active tag chip is highlighted and toggles off when tapped again.
+- Settings → About shows 39.9.0.
+
+Impact
+- Tags are reachable without opening the menu. Phone Home itself is unchanged (it already fills one screen); chips appear there only while searching.
+
 feat: 39.7.0 → 39.8.0 — Ask for the name on first opening, Mochi theme font like the other themes
 
 Added
