@@ -8,6 +8,20 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.10.0 → 39.11.0 — Share a note as image, PDF, Markdown or text; weekly backup reminder; Trash auto-clean
+
+Added
+- "Share…" on notes (editor ⋮ menu and list menus) with Image (.png), PDF, Markdown (.md) and plain text. Uses the Web Share API with the file when the device supports it, otherwise downloads. New file js/app/note-export.js builds the formats with no libraries.
+- Backup reminder dialog about once a week (needs 3+ notes; "Back up now" exports, "Later" waits 3 days). Setting: Settings → Behavior → Backup reminder.
+- Trash auto-clean: notes in Trash for more than 30 days are deleted when the app opens, with a short message. Setting: Settings → Behavior → Empty Trash automatically (After 30 days / Never).
+
+Changed
+- The Trash bar text shows the auto-delete period.
+- Settings → About shows 39.11.0.
+
+Impact
+- Notes already in Trash for over 30 days are removed the first time the app opens after updating; switch the setting to Never before updating to keep them.
+
 feat: 39.9.0 → 39.10.0 — Reminders and a Today section on Home
 
 Added

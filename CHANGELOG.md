@@ -10,6 +10,11 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.11.0 — Share, backup reminder, Trash clean-up
+- **Share…** in a note's ⋮ menu (editor and lists): Image (.png), PDF, Markdown (.md) or plain text. Opens the phone's share sheet when available, otherwise downloads the file.
+- Backup reminder: about once a week the app offers to export a backup (not before 3 notes; "Later" waits 3 days). Switch it off in Settings → Behavior.
+- Trash empties itself after 30 days (Settings → Behavior: After 30 days / Never). The Trash bar says so.
+
 ### v39.10.0 — Reminders
 - Add a reminder (date and time) from a note's ⋮ menu, in the editor or from a list. Notes show a chip: Today, Overdue, Tomorrow or the date.
 - New **Reminders** page in the menu (sorted by date, with a count). Phone Home shows a "N due today · N overdue" bar when something is due; desktop Home shows "Due today" in the Today card.

@@ -4,9 +4,9 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.10.0';
+  const APP_VERSION = '39.11.0';
   const PREFS_KEY = 'mochinote:prefs';
-  const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: '', welcomed: false, tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
+  const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: '', welcomed: false, tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0, backupNudge: true, backupSnooze: 0, trashDays: 30 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
   const THEMES = [['mochi', '#f4b7ae', 'Mochi'], ['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
   const FONTS = [['', 'Default (sans)'], ['Georgia, serif', 'Serif'], ["'Courier New', monospace", 'Mono'], ["'Comic Sans MS', 'Trebuchet MS', cursive", 'Playful']];
@@ -249,6 +249,14 @@
     const live = state.notes.filter(n => n.due && !n.trashed && !n.archived), end = dayStart(new Date()) + 86400000, now = Date.now();
     return { overdue: live.filter(n => dueTs(n) < now).length, today: live.filter(n => dueTs(n) >= now && dueTs(n) < end).length, all: live.length };
   }
+  async function shareNote(id) {
+    const n = noteById(id); if (!n) return;
+    const f = await dialog({ kind: 'select', title: 'Share note', message: 'Choose a format. Your phone’s share sheet opens when it can; otherwise the file is downloaded.', options: [['png', 'Image (.png)'], ['pdf', 'PDF (.pdf)'], ['md', 'Markdown (.md)'], ['txt', 'Plain text']], value: 'png', ok: 'Share' });
+    if (!f) return;
+    toast('Preparing…', 8000);
+    try { const r = await NoteExport.share(n, f); toast(r === 'downloaded' ? 'Saved to your downloads' : r === 'shared' ? 'Shared' : 'Cancelled'); }
+    catch (e) { toast('Could not share: ' + e.message, 5000); }
+  }
   async function setReminder(id) {
     const n = noteById(id); if (!n) return;
     const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
@@ -322,6 +330,7 @@
     updateFolderMore();
     $('#fvGrid').setAttribute('aria-pressed', p.folderView === 'grid'); $('#fvList').setAttribute('aria-pressed', p.folderView === 'list');
     $('#trashBar').hidden = state.view !== 'trash' || !state.notes.some(n => n.trashed);
+    $('#trashBar span').textContent = state.prefs.trashDays > 0 ? 'Notes in Trash are deleted for good after ' + state.prefs.trashDays + ' days. You can restore them before then.' : 'Notes in Trash can be restored or deleted forever.';
 
     const list = homeAny ? homeList() : currentList(), box = $('#notes');
     // list view uses the Recent Notes row design (Trash and Archive keep cards: they carry Restore / Delete buttons)
@@ -632,6 +641,7 @@
       items.push({ icon: 'close', label: 'Delete forever', danger: true, fn: () => deleteForever(n.id) });
     } else {
       if (!n.archived) items.push({ icon: 'pin', label: n.pinned ? 'Unpin' : 'Pin', fn: () => togglePin(n.id) });
+      items.push({ icon: 'send', label: 'Share…', fn: () => shareNote(n.id) });
       items.push({ icon: 'bell', label: n.due ? 'Change reminder…' : 'Reminder…', fn: () => setReminder(n.id) });
       if (n.due) items.push({ icon: 'close', label: 'Clear reminder', fn: () => clearReminder(n.id) });
       items.push({ icon: 'tag', label: 'Icon & colour…', fn: () => noteIconDialog(n.id) });
@@ -947,6 +957,8 @@
       let target = v || null;
       if (v === '__new__') { const f = await createFolder(null); if (!f) return; target = f.id; }
       n.folderId = target; state.dirty = true; await saveOpen(); toast('Moved');
+    } else if (act === 'share') {
+      state.dirty = true; await saveOpen(); await shareNote(n.id);
     } else if (act === 'due') {
       state.dirty = true; await saveOpen(); await setReminder(n.id);
     } else if (act === 'dueclear') {
@@ -987,6 +999,8 @@
         row('Auto-capitalize', 'Capitalize the first letter of each sentence and a lone "i" while you type.', el('input', { type: 'checkbox', checked: p.autocap !== false, 'aria-label': 'Auto-capitalize', onchange: e => setPref('autocap', e.target.checked) })),
         row('Open notes to read', 'Notes open in viewing mode; tap the edit icon to change them.', el('input', { type: 'checkbox', checked: p.openView !== false, 'aria-label': 'Open notes in viewing mode', onchange: e => setPref('openView', e.target.checked) })),
         row('Autosave', 'Save a moment after you stop typing. When off, notes save when you go back.', el('input', { type: 'checkbox', checked: p.autosave, 'aria-label': 'Autosave', onchange: e => setPref('autosave', e.target.checked) })),
+        row('Backup reminder', 'Ask me about once a week to export a backup.', el('input', { type: 'checkbox', checked: p.backupNudge !== false, 'aria-label': 'Backup reminder', onchange: e => setPref('backupNudge', e.target.checked) })),
+        row('Empty Trash automatically', 'Notes in Trash are deleted for good after this time.', sel([['30', 'After 30 days'], ['0', 'Never']], String(p.trashDays == null ? 30 : p.trashDays), v => { setPref('trashDays', Number(v)); renderNotes(); }, 'Empty Trash automatically')),
         row('Animations', 'Turn off for a still interface (also follows your system setting)', el('input', { type: 'checkbox', checked: p.motion !== 'off', 'aria-label': 'Animations', onchange: e => setPref('motion', e.target.checked ? 'on' : 'off') }))),
       dataCard(),
       el('section', { class: 'set-card about' },
@@ -1229,11 +1243,25 @@
   }
 
   /* ---------- boot ---------- */
+  // Trash: notes older than the chosen number of days (Settings) are deleted for good; returns how many went
   async function purgeOldTrash() {
-    const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-    const old = state.notes.filter(n => n.trashed && n.trashedAt && n.trashedAt < cutoff);
-    if (!old.length) return;
-    // Trash is kept until the user empties it; we only mention notes that have been there a while.
+    const days = Number(state.prefs.trashDays == null ? 30 : state.prefs.trashDays); if (!(days > 0)) return 0;
+    const cutoff = Date.now() - days * 24 * 3600 * 1000;
+    const old = state.notes.filter(n => n.trashed && (n.trashedAt || n.updated || 0) < cutoff && (n.trashedAt || n.updated));
+    if (!old.length) return 0;
+    try { await NotesDB.removeMany('notes', old.map(n => n.id)); } catch (_) { return 0; }
+    const gone = new Set(old.map(n => n.id)); state.notes = state.notes.filter(n => !gone.has(n.id));
+    return old.length;
+  }
+  // about once a week: offer to export a backup (everything lives on this device)
+  async function backupNudge() {
+    const p = state.prefs, now = Date.now(), DAY = 86400000;
+    if (p.backupNudge === false || state.notes.length < 3 || now < (p.backupSnooze || 0)) return;
+    const ref = p.lastBackup || Math.min(...state.notes.map(n => n.created || now));
+    if (now - ref < 7 * DAY) return;
+    const days = Math.floor((now - ref) / DAY);
+    const ok = await dialog({ title: 'Back up your notes?', message: 'Everything lives on this device only. ' + (p.lastBackup ? 'Your last backup was ' + days + ' days ago.' : 'You have not made a backup yet.'), ok: 'Back up now', cancel: 'Later' });
+    if (ok) exportBackup(); else setPref('backupSnooze', now + 3 * DAY);
   }
   async function boot() {
     loadPrefs(); applyPrefs(); wire(); history.replaceState(viewState(), '');
@@ -1246,8 +1274,10 @@
     state.notes.forEach(n => { n.tags = n.tags || L.extractTags((n.title || '') + '\n' + (n.text || '')); if (!L.COLORS.includes(n.color)) n.color = 'default'; });
     if (!ok) await dialog({ title: 'Storage unavailable', message: 'Your browser is blocking local storage, so notes will only last until this tab closes. Use Settings → Export backup to keep your work.', ok: 'Got it', hideCancel: true });
     NotesDB.requestPersist();
+    const purged = await purgeOldTrash();
     render();
-    if (!state.prefs.welcomed && !navigator.webdriver) welcome();
+    if (purged) toast(purged + (purged === 1 ? ' old note was' : ' old notes were') + ' removed from Trash', 4500);
+    if (!navigator.webdriver) { if (!state.prefs.welcomed) await welcome(); await backupNudge(); }
     const dn = dueCounts(), dkey = localIso(new Date()).slice(0, 10);
     if (dn.today + dn.overdue && state.prefs.dueSeen !== dkey) { setPref('dueSeen', dkey); toast((dn.today + dn.overdue) + (dn.today + dn.overdue === 1 ? ' reminder needs' : ' reminders need') + ' your attention today', 5000); }
   }

@@ -3,7 +3,7 @@
 Handoff notes for another AI or account. Keep this file short and current; update it with every release.
 
 ## Status
-- Version **39.10.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
+- Version **39.11.0** (semver from here on: `fix:` patch, `feat:` minor, `feat!:` major).
 - Personal notes web app: vanilla HTML/CSS/JS, no build tools, no backend, local-first (IndexedDB, in-memory fallback). Mobile-first; desktop (≥900px) adapts.
 - Work arrives as lists of changes; the owner says "Next" to build a batch. One zip per version, named `mochinote-vX.Y.Z.zip`, tests excluded.
 
@@ -45,3 +45,5 @@ Handoff notes for another AI or account. Keep this file short and current; updat
 ## Next steps
 1. Keep `commit.txt` updated at the top for every release.
 2. Split the two big JS files further if it can be done without changing behaviour.
+
+- `js/app/note-export.js` (v39.11): NoteExport — a note to text, Markdown, PNG (SVG foreignObject → canvas) or PDF (hand-written PDF of JPEG slices); shared with the Web Share API or downloaded.
