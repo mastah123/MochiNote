@@ -2,7 +2,7 @@
   "appId": "com.mochinote.app",
   "appName": "MochiNote",
   "webDir": "www",
-  "backgroundColor": "#f8f1e7",
+  "backgroundColor": "#fbf9f6",
   "android": {
     "allowMixedContent": false
   }

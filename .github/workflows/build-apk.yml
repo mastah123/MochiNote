@@ -1,7 +1,7 @@
 name: Build Android APK
 
-# Starts when you commit to the android-apk branch. To rebuild with the newest app files from master:
-# open the latest run on the Actions tab and press "Re-run all jobs".
+# Starts when you commit to the android-apk branch. The web app lives in the app/ folder of this branch,
+# so this branch is self-contained. To update the app, replace the files in app/ and commit.
 on:
   push:
     branches: [android-apk]
@@ -11,14 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: Get the Android build files (this branch)
+      - name: Get this branch (Android build files + the app in app/)
         uses: actions/checkout@v4
-
-      - name: Get the newest app files from master
-        uses: actions/checkout@v4
-        with:
-          ref: master
-          path: web
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -37,8 +31,8 @@ jobs:
       - name: Copy the web app into www
         run: |
           mkdir -p www
-          cp web/index.html web/manifest.webmanifest www/
-          cp -r web/css web/js web/assets www/
+          cp app/index.html app/manifest.webmanifest www/
+          cp -r app/css app/js app/assets www/
 
       - name: Create the Android project
         run: |
@@ -51,15 +45,15 @@ jobs:
           command -v convert >/dev/null 2>&1 || command -v magick >/dev/null 2>&1 || { sudo apt-get update -y && sudo apt-get install -y imagemagick; }
           IM=$(command -v magick || command -v convert)
           RES=android/app/src/main/res
-          ICON=web/assets/icon-512.png
-          BG='#FFFCF5'
+          ICON=icon/foreground.png   # the cat on a transparent background
+          BG='#FFF6EC'
           # adaptive icon (Android 8+): paper-coloured background + the logo in the safe zone
           sed -i "s/#FFFFFF/$BG/I" $RES/values/ic_launcher_background.xml
           for d in mdpi:108:48 hdpi:162:72 xhdpi:216:96 xxhdpi:324:144 xxxhdpi:432:192; do
             IFS=: read dir fg legacy <<< "$d"
             inner=$((fg * 64 / 100))
             $IM $ICON -resize ${inner}x${inner} -background none -gravity center -extent ${fg}x${fg} $RES/mipmap-$dir/ic_launcher_foreground.png
-            lg=$((legacy * 85 / 100))
+            lg=$((legacy * 78 / 100))
             $IM -size ${legacy}x${legacy} xc:"$BG" \( $ICON -resize ${lg}x${lg} \) -gravity center -composite $RES/mipmap-$dir/ic_launcher.png
             cp $RES/mipmap-$dir/ic_launcher.png $RES/mipmap-$dir/ic_launcher_round.png
           done

@@ -1,13 +1,14 @@
-/* app.js — UI controller: state, rendering, folders, tags, settings, backup. */
+/* notes-app.js — UI controller: state, rendering, folders, tags, settings, backup. */
 (function () {
   'use strict';
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '37.0.0';
+  const APP_VERSION = '39.8.0';
   const PREFS_KEY = 'mochinote:prefs';
-  const DEFAULT_PREFS = { theme: 'cream', mode: 'light', view: 'grid', sort: 'edited', heroTitle: 'A little bit of everything ☁️', heroSub: 'Ideas, reminders & random thoughts.', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
-  const THEMES = [['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
+  const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: '', welcomed: false, tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
+  const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
+  const THEMES = [['mochi', '#f4b7ae', 'Mochi'], ['cream', '#f3dfb7', 'Cream'], ['blush', '#f6d9de', 'Blush'], ['sage', '#d3e4cf', 'Sage'], ['sky', '#d3e4f2', 'Sky'], ['lilac', '#e2d8f1', 'Lilac'], ['stone', '#dedbd5', 'Stone']];
   const FONTS = [['', 'Default (sans)'], ['Georgia, serif', 'Serif'], ["'Courier New', monospace", 'Mono'], ["'Comic Sans MS', 'Trebuchet MS', cursive", 'Playful']];
   const COLOR_VAR = { default: '--c-default', yellow: '--c-yellow', green: '--c-green', blue: '--c-blue', pink: '--c-pink', lilac: '--c-lilac' };
 
@@ -25,6 +26,9 @@
     if (p.view !== 'grid' && p.view !== 'list') p.view = 'grid';
     if (p.folderView !== 'grid' && p.folderView !== 'list') p.folderView = 'grid';
     p.fontSize = Math.min(28, Math.max(12, Number(p.fontSize) || 16));
+    // the redesign (v39) starts everyone on the new Mochi theme once; any theme picked afterwards is kept
+    if (!p.designVersion) { p.theme = 'mochi'; p.designVersion = 2; savePrefs(); }
+    if (!THEMES.some(t => t[0] === p.theme)) p.theme = 'mochi';
   }
   function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); } catch (_) {} }
   function applyPrefs() {
@@ -33,7 +37,7 @@
     h.style.setProperty('--editor-size', p.fontSize + 'px');
     h.style.setProperty('--editor-font', p.fontFamily || 'var(--font)');
     const meta = $('meta[name=theme-color]');
-    if (meta) meta.content = getComputedStyle(h).getPropertyValue('--bg').trim() || '#f8f1e7';
+    if (meta) meta.content = getComputedStyle(h).getPropertyValue('--bg').trim() || '#fbf9f6';
   }
   function setPref(k, v) { state.prefs[k] = v; savePrefs(); applyPrefs(); }
 
@@ -50,28 +54,7 @@
     kids.flat().forEach(k => { if (k != null) n.append(k.nodeType ? k : document.createTextNode(k)); });
     return n;
   }
-  const ICONS = {
-    pin: '<svg class="pm-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>',
-    folder: '<svg class="f-ico" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>'
-  };
-  // one line-icon set (24px grid, 1.9 stroke, round caps) used by the menu, settings, sheets, back and more buttons
-  const IPATHS = {
-    all: '<path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 9h6M9 13h6M9 17h3"/>',
-    pin: '<path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z"/><path d="M12 14v6"/>',
-    archive: '<rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5M10 12.5h4"/>',
-    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
-    settings: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
-    folder: '<path d="M3.5 7a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
-    restore: '<path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4.5h4.5"/>',
-    close: '<path d="M6 6l12 12M18 6 6 18"/>',
-    edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>',
-    back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
-    more: '<circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/>',
-    search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>'
-  };
-  const svgIco = (name, size) => '<svg class="ico" viewBox="0 0 24 24" width="' + (size || 20) + '" height="' + (size || 20) + '" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + IPATHS[name] + '</svg>';
-  const icon = svg => { const t = document.createElement('template'); t.innerHTML = svg; return t.content.firstChild.cloneNode(true); };
+  const { ICONS, IPATHS, svgIco, icon } = NotesIcons;
   let toastTimer;
   function toast(msg, ms) {
     const t = $('#toast'); t.textContent = msg; t.hidden = false;
@@ -84,7 +67,7 @@
     const n = noteById(state.openId); if (!n) return;
     const fmt = ts => new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
     const w = countWords();
-    const st = curStatus === 'Saved' ? 'Saved ' + new Date(n.updated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : curStatus;
+    const st = curStatus;
     m.textContent = [w + (w === 1 ? ' word' : ' words'), 'Created ' + fmt(n.created || n.updated), st].filter(Boolean).join(' · ');
   }
   function setStatus(msg) {
@@ -112,7 +95,7 @@
       sel.textContent = '';
       (o.options || []).forEach(([v, label]) => sel.append(el('option', { value: v, text: label })));
       if (o.kind === 'select') sel.value = o.value == null ? '' : o.value;
-      $('#dlgCancel').hidden = o.hideCancel === true;
+      $('#dlgCancel').hidden = o.hideCancel === true; $('#dlgCancel').textContent = o.cancel || 'Cancel';
       const ok = $('#dlgOk'); ok.textContent = o.ok || 'OK'; ok.className = o.danger ? 'btn-danger' : 'btn-primary';
       const done = () => {
         d.removeEventListener('close', done);
@@ -141,7 +124,7 @@
   }
 
   /* ---------- navigation + rendering ---------- */
-  const VIEW_TITLES = { all: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Folders' };
+  const VIEW_TITLES = { all: 'Home', notes: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Categories' };
 
   function go(view, opts) {
     if (state.openId) closeEditor();
@@ -158,7 +141,9 @@
     $('#notesView').hidden = settings || foldersPage; $('#settingsView').hidden = !settings; $('#foldersView').hidden = !foldersPage;
     $('#homeHead').hidden = settings || foldersPage;
     $('#main').dataset.view = state.view;
-    $('#newNote').hidden = settings || foldersPage || state.view === 'trash';
+    const homeAny = state.view === 'all' && !state.folderId && !state.tag, homeMode = isMobile() && homeAny;
+    if (homeAny) $('#main').dataset.home = '1'; else delete $('#main').dataset.home;
+    $('#newNote').hidden = settings || foldersPage || state.view === 'trash' || homeAny;
     let title = VIEW_TITLES[state.view];
     if (state.view === 'all' && state.folderId) title = state.folderId === L.NO_FOLDER ? 'No folder' : (folderById(state.folderId) || { name: 'All notes' }).name;
     $('#viewTitle').textContent = title;
@@ -166,26 +151,51 @@
     if (mb.dataset.menuSvg === undefined) mb.dataset.menuSvg = mb.innerHTML;
     mb.innerHTML = settings ? svgIco('back', 24) : mb.dataset.menuSvg;
     mb.setAttribute('aria-label', settings ? 'Back' : 'Open menu'); mb.title = settings ? 'Back' : 'Menu';
-    document.title = title + ' · MochiNote';
+    paintBottomNav(homeMode); paintTheme();
+    document.title = 'MochiNote';
     renderSidebar();
     if (settings) renderSettings(); else if (foldersPage) renderFoldersPage(); else renderNotes();
   }
 
+  /* phone bottom bar: Home, Notes, Categories, Settings */
+  function paintBottomNav(homeMode) {
+    const v = state.view;
+    const tab = v === 'settings' ? 'settings' : (v === 'folders' || (v === 'all' && state.folderId)) ? 'categories' : homeMode ? 'home' : 'notes';
+    $$('#bottomNav .bn-item').forEach(b => {
+      const ico = $('.bn-ico', b); if (!ico.firstChild) ico.innerHTML = svgIco(ico.dataset.ico, 24, 1.8);
+      const on = b.dataset.tab === tab; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+  }
+  const greetingWord = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
+  const SUN = '<svg class="hero-sun" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="6" fill="#f8bd55" stroke="#f2a43a" stroke-width="1.4"/><g stroke="#f5b04a" stroke-width="2.2" stroke-linecap="round"><path d="M16 3.5v3M16 25.5v3M3.5 16h3M25.5 16h3M7.2 7.2l2.1 2.1M22.7 22.7l2.1 2.1M24.8 7.2l-2.1 2.1M9.3 22.7l-2.1 2.1"/></g></svg>';
+  const MOON = '<svg class="hero-sun" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M25 20.5A10 10 0 1 1 13.5 7a8 8 0 0 0 11.5 13.5z" fill="#f8d97f" stroke="#eab84a" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+  function paintHero() {
+    const t = $('#heroTitle'), name = (state.prefs.userName || '').trim(), h = new Date().getHours();
+    t.textContent = '';
+    t.append(greetingWord() + (name ? ',' : '!'));
+    if (name) t.append(el('br'), name + '!');
+    t.append(' ', icon(h >= 18 ? MOON : SUN));
+    $('#heroSub').textContent = (state.prefs.tagline || '').trim() || DEFAULT_TAGLINE;
+  }
+
+  const SIDE_FOLDER_ROWS = 4, SIDE_TAG_LIMIT = 8;
   function renderSidebar() {
     $$('.nav-item').forEach(b => {
       const v = b.dataset.view;
       b.classList.toggle('active', v === state.view && !(v === 'all' && (state.folderId || state.tag)));
-      if (v !== 'settings') {
-        const c = L.filterNotes(state.notes, state.folders, { view: v }).length;
-        $('[data-count]', b).textContent = c ? c : '';
+      if (v && v !== 'settings') {
+        const c = L.filterNotes(state.notes, state.folders, { view: v === 'notes' ? 'all' : v }).length;
+        const cn = $('[data-count]', b); if (cn) cn.textContent = c ? c : '';
       }
     });
     const sf = $('#sideFolders'); sf.textContent = '';
     const active = state.notes.filter(n => !n.trashed && !n.archived);
+    let dotN = 0;
     const mk = (label, id, count, folder) => {
+      const dn = dotN++;
       const isActive = state.view === 'all' && state.folderId === id;
       const item = el('button', { class: 'side-item' + (isActive ? ' active' : ''), onclick: () => go('all', { folderId: id, tag: state.tag }) },
-        el('span', { class: 'fl-name' }, icon(svgIco('folder', 18)), label), el('span', { class: 'count', text: count || '' }));
+        el('span', { class: 'fl-name' }, el('span', { class: 'dot ' + (folder && okTint(folder.color) ? 'c-' + folder.color : 'd' + (dn % 5)), 'aria-hidden': 'true' }), icon(svgIco('folder', 18)), el('span', { class: 'fl-t', text: label })), el('span', { class: 'count', text: count || '' }));
       if (folder) onLongPress(item, () => folderSheet(folder, item));
       sf.append(item);
       if (folder && isActive) {
@@ -195,15 +205,28 @@
       }
     };
     L.folderTree(state.folders).forEach(({ folder }) => mk(folder.name, folder.id, active.filter(n => n.folderId === folder.id).length, folder));
+    // menu: 4 folder rows, the rest scrolls; a fixed "Show all" sits under the list (phone: the folders page, desktop: expands the list)
+    const manyFolders = state.folders.length > SIDE_FOLDER_ROWS, open = !isMobile() && state.sideFoldersOpen;
+    sf.classList.toggle('capped', manyFolders && !open);
+    $('#sideFoldersMore').hidden = !manyFolders;
+    $('#sideShowAllFolders').textContent = open ? 'Show less' : 'Show all';
     const st = $('#sideTags'); st.textContent = '';
-    const tags = allTags();
+    const allT = allTags(), moreTags = allT.length > SIDE_TAG_LIMIT;
+    const tags = moreTags && !state.sideTagsOpen ? allT.slice(0, SIDE_TAG_LIMIT) : allT;
+    st.classList.toggle('open', moreTags && !!state.sideTagsOpen);
+    $('#sideShowAllTags').hidden = !moreTags; $('#sideShowAllTags').textContent = state.sideTagsOpen ? 'Show less' : 'Show all';
     if (!tags.length) st.append(el('span', { class: 'info', style: 'color:var(--muted);font-size:.9rem', text: 'Type #tags in a note and they show up here.' }));
     tags.forEach(([t, c]) => st.append(el('button', { class: 'tag' + (state.tag === t ? ' active' : ''), onclick: () => go('all', { tag: state.tag === t ? null : t, folderId: state.folderId }) }, '#' + t + ' ' + c)));
   }
 
   function currentList() {
-    const list = L.filterNotes(state.notes, state.folders, { view: state.view, folderId: state.folderId, tag: state.tag, query: state.query });
+    const list = L.filterNotes(state.notes, state.folders, { view: state.view === 'notes' ? 'all' : state.view, folderId: state.folderId, tag: state.tag, query: state.query });
     return L.sortNotes(list, state.prefs.sort, state.view !== 'trash');
+  }
+  // the phone Home shows the five most recently edited notes (all matches while searching)
+  function homeList() {
+    const list = L.filterNotes(state.notes, state.folders, { view: 'all', folderId: null, tag: null, query: state.query });
+    return state.query ? L.sortNotes(list, state.prefs.sort, true) : L.sortNotes(list, 'edited', true).slice(0, 5);
   }
 
   function renderNotes() {
@@ -216,53 +239,201 @@
     if (state.tag) f.append(el('button', { class: 'pill', onclick: () => go('all', { tag: null, folderId: state.folderId }) }, 'Tag: ', el('b', { text: '#' + state.tag }), ' ✕'));
     // labels + "Your space" card (phones; desktop hides them in CSS)
     const plainHome = state.view === 'all' && !state.folderId && !state.tag && !state.query;
-    $('#hero').hidden = !plainHome;
-    $('#heroTitle').textContent = p.heroTitle || DEFAULT_PREFS.heroTitle; $('#heroSub').textContent = p.heroSub || DEFAULT_PREFS.heroSub;
-    $('#notesLabel').textContent = state.view === 'all' && !state.folderId
+    const homeAny = state.view === 'all' && !state.folderId && !state.tag, homeMode = isMobile() && homeAny;
+    const deskAll = !isMobile() && state.view === 'notes' && !state.query;
+    $('#hero').hidden = !plainHome; paintHero();
+    $('#homeFooter').hidden = !(homeAny && plainHome); $('#viewAll').hidden = !(homeAny && plainHome); renderAside(homeAny);
+    $('#notesLabel').textContent = homeAny ? (state.query ? 'Results' : 'Recent Notes') : deskAll ? 'All notes' : state.view === 'all' && !state.folderId
       ? (state.tag ? '#' + state.tag : state.query ? 'Results' : p.sort === 'edited' ? 'Recent notes' : 'Notes')
       : $('#viewTitle').textContent;
     // folder cards on All notes: phones show 2 (grid) or 4 (list) with "Show all"; desktop shows them all as before
     const strip = $('#folderStrip'); strip.textContent = '';
     const top = state.folders.filter(x => !x.parentId).sort((a, b) => (a.created || 0) - (b.created || 0));
     const mobile = isMobile(), fview = mobile ? p.folderView : 'grid';
-    const showFolders = plainHome && top.length > 0;
-    strip.className = 'folder-strip ' + fview;
-    if (showFolders) {
-      if (!mobile) strip.append(el('div', { class: 'folder-strip-head' }, el('span', {}, icon(svgIco('folder', 18)), 'Folders')));
+    const showFolders = homeAny ? plainHome : (plainHome || deskAll) && top.length > 0;
+    strip.className = 'folder-strip ' + (homeMode ? 'tiles' : homeAny ? 'actions' : fview);
+    if (showFolders && homeAny && !homeMode) {
+      actionCards().forEach(c => strip.append(c));
+    } else if (showFolders && homeMode) {
+      top.slice(0, 4).forEach((fo, i) => strip.append(folderTile(fo, i)));
+      if (top.length < 4) strip.append(el('button', { class: 'tile tile-new', onclick: () => createFolder(null) }, el('span', { class: 't-ico' }, icon(svgIco('plus', 26, 1.7))), el('span', { class: 'fname', text: 'New folder' })));
+    } else if (showFolders) {
       top.slice(0, mobile ? (fview === 'list' ? 4 : 2) : top.length).forEach((fo, i) => strip.append(folderCard(fo, i)));
     }
+    strip.classList.toggle('open', !mobile && !!state.homeFoldersOpen);
     strip.hidden = !strip.childNodes.length;
     $('#folderSection').hidden = !showFolders;
+    $('.controls').classList.toggle('plain', plainHome || deskAll);
+    updateFolderMore();
     $('#fvGrid').setAttribute('aria-pressed', p.folderView === 'grid'); $('#fvList').setAttribute('aria-pressed', p.folderView === 'list');
     $('#trashBar').hidden = state.view !== 'trash' || !state.notes.some(n => n.trashed);
 
-    const list = currentList(), box = $('#notes');
-    box.className = 'notes ' + p.view; box.textContent = '';
+    const list = homeAny ? homeList() : currentList(), box = $('#notes');
+    // list view uses the Recent Notes row design (Trash and Archive keep cards: they carry Restore / Delete buttons)
+    const rowsMode = homeAny || (p.view === 'list' && state.view !== 'trash' && state.view !== 'archive');
+    box.className = 'notes ' + (homeAny ? 'home-list' : rowsMode ? 'home-list rows' : p.view); box.textContent = '';
+    if (!homeAny && mobile) $('#notesLabel').textContent = list.length + (list.length === 1 ? ' note' : ' notes');
     const frag = document.createDocumentFragment();
-    list.forEach(n => frag.append(noteCard(n)));
+    list.forEach(n => frag.append(rowsMode ? homeRow(n) : noteCard(n)));
     box.append(frag);
     const empty = $('#empty'); empty.hidden = list.length > 0;
     if (!list.length) {
       const msgs = {
-        all: state.query || state.tag || state.folderId ? ['Nothing matches', 'Try a different search or clear a filter.'] : ['No notes yet', 'Tap “New note” to write your first one.'],
+        all: state.query || state.tag || state.folderId ? ['Nothing matches', 'Try a different search or clear a filter.'] : ['No notes yet', homeAny ? 'Tap “New Note” to write your first one.' : 'Tap “New note” to write your first one.'],
         pinned: ['No pinned notes', 'Pin a note to keep it handy.'], archive: ['Archive is empty', 'Archived notes live here.'], trash: ['Trash is empty', 'Deleted notes wait here until you remove them.']
       };
-      const m = msgs[state.view]; empty.textContent = ''; empty.append(el('b', { text: m[0] }), m[1]);
+      const m = msgs[state.view] || msgs.all; empty.textContent = ''; empty.append(el('b', { text: m[0] }), m[1]);
     }
   }
 
+  // desktop home: folders sit in one compact row; "Show all" appears only when some folders don't fit and expands the row
+  function updateFolderMore() {
+    const b = $('#showAllFolders'), strip = $('#folderStrip'); if (!b || !strip) return;
+    if (isMobile()) { b.hidden = false; b.textContent = 'Show all'; return; }
+    const cols = (getComputedStyle(strip).gridTemplateColumns || '').split(' ').filter(Boolean).length || 1;
+    const many = strip.querySelectorAll('.folder-card').length > cols;
+    b.hidden = !many; b.textContent = state.homeFoldersOpen ? 'Show less' : 'Show all';
+  }
   function folderCard(fo, i) {
     const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
-    const fc = el('button', { class: 'folder-card f' + (i % 4), title: fo.name, onclick: () => go('all', { folderId: fo.id }) },
-      icon(ICONS.folder), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') }));
+    const fc = el('button', { class: 'folder-card ' + (okTint(fo.color) ? 'c-' + fo.color : 'f' + (i % 4)), title: fo.name, onclick: () => go('all', { folderId: fo.id }) },
+      okIco(fo.icon) ? icon(svgIco(fo.icon, 26, 1.7).replace('class="ico"', 'class="ico f-ico"')) : icon(ICONS.folder), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: c + (c === 1 ? ' note' : ' notes') }));
     onLongPress(fc, () => folderSheet(fo, fc));
     return fc;
   }
+  /* desktop Home: four quick actions, and the right-hand column (today, a tip, recent categories) */
+  const ACTION_ICONS = { note: 'doc', folder: 'folder', tag: 'tag', capture: 'bolt' };
+  function actionCards() {
+    const mk = (cls, id, key, label, fn) => el('button', { class: 'act ' + cls, id, type: 'button', onclick: fn },
+      el('span', { class: 'a-ico' }, icon(svgIco(ACTION_ICONS[key], 30, 1.7))), el('span', { class: 'a-name', text: label }), el('span', { class: 'a-go' }, icon(svgIco('arrow', 20, 1.8))));
+    return [
+      mk('a0', 'actNewNote', 'note', 'New Note', createAndOpen),
+      mk('a1', 'actNewFolder', 'folder', 'New Folder', () => createFolder(null)),
+      mk('a2', 'actAddTag', 'tag', 'Add Tag', addTag),
+      mk('a3', 'actCapture', 'capture', 'Quick Capture', quickCapture)
+    ];
+  }
+  async function addTag() {
+    const v = await dialog({ kind: 'prompt', title: 'Add a tag', message: 'Starts a new note with the tag, so it shows up in the menu.', placeholder: 'tag name', ok: 'Add' });
+    const t = (v || '').trim().replace(/^#+/, '').replace(/[^\p{L}\p{N}_-]+/gu, '');
+    if (!t) return;
+    const n = newNote({ html: '<p>#' + t + ' </p>', text: '#' + t, tags: [t] });
+    state.notes.push(n); try { await persistNote(n); } catch (e) { toast('Could not create note: ' + e.message); }
+    openEditor(n.id, true);
+  }
+  async function quickCapture() {
+    const v = await dialog({ kind: 'prompt', title: 'Quick Capture', message: 'Jot something down. It is saved as a new note.', placeholder: 'What is on your mind?', ok: 'Save' });
+    const t = (v || '').trim(); if (!t) return;
+    const n = newNote({ html: '<div>' + t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>', text: t, tags: L.extractTags(t) });
+    state.notes.push(n); try { await persistNote(n); } catch (e) { toast('Could not save: ' + e.message); return; }
+    toast('Captured'); render();
+  }
+  const TIPS = ['You can organize your notes with categories to keep everything tidy and easy to find.', 'Type #tags in a note and they show up in the menu for quick filtering.', 'Pin a note to keep it at the top of your list.', 'Press Ctrl K (or /) anywhere to jump to search.', 'Everything stays on this device. Export a backup from Settings now and then.'];
+  function renderAside(on) {
+    if (!on) return;
+    const live = state.notes.filter(n => !n.trashed), d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    const added = live.filter(n => (n.created || 0) >= d0.getTime()).length;
+    const today = $('#hwToday'); today.textContent = '';
+    today.append(el('div', { class: 'hw-row' }, el('h3', { text: 'Today' }), el('span', { class: 'hw-date', text: new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) })),
+      el('div', { class: 'hw-stats' }, el('div', {}, el('b', { text: String(added) }), el('span', { text: 'Notes added' })), el('div', {}, el('b', { text: String(live.length) }), el('span', { text: 'Total notes' }))),
+      el('div', { class: 'hw-mascot', 'aria-hidden': 'true' }, el('img', { src: 'assets/mascot.svg', alt: '', width: 64, height: 64 }), el('span', { class: 'hw-heart', text: '♥' })));
+    const ti = Math.floor(Date.now() / 86400000) % TIPS.length, tip = $('#hwTip'); tip.textContent = '';
+    tip.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('bulb', 24, 1.7))), el('h3', { text: 'Quick Tip' })), el('p', { text: TIPS[ti] }),
+      el('button', { class: 'learn', type: 'button', onclick: () => dialog({ title: 'Quick tips', message: TIPS.map(x => '• ' + x).join('\n'), ok: 'Got it', hideCancel: true }) }, 'Learn more ', icon(svgIco('arrow', 16, 1.8))));
+    const last = f => Math.max(f.created || 0, ...state.notes.filter(n => !n.trashed && n.folderId === f.id).map(n => n.updated || 0));
+    const top = state.folders.slice().sort((a, b) => last(b) - last(a)).slice(0, 4), cats = $('#hwCats'); cats.textContent = '';
+    cats.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('folder', 24, 1.7))), el('h3', { text: 'Recent Categories' })));
+    if (!top.length) cats.append(el('p', { class: 'hw-empty', text: 'No categories yet. Use New Folder to make one.' }));
+    top.forEach((f, i) => cats.append(el('button', { class: 'hw-cat', type: 'button', onclick: () => go('all', { folderId: f.id }) }, el('span', { class: 'dot ' + (okTint(f.color) ? 'c-' + f.color : 'd' + (i % 5)) }), el('span', { class: 'hc-name', text: f.name }), el('span', { class: 'hc-n', text: String(state.notes.filter(n => !n.trashed && !n.archived && n.folderId === f.id).length) }))));
+  }
+  const SUN_SVG = '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>', MOON_SVG = '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>';
+  function paintTheme() { const b = $('#themeToggle'); if (!b) return; b.innerHTML = '<svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (state.prefs.mode === 'dark' ? MOON_SVG : SUN_SVG) + '</svg>'; }
+
+  const TILE_ICONS = ['doc', 'folder', 'tag', 'bulb'], ROW_ICONS = ['doc', 'folder', 'tag', 'file', 'bulb'];
+  const TINTS = ['pink', 'blue', 'lilac', 'green', 'yellow'], TILE_TINTS = ['pink', 'blue', 'lilac', 'green'], ROW_TINTS = ['pink', 'blue', 'green', 'lilac', 'yellow'];
+  const PICK_ICONS = ['doc', 'file', 'folder', 'tag', 'bulb', 'star', 'heart', 'bookmark', 'calendar', 'cart', 'briefcase', 'book', 'code', 'home', 'plane', 'music', 'check', 'pin'];
+  const okTint = t => TINTS.includes(t) ? t : null, okIco = n => (n && IPATHS[n]) ? n : null;
+  const folderIdx = f => Math.max(0, state.folders.filter(x => !x.parentId).sort((a, b) => (a.created || 0) - (b.created || 0)).findIndex(x => x.id === f.id));
+  /* icon + colour picker: resolves {icon, tint} (null = default) or null when cancelled */
+  function pickIcon(o) {
+    return new Promise(resolve => {
+      let curIcon = okIco(o.icon), curTint = okTint(o.tint), out = null;
+      const d = el('dialog', { class: 'dlg pick' }), prev = el('span', { class: 'pk-prev' });
+      const gi = PICK_ICONS.map(n => [el('button', { type: 'button', class: 'pk-i', 'aria-label': n, onclick: () => { curIcon = n; paint(); } }, icon(svgIco(n, 22, 1.7))), n]);
+      const gc = TINTS.map(n => [el('button', { type: 'button', class: 'pk-c c-' + n, 'aria-label': n + ' colour', onclick: () => { curTint = n; paint(); } }), n]);
+      const paint = () => {
+        prev.className = 'pk-prev c-' + (curTint || o.defTint); prev.textContent = ''; prev.append(icon(svgIco(curIcon || o.defIcon, 28, 1.7)));
+        gi.forEach(([b, n]) => b.setAttribute('aria-pressed', String(n === curIcon))); gc.forEach(([b, n]) => b.setAttribute('aria-pressed', String(n === curTint)));
+      };
+      d.append(el('h2', { text: o.title }), el('div', { class: 'pk-top' }, prev, el('span', { class: 'pk-name', text: o.name || '' })),
+        el('div', { class: 'pk-grid' }, gi.map(x => x[0])), el('div', { class: 'pk-colors' }, gc.map(x => x[0])),
+        el('div', { class: 'dlg-btns' },
+          el('button', { type: 'button', class: 'btn-ghost', onclick: () => { out = { icon: null, tint: null }; d.close(); } }, 'Default'),
+          el('button', { type: 'button', class: 'btn-ghost', onclick: () => d.close() }, 'Cancel'),
+          el('button', { type: 'button', class: 'btn-primary', onclick: () => { out = { icon: curIcon, tint: curTint }; d.close(); } }, 'Save')));
+      d.addEventListener('close', () => { d.remove(); resolve(out); });
+      document.body.append(d); paint(); d.showModal();
+    });
+  }
+  async function noteIconDialog(id) {
+    const n = noteById(id); if (!n) return;
+    const k = hashIdx(n.id, ROW_ICONS.length);
+    const r = await pickIcon({ title: 'Note icon', name: n.title.trim() || 'Untitled', icon: n.icon, tint: n.tint, defIcon: ROW_ICONS[k], defTint: ROW_TINTS[k] });
+    if (!r) return;
+    await patchNote(n, { icon: r.icon || undefined, tint: r.tint || undefined }, false);
+    if (!r.icon) delete n.icon; if (!r.tint) delete n.tint; await persistNote(n);
+    toast('Saved'); render();
+  }
+  async function folderIconDialog(id) {
+    const f = folderById(id); if (!f) return;
+    const i = folderIdx(f);
+    const r = await pickIcon({ title: 'Category icon', name: f.name, icon: f.icon, tint: f.color, defIcon: TILE_ICONS[i % 4], defTint: TILE_TINTS[i % 4] });
+    if (!r) return;
+    if (r.icon) f.icon = r.icon; else delete f.icon;
+    if (r.tint) f.color = r.tint; else delete f.color;
+    await NotesDB.put('folders', f); toast('Saved'); render();
+  }
+  function folderTile(fo, i, big) {
+    const c = state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length;
+    const tn = okTint(fo.color);
+    const t = el('button', { class: 'folder-card tile ' + (tn ? 'c-' + tn : 't' + (i % 4)) + (big ? ' big' : ''), title: fo.name, 'aria-label': fo.name + ', ' + c + (c === 1 ? ' note' : ' notes'), onclick: () => go('all', { folderId: fo.id }) },
+      el('span', { class: 't-ico' }, icon(svgIco(okIco(fo.icon) || TILE_ICONS[i % 4], 28, 1.7))), el('span', { class: 'fname', text: fo.name }), el('span', { class: 'fcount', text: big ? c + (c === 1 ? ' note' : ' notes') : String(c) }));
+    onLongPress(t, () => folderSheet(fo, t));
+    return t;
+  }
+  // Categories page: same layout as All notes (count + view toggle, rows or cards with a tinted icon)
+  function folderNoteCount(fo) { return state.notes.filter(n => !n.trashed && !n.archived && n.folderId === fo.id).length; }
+  function folderRow(fo, i) {
+    const c = folderNoteCount(fo), tn = okTint(fo.color) || ROW_TINTS[i % ROW_TINTS.length], lbl = c + (c === 1 ? ' note' : ' notes');
+    const more = el('button', { class: 'n-more', type: 'button', 'aria-label': 'Category options', title: 'Options', onclick: e => { e.stopPropagation(); folderSheet(fo, more); } }, icon(svgIco('more', 20)));
+    const row = el('article', { class: 'note hrow fcat c-' + tn, tabindex: '0', role: 'button', 'aria-label': fo.name + ', ' + lbl,
+      onclick: () => go('all', { folderId: fo.id }),
+      onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === row) { e.preventDefault(); go('all', { folderId: fo.id }); } } },
+      el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(okIco(fo.icon) || TILE_ICONS[i % 4], 26, 1.7))),
+      el('div', { class: 'n-main' }, el('div', { class: 'n-title', text: fo.name }), el('div', { class: 'n-sub', text: lbl })),
+      el('span', { class: 'n-side' }), more);
+    onLongPress(row, () => folderSheet(fo, row));
+    return row;
+  }
+  function folderGridCard(fo, i) {
+    const c = folderNoteCount(fo), tn = okTint(fo.color) || ROW_TINTS[i % ROW_TINTS.length];
+    const card = el('article', { class: 'note fcat fcard', tabindex: '0', role: 'button', 'aria-label': fo.name + ', ' + c + (c === 1 ? ' note' : ' notes'),
+      onclick: () => go('all', { folderId: fo.id }),
+      onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); go('all', { folderId: fo.id }); } } },
+      el('span', { class: 'n-ico c-' + tn, 'aria-hidden': 'true' }, icon(svgIco(okIco(fo.icon) || TILE_ICONS[i % 4], 20, 1.7))),
+      el('div', { class: 'n-title', text: fo.name }),
+      el('div', { class: 'n-count', text: c + (c === 1 ? ' note' : ' notes') }));
+    onLongPress(card, () => folderSheet(fo, card));
+    return card;
+  }
   function renderFoldersPage() {
-    const box = $('#allFolders'); box.textContent = ''; box.className = 'folder-strip grid';
-    const tree = L.folderTree(state.folders);
+    const p = state.prefs, box = $('#allFolders'); box.textContent = '';
+    const tree = L.folderTree(state.folders), rows = p.view === 'list';
+    $('#catGrid').setAttribute('aria-pressed', !rows); $('#catList').setAttribute('aria-pressed', rows);
+    $('#catLabel').textContent = tree.length + (tree.length === 1 ? ' category' : ' categories');
+    box.className = 'notes ' + (!tree.length ? 'grid' : rows ? 'home-list rows' : 'grid');
     if (!tree.length) { box.append(el('div', { class: 'empty', style: 'grid-column:1/-1' }, el('b', { text: 'No folders yet' }), 'Tap “+ New folder” to make one.')); return; }
-    tree.forEach(({ folder }, i) => box.append(folderCard(folder, i)));
+    tree.forEach(({ folder }, i) => box.append(rows ? folderRow(folder, i) : folderGridCard(folder, i)));
   }
 
   /* Structured preview for cards: keeps bullets, numbering and checklists instead of flattening to text.
@@ -399,6 +570,7 @@
       items.push({ icon: 'close', label: 'Delete forever', danger: true, fn: () => deleteForever(n.id) });
     } else {
       if (!n.archived) items.push({ icon: 'pin', label: n.pinned ? 'Unpin' : 'Pin', fn: () => togglePin(n.id) });
+      items.push({ icon: 'tag', label: 'Icon & colour…', fn: () => noteIconDialog(n.id) });
       items.push({ icon: 'folder', label: 'Move to folder…', fn: () => moveNoteDialog(n.id) });
       items.push({ icon: 'archive', label: n.archived ? 'Unarchive' : 'Archive', fn: () => archiveNote(n.id, !n.archived) });
       items.push({ icon: 'trash', label: 'Move to Trash', danger: true, fn: () => trashNote(n.id) });
@@ -408,18 +580,25 @@
   function folderSheet(f, anchor) {
     openSheet(f.name, [
       { icon: 'edit', label: 'Rename', fn: () => renameFolder(f.id) },
+      { icon: 'tag', label: 'Icon & colour…', fn: () => folderIconDialog(f.id) },
       { icon: 'trash', label: 'Delete folder', danger: true, fn: () => deleteFolder(f.id) }
     ], anchor);
   }
   async function editHero() {
     const p = state.prefs;
-    const v = await dialog({ kind: 'form', title: 'Edit your space', ok: 'Save', fields: [
-      { value: p.heroTitle, placeholder: 'Title', label: 'Title', max: 60 }, { value: p.heroSub, placeholder: 'Subtitle', label: 'Subtitle', max: 90 }] });
+    const v = await dialog({ kind: 'form', title: 'Your profile', ok: 'Save', fields: [
+      { value: p.userName, placeholder: 'Your name', label: 'Your name', max: 30 }, { value: p.tagline, placeholder: 'Tagline', label: 'Tagline', max: 70 }] });
     if (!v) return;
-    setPref('heroTitle', v[0].trim() || DEFAULT_PREFS.heroTitle); setPref('heroSub', v[1].trim() || DEFAULT_PREFS.heroSub);
-    renderNotes(); toast('Saved');
+    setPref('userName', v[0].trim()); setPref('tagline', v[1].trim() || DEFAULT_TAGLINE);
+    renderNotes(); if (state.view === 'settings') renderSettings(); toast('Saved');
   }
-  function resetHero() { setPref('heroTitle', DEFAULT_PREFS.heroTitle); setPref('heroSub', DEFAULT_PREFS.heroSub); renderNotes(); toast('Back to the default'); }
+  // first opening: ask for the name once (Esc or Skip leaves it empty; it can be set later from the profile icon)
+  async function welcome() {
+    const v = await dialog({ kind: 'prompt', title: 'Welcome to MochiNote', message: 'What should we call you? Your name shows in the Home greeting. You can change it any time from the profile icon.', placeholder: 'Your name', value: state.prefs.userName || '', ok: 'Get started', cancel: 'Skip' });
+    if (v != null && v.trim()) setPref('userName', v.trim().slice(0, 30));
+    setPref('welcomed', true); renderNotes();
+  }
+  function resetHero() { setPref('userName', DEFAULT_PREFS.userName); setPref('tagline', DEFAULT_TAGLINE); renderNotes(); toast('Back to the default'); }
   async function togglePin(id) {
     const n = noteById(id); if (!n) return;
     await patchNote(n, { pinned: !n.pinned }); toast(n.pinned ? 'Pinned' : 'Unpinned'); render();
@@ -439,8 +618,9 @@
     const card = el('article', { class: 'note', style: n.color !== 'default' ? '--nc:var(' + COLOR_VAR[n.color] + ')' : false, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
       onclick: e => { if (!e.target.closest('.row-actions')) openEditor(n.id); },
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
+      el('span', { class: 'n-ico c-' + (okTint(n.tint) || ROW_TINTS[hashIdx(n.id, ROW_ICONS.length)]), 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[hashIdx(n.id, ROW_ICONS.length)], 20, 1.7))),
       n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned' }, el('span', { class: 'pm-emoji', text: '📌' }), icon(ICONS.pin)) : null,
-      el('div', { class: 'n-title', text: n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled') }),
+      el('div', { class: 'n-title' }, (okIco(n.icon) || okTint(n.tint)) ? el('span', { class: 'n-badge c-' + (okTint(n.tint) || 'pink') }, icon(svgIco(okIco(n.icon) || 'doc', 15, 1.8))) : null, n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled')),
       pv ? el('div', { class: 'n-prev', text: n.title.trim() ? pv : '' }) : null,
       rich,
       (n.tags || []).length ? el('div', { class: 'n-tags' }, n.tags.slice(0, 5).map(t => el('span', { class: 'tag', text: '#' + t }))) : null,
@@ -453,6 +633,30 @@
       card.append(el('div', { class: 'row-actions' }, el('button', { onclick: () => archiveNote(n.id, false) }, 'Restore to notes')));
     }
     if (card.querySelector('.row-actions')) card.classList.add('has-actions');
+    onLongPress(card, () => noteSheet(n, card));
+    return card;
+  }
+
+  const hashIdx = (id, m) => { let h = 0; String(id).split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return h % m; };
+  function homeDate(ts) {
+    const d = new Date(ts), now = new Date(), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((day(now) - day(d)) / 86400000);
+    if (diff <= 0) return 'Today'; if (diff === 1) return 'Yesterday';
+    return d.toLocaleDateString([], d.getFullYear() === now.getFullYear() ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  // phone Home: one row per note — tinted icon, title, one line of preview, date and a ⋮ menu
+  function homeRow(n) {
+    const lines = previewLines(n.html, 5).lines.map(l => l.t);
+    const title = n.title.trim() || lines.shift() || 'Untitled';
+    const k = hashIdx(n.id, ROW_ICONS.length), tn = okTint(n.tint) || ROW_TINTS[k];
+    const more = el('button', { class: 'n-more', type: 'button', 'aria-label': 'Note options', title: 'Options', onclick: e => { e.stopPropagation(); noteSheet(n, more); } }, icon(svgIco('more', 20)));
+    const card = el('article', { class: 'note hrow c-' + tn, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
+      onclick: () => openEditor(n.id),
+      onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
+      el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[k], 26, 1.7))),
+      el('div', { class: 'n-main' }, el('div', { class: 'n-title', text: title }), el('div', { class: 'n-sub', text: lines.join('  •  ') })),
+      el('span', { class: 'n-side' }, el('span', { class: 'n-date', text: (n.pinned ? '📌 ' : '') + homeDate(n.updated) })),
+      more);
     onLongPress(card, () => noteSheet(n, card));
     return card;
   }
@@ -568,10 +772,12 @@
   }
   function startEditing() {
     if (!state.openId || !state.viewing) return;
-    const sc = $('#edScroll'), top = sc.scrollTop;          // keep the reading position: no scrolling again after tapping edit
+    const sc = $('#edScroll'); let top = sc.scrollTop;      // keep the reading position: no scrolling again after tapping edit
+    const atEnd = NotesEditor.endInView(), wasBottom = top >= sc.scrollHeight - sc.clientHeight - 2;   // measured before the format bar changes the layout
     state.viewing = false; applyMode();
+    if (atEnd && wasBottom) top = Math.max(0, sc.scrollHeight - sc.clientHeight);   // the toolbar took space: stay at the end so the caret is visible
     if (!state.editPushed) { history.pushState({ kind: 'editor', edit: true }, ''); state.editPushed = true; }
-    NotesEditor.el().focus({ preventScroll: true }); NotesEditor.placeCaretForEdit();
+    NotesEditor.el().focus({ preventScroll: true }); NotesEditor.placeCaretForEdit(atEnd);
     let stop = false; const halt = () => { stop = true; };
     ['touchstart', 'wheel', 'pointerdown', 'keydown'].forEach(ev => sc.addEventListener(ev, halt, { once: true, passive: true }));
     const keep = () => { if (!stop && Math.abs(sc.scrollTop - top) > 1) sc.scrollTop = top; };
@@ -675,6 +881,8 @@
       let target = v || null;
       if (v === '__new__') { const f = await createFolder(null); if (!f) return; target = f.id; }
       n.folderId = target; state.dirty = true; await saveOpen(); toast('Moved');
+    } else if (act === 'icon') {
+      state.dirty = true; await saveOpen(); await noteIconDialog(n.id);
     } else if (act === 'pin') {
       n.pinned = !n.pinned; state.dirty = true; await saveOpen(); paintEditorMeta(n);
     }
@@ -793,15 +1001,34 @@
   function closeSidebar() { $('#sidebar').classList.remove('open'); $('#scrim').classList.remove('show'); }
   function requestCloseSidebar() { if (history.state && history.state.kind === 'sidebar') history.back(); else closeSidebar(); }
   function requestCloseEditor() { if (history.state && history.state.kind === 'editor') history.back(); else closeEditor(); }
-  window.addEventListener('popstate', e => {
-    const s = e.state;
+  function applyBack(s) {
     if (sheetIsOpen() && !(s && s.kind === 'sheet')) { hideSheet(); const f = sheetPending; sheetPending = null; if (f) f(); return; }
     if (state.openId && state.editPushed && !(s && s.edit)) { stopEditing(); return; }   // Back while editing -> viewing mode
     if (state.openId) { closeEditor(); return; }
     if (sidebarIsOpen() && !(s && s.kind === 'sidebar')) { closeSidebar(); return; }
     if (s && s.kind === 'view') { state.view = s.view; state.folderId = s.folderId; state.tag = s.tag; closeSidebar(); render(); }
     else if (s && (s.kind === 'editor' || s.kind === 'sheet')) history.replaceState(viewState(), '');   // forward into a closed editor / sheet
-  });
+  }
+  window.addEventListener('popstate', e => applyBack(e.state));
+
+  /* Android app (Capacitor wrapper): the hardware Back button does what the browser Back button does.
+     At the plain home screen it leaves the app; anywhere else it goes back one step. If the WebView
+     has no history entry to go back to, the same step is applied directly. */
+  function atHomeRoot() {
+    return !sheetIsOpen() && !state.openId && !sidebarIsOpen() && state.view === 'all' && !state.folderId && !state.tag && !state.query && !$('#headFixed').classList.contains('searching');
+  }
+  function androidBack(capApp) {
+    if (atHomeRoot()) { capApp.exitApp(); return; }
+    if ($('#headFixed').classList.contains('searching') && !state.openId && !sheetIsOpen() && !sidebarIsOpen()) { closeSearch(); return; }
+    let popped = false; const mark = () => { popped = true; };
+    window.addEventListener('popstate', mark, { once: true });
+    history.back();
+    setTimeout(() => { window.removeEventListener('popstate', mark); if (!popped) applyBack({ kind: 'view', view: 'all', folderId: null, tag: null }); }, 220);
+  }
+  try {
+    const cap = window.Capacitor, capApp = cap && cap.Plugins && cap.Plugins.App;
+    if (capApp && capApp.addListener) capApp.addListener('backButton', () => androidBack(capApp));
+  } catch (_) {}
 
   /* phones: the header shows a search icon; tapping it opens the field, the ✕ clears and closes it */
   function openSearch() {
@@ -817,21 +1044,36 @@
   const focusSearch = () => { if (isMobile()) openSearch(); else $('#search').focus(); };
 
   function wire() {
-    $$('.nav-item').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
+    $$('.nav-item').forEach(b => b.addEventListener('click', () => { if (b.dataset.act === 'search') { closeSidebar(); focusSearch(); } else go(b.dataset.view); }));
+    $('#themeToggle').onclick = () => { setPref('mode', state.prefs.mode === 'dark' ? 'light' : 'dark'); paintTheme(); if (state.view === 'settings') renderSettings(); };
+    $('#avatarBtn').onclick = editHero; $('#profileBtn').onclick = editHero;
     $('#openSidebar').onclick = () => { if (state.view === 'settings') { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); } else openSidebar(); }; $('#scrim').onclick = requestCloseSidebar;
     $('#addFolderBtn').onclick = () => createFolder(null);
     $('#newNote').onclick = createAndOpen;
     $('#emptyTrash').onclick = emptyTrash;
     $('#sheetScrim').onclick = () => requestCloseSheet();
     window.addEventListener('resize', () => { if (sheetIsOpen()) placeSheet(sheetAnchor); });
-    $('#showAllFolders').onclick = () => go('folders');
-    $('#heroEdit').onclick = editHero;
-    onLongPress($('#hero'), () => openSheet('Your space', [
+    $('#showAllFolders').onclick = () => { if (isMobile()) go('folders'); else { state.homeFoldersOpen = !state.homeFoldersOpen; $('#folderStrip').classList.toggle('open', state.homeFoldersOpen); updateFolderMore(); } };
+    let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(updateFolderMore, 120); });
+    $('#sideShowAllFolders').onclick = () => { if (isMobile()) { closeSidebar(); go('folders'); } else { state.sideFoldersOpen = !state.sideFoldersOpen; renderSidebar(); } };
+    $('#sideShowAllTags').onclick = () => { state.sideTagsOpen = !state.sideTagsOpen; renderSidebar(); };
+    $('#heroNew').onclick = createAndOpen;
+    $('#viewAll').onclick = () => go('notes');
+    $$('#bottomNav .bn-item').forEach(b => b.addEventListener('click', () => {
+      const t = b.dataset.tab;
+      if (t === 'home') { state.query = ''; $('#search').value = ''; go('all', { folderId: null, tag: null }); }
+      else go(t === 'notes' ? 'notes' : t === 'categories' ? 'folders' : 'settings');
+    }));
+    // the soft keyboard: hide the bottom bar while a field is focused
+    document.addEventListener('focusin', e => { if (e.target.matches && e.target.matches('input,textarea,select')) document.body.classList.add('typing'); });
+    document.addEventListener('focusout', () => document.body.classList.remove('typing'));
+    onLongPress($('#hero'), () => openSheet('Greeting', [
       { icon: 'edit', label: 'Edit', fn: editHero },
       { icon: 'restore', label: 'Reset to default', fn: resetHero }
     ], $('#hero')));
-    $('#foldersBack').onclick = () => { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); };
     $('#foldersNew').onclick = () => createFolder(null);
+    $('#catGrid').onclick = () => { setPref('view', 'grid'); renderFoldersPage(); };
+    $('#catList').onclick = () => { setPref('view', 'list'); renderFoldersPage(); };
     $('#fvGrid').onclick = () => { setPref('folderView', 'grid'); renderNotes(); };
     $('#fvList').onclick = () => { setPref('folderView', 'list'); renderNotes(); };
     $('#searchBtn').onclick = () => { if ($('#headFixed').classList.contains('searching')) closeSearch(); else openSearch(); };
@@ -934,8 +1176,9 @@
     if (!ok) await dialog({ title: 'Storage unavailable', message: 'Your browser is blocking local storage, so notes will only last until this tab closes. Use Settings → Export backup to keep your work.', ok: 'Got it', hideCancel: true });
     NotesDB.requestPersist();
     render();
+    if (!state.prefs.welcomed && !navigator.webdriver) welcome();
   }
   boot();
-  window.__mochiNote = { state, go, render };
+  window.__mochiNote = { state, go, render, welcome };
   window.__littleNotes = window.__mochiNote; // backwards compat
 })();
