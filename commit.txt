@@ -8,6 +8,20 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.9.0 → 39.10.0 — Reminders and a Today section on Home
+
+Added
+- Reminder (date and time) on any note: note ⋮ menu in the editor and on lists ("Reminder…", "Change reminder…", "Clear reminder"). Due chips on rows and cards (Today, Overdue, Tomorrow, date); the editor info line shows the reminder.
+- Reminders page (menu → Reminders, with count) sorted by date.
+- Phone Home: "N due today · N overdue" bar (replaces the footer banner while something is due). Desktop Home: "Due today" count in the Today card.
+- A message once a day on opening the app when reminders are due. Reminders are kept in backups and import.
+
+Changed
+- Settings → About shows 39.10.0.
+
+Impact
+- Reminders are shown inside the app only; the web app cannot notify while closed (the Android build could do that later with a notifications plugin).
+
 feat: 39.8.0 → 39.9.0 — Tag chips, tags on Categories, search highlight and filters
 
 Added

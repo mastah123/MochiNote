@@ -491,3 +491,16 @@ mark.hit { background: var(--yellow-bg); color: inherit; border-radius: 4px; pad
 @media (min-width: 900px) { .tag-row { margin: 0 0 8px; padding: 2px 0 4px; flex-wrap: wrap; overflow: visible; } }
 .main[data-home="1"] .tag-row { margin-bottom: 6px; }
 @media (max-width: 899px) { .main[data-home="1"] .tag-row { order: 1; margin-top: 10px; } }
+
+/* v39.10.0 — reminders */
+.due-chip { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; padding: 2px 9px; border-radius: 999px; font-size: .72rem; font-weight: 500; background: var(--blue-bg); color: var(--blue-ink); white-space: nowrap; }
+.due-chip.today { background: var(--yellow-bg); color: var(--yellow-ink); }
+.due-chip.overdue { background: var(--pink-bg); color: var(--pink-ink); }
+.today-bar { display: none; }
+@media (max-width: 899px) {
+  .today-bar:not([hidden]) { order: 2; display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--yellow-bd); border-radius: 16px; background: var(--yellow-bg); color: var(--yellow-ink); font-size: .88rem; font-weight: 500; text-align: left; }
+  .today-bar .tb-text { flex: 1; min-width: 0; }
+  .main[data-today="1"] .home-footer { display: none; }
+}
+.hw-stats .hw-due { border: 0; background: none; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; display: block; }
+.hw-stats .hw-due b { display: block; }

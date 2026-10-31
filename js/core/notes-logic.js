@@ -223,6 +223,7 @@
         created, updated: ts(n.updated, created)
       };
       if (okIcon(n.icon)) nn.icon = n.icon; if (TINTS.includes(n.tint)) nn.tint = n.tint;
+      if (typeof n.due === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(n.due) && !isNaN(new Date(n.due).getTime())) nn.due = n.due;
       notes.push(nn);
     });
     return { notes, folders, skippedNotes, skippedFolders, settings: data.settings && typeof data.settings === 'object' ? data.settings : null };

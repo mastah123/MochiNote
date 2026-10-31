@@ -10,6 +10,11 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.10.0 — Reminders
+- Add a reminder (date and time) from a note's ⋮ menu, in the editor or from a list. Notes show a chip: Today, Overdue, Tomorrow or the date.
+- New **Reminders** page in the menu (sorted by date, with a count). Phone Home shows a "N due today · N overdue" bar when something is due; desktop Home shows "Due today" in the Today card.
+- A short message on opening the app once a day when reminders are due. Reminders are in-app only: the app cannot ring while it is closed. Backups keep reminders.
+
 ### v39.9.0 — Tag chips and better search
 - Tag chips under the header on All notes and on tag/category lists (tap to filter, tap again to clear); a Tags section on the Categories page.
 - Search: the words you typed are highlighted in titles and previews, the label shows "N results", and Pinned / Checklists / Images chips narrow the results.

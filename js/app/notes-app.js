@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.9.0';
+  const APP_VERSION = '39.10.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: '', welcomed: false, tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -68,7 +68,7 @@
     const fmt = ts => new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
     const w = countWords();
     const st = curStatus;
-    m.textContent = [w + (w === 1 ? ' word' : ' words'), 'Created ' + fmt(n.created || n.updated), st].filter(Boolean).join(' · ');
+    m.textContent = [w + (w === 1 ? ' word' : ' words'), 'Created ' + fmt(n.created || n.updated), n.due ? 'Reminder ' + fmt(dueTs(n)) : '', st].filter(Boolean).join(' · ');
   }
   function setStatus(msg) {
     curStatus = msg;
@@ -91,6 +91,7 @@
       $('#dlgMsg').hidden = !o.message;
       inp.hidden = o.kind !== 'prompt' && o.kind !== 'form'; inp2.hidden = o.kind !== 'form'; sel.hidden = o.kind !== 'select';
       if (o.kind === 'form') { const [f1, f2] = o.fields; inp.value = f1.value || ''; inp.placeholder = f1.placeholder || ''; inp.setAttribute('aria-label', f1.label || ''); inp.maxLength = f1.max || 200; inp2.value = f2.value || ''; inp2.placeholder = f2.placeholder || ''; inp2.setAttribute('aria-label', f2.label || ''); inp2.maxLength = f2.max || 200; } else { inp.maxLength = 524288; }
+      inp.type = o.inputType || 'text';
       if (o.kind !== 'form') { inp.value = o.value || ''; inp.placeholder = o.placeholder || ''; inp.removeAttribute('aria-label'); }
       sel.textContent = '';
       (o.options || []).forEach(([v, label]) => sel.append(el('option', { value: v, text: label })));
@@ -124,7 +125,7 @@
   }
 
   /* ---------- navigation + rendering ---------- */
-  const VIEW_TITLES = { all: 'Home', notes: 'All notes', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Categories' };
+  const VIEW_TITLES = { all: 'Home', notes: 'All notes', due: 'Reminders', pinned: 'Pinned', archive: 'Archive', trash: 'Trash', settings: 'Settings', folders: 'Categories' };
 
   function go(view, opts) {
     if (state.openId) closeEditor();
@@ -160,7 +161,7 @@
   /* phone bottom bar: Home, Notes, Categories, Settings */
   function paintBottomNav(homeMode) {
     const v = state.view;
-    const tab = v === 'settings' ? 'settings' : (v === 'folders' || (v === 'all' && state.folderId)) ? 'categories' : homeMode ? 'home' : 'notes';
+    const tab = v === 'settings' ? 'settings' : (v === 'folders' || (v === 'all' && state.folderId)) ? 'categories' : homeMode ? 'home' : 'notes'; // Reminders sits under the Notes tab
     $$('#bottomNav .bn-item').forEach(b => {
       const ico = $('.bn-ico', b); if (!ico.firstChild) ico.innerHTML = svgIco(ico.dataset.ico, 24, 1.8);
       const on = b.dataset.tab === tab; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
@@ -184,7 +185,7 @@
       const v = b.dataset.view;
       b.classList.toggle('active', v === state.view && !(v === 'all' && (state.folderId || state.tag)));
       if (v && v !== 'settings') {
-        const c = L.filterNotes(state.notes, state.folders, { view: v === 'notes' ? 'all' : v }).length;
+        const c = v === 'due' ? dueCounts().all : L.filterNotes(state.notes, state.folders, { view: v === 'notes' ? 'all' : v }).length;
         const cn = $('[data-count]', b); if (cn) cn.textContent = c ? c : '';
       }
     });
@@ -230,12 +231,43 @@
     const esc = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
     return text.split(new RegExp('(' + esc + ')', 'ig')).map((part, i) => i % 2 ? el('mark', { class: 'hit', text: part }) : part).filter(p => p !== '');
   }
+  /* ---------- reminders: a date and time on a note (shown on Home and under Reminders) ---------- */
+  const dueTs = n => new Date(n.due).getTime();
+  const pad2 = x => String(x).padStart(2, '0');
+  const localIso = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  const dayStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  function dueInfo(n) { // { kind: 'overdue' | 'today' | 'later', label }
+    const d = new Date(dueTs(n)), now = new Date(), diff = Math.round((dayStart(d) - dayStart(now)) / 86400000);
+    const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (d.getTime() < now.getTime()) return { kind: 'overdue', label: 'Overdue · ' + (diff === 0 ? time : d.toLocaleDateString([], { month: 'short', day: 'numeric' })) };
+    if (diff === 0) return { kind: 'today', label: 'Today ' + time };
+    if (diff === 1) return { kind: 'later', label: 'Tomorrow ' + time };
+    return { kind: 'later', label: d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + time };
+  }
+  const dueChip = n => { if (!n.due || n.trashed) return null; const i = dueInfo(n); return el('span', { class: 'due-chip ' + i.kind }, icon(svgIco('bell', 13, 1.9)), i.label); };
+  function dueCounts() {
+    const live = state.notes.filter(n => n.due && !n.trashed && !n.archived), end = dayStart(new Date()) + 86400000, now = Date.now();
+    return { overdue: live.filter(n => dueTs(n) < now).length, today: live.filter(n => dueTs(n) >= now && dueTs(n) < end).length, all: live.length };
+  }
+  async function setReminder(id) {
+    const n = noteById(id); if (!n) return;
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
+    const v = await dialog({ kind: 'prompt', inputType: 'datetime-local', title: 'Reminder', message: 'Pick a date and time. It shows on Home and under Reminders (the app cannot ring while it is closed).', value: n.due || localIso(d), ok: 'Set reminder' });
+    if (!v || isNaN(new Date(v).getTime())) return;
+    await patchNote(n, { due: v.slice(0, 16) }, false); toast('Reminder set'); render(); if (state.openId === id) paintEditorMeta(n);
+  }
+  async function clearReminder(id) {
+    const n = noteById(id); if (!n || !n.due) return;
+    await patchNote(n, { due: null }, false); toast('Reminder cleared'); render(); if (state.openId === id) paintEditorMeta(n);
+  }
   function tagChip(t, c) {
     return el('button', { class: 'tag' + (state.tag === t ? ' active' : ''), type: 'button', 'aria-pressed': String(state.tag === t),
       onclick: () => go(state.view === 'notes' ? 'notes' : state.view === 'folders' ? 'all' : 'all', { tag: state.tag === t ? null : t, folderId: state.view === 'folders' ? null : state.folderId }) }, '#' + t + ' ' + c);
   }
   function currentList() {
-    const list = L.filterNotes(state.notes, state.folders, { view: state.view === 'notes' ? 'all' : state.view, folderId: state.folderId, tag: state.tag, query: state.query }).filter(passQF);
+    const isDue = state.view === 'due';
+    let list = L.filterNotes(state.notes, state.folders, { view: state.view === 'notes' || isDue ? 'all' : state.view, folderId: state.folderId, tag: state.tag, query: state.query }).filter(passQF);
+    if (isDue) return list.filter(n => n.due).sort((a, b) => dueTs(a) - dueTs(b));
     return L.sortNotes(list, state.prefs.sort, state.view !== 'trash');
   }
   // the phone Home shows the five most recently edited notes (all matches while searching)
@@ -262,6 +294,9 @@
     const homeAny = state.view === 'all' && !state.folderId && !state.tag, homeMode = isMobile() && homeAny;
     const deskAll = !isMobile() && state.view === 'notes' && !state.query;
     $('#hero').hidden = !plainHome; paintHero();
+    const dc = dueCounts(), tb = $('#todayBar'), dueNow = dc.overdue + dc.today;
+    tb.hidden = !(plainHome && dueNow); $('#main').dataset.today = (plainHome && dueNow) ? '1' : '';
+    if (!tb.hidden) { tb.textContent = ''; tb.append(icon(svgIco('bell', 22, 1.8)), el('span', { class: 'tb-text' }, [dc.today ? dc.today + ' due today' : '', dc.overdue ? dc.overdue + ' overdue' : ''].filter(Boolean).join(' · ')), icon(svgIco('arrow', 18, 1.8))); }
     $('#homeFooter').hidden = !(homeAny && plainHome); $('#viewAll').hidden = !(homeAny && plainHome); renderAside(homeAny);
     $('#notesLabel').textContent = homeAny ? (state.query ? 'Results' : 'Recent Notes') : deskAll ? 'All notes' : state.view === 'all' && !state.folderId
       ? (state.tag ? '#' + state.tag : state.query ? 'Results' : p.sort === 'edited' ? 'Recent notes' : 'Notes')
@@ -301,6 +336,7 @@
     if (!list.length) {
       const msgs = {
         all: state.query || state.tag || state.folderId ? ['Nothing matches', 'Try a different search or clear a filter.'] : ['No notes yet', homeAny ? 'Tap “New Note” to write your first one.' : 'Tap “New note” to write your first one.'],
+        due: ['No reminders', 'Open a note’s ⋮ menu and choose Reminder to add one.'],
         pinned: ['No pinned notes', 'Pin a note to keep it handy.'], archive: ['Archive is empty', 'Archived notes live here.'], trash: ['Trash is empty', 'Deleted notes wait here until you remove them.']
       };
       const m = msgs[state.view] || msgs.all; empty.textContent = ''; empty.append(el('b', { text: m[0] }), m[1]);
@@ -356,7 +392,7 @@
     const added = live.filter(n => (n.created || 0) >= d0.getTime()).length;
     const today = $('#hwToday'); today.textContent = '';
     today.append(el('div', { class: 'hw-row' }, el('h3', { text: 'Today' }), el('span', { class: 'hw-date', text: new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) })),
-      el('div', { class: 'hw-stats' }, el('div', {}, el('b', { text: String(added) }), el('span', { text: 'Notes added' })), el('div', {}, el('b', { text: String(live.length) }), el('span', { text: 'Total notes' }))),
+      el('div', { class: 'hw-stats' }, el('div', {}, el('b', { text: String(added) }), el('span', { text: 'Notes added' })), el('div', {}, el('b', { text: String(live.length) }), el('span', { text: 'Total notes' })), el('button', { class: 'hw-due', type: 'button', onclick: () => go('due') }, el('b', { text: String(dueCounts().today + dueCounts().overdue) }), el('span', { text: 'Due today' }))),
       el('div', { class: 'hw-mascot', 'aria-hidden': 'true' }, el('img', { src: 'assets/mascot.svg', alt: '', width: 64, height: 64 }), el('span', { class: 'hw-heart', text: '♥' })));
     const ti = Math.floor(Date.now() / 86400000) % TIPS.length, tip = $('#hwTip'); tip.textContent = '';
     tip.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('bulb', 24, 1.7))), el('h3', { text: 'Quick Tip' })), el('p', { text: TIPS[ti] }),
@@ -596,6 +632,8 @@
       items.push({ icon: 'close', label: 'Delete forever', danger: true, fn: () => deleteForever(n.id) });
     } else {
       if (!n.archived) items.push({ icon: 'pin', label: n.pinned ? 'Unpin' : 'Pin', fn: () => togglePin(n.id) });
+      items.push({ icon: 'bell', label: n.due ? 'Change reminder…' : 'Reminder…', fn: () => setReminder(n.id) });
+      if (n.due) items.push({ icon: 'close', label: 'Clear reminder', fn: () => clearReminder(n.id) });
       items.push({ icon: 'tag', label: 'Icon & colour…', fn: () => noteIconDialog(n.id) });
       items.push({ icon: 'folder', label: 'Move to folder…', fn: () => moveNoteDialog(n.id) });
       items.push({ icon: 'archive', label: n.archived ? 'Unarchive' : 'Archive', fn: () => archiveNote(n.id, !n.archived) });
@@ -649,6 +687,7 @@
       el('div', { class: 'n-title' }, (okIco(n.icon) || okTint(n.tint)) ? el('span', { class: 'n-badge c-' + (okTint(n.tint) || 'pink') }, icon(svgIco(okIco(n.icon) || 'doc', 15, 1.8))) : null, hl(n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled'))),
       pv ? el('div', { class: 'n-prev' }, hl(n.title.trim() ? pv : '')) : null,
       rich,
+      dueChip(n),
       (n.tags || []).length ? el('div', { class: 'n-tags' }, n.tags.slice(0, 5).map(t => el('span', { class: 'tag', text: '#' + t }))) : null,
       el('div', { class: 'n-meta' + (n.folderId && folderById(n.folderId) ? ' has-folder' : '') }, (n.folderId && folderById(n.folderId) ? [icon(svgIco('folder', 14)), el('span', { class: 'n-fname', text: folderById(n.folderId).name }), el('span', { class: 'n-date', text: ' · ' + L.formatDate(n.updated) })] : [el('span', { class: 'n-date', text: L.formatDate(n.updated) })])));
     if (n.trashed) {
@@ -680,7 +719,7 @@
       onclick: () => openEditor(n.id),
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
       el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[k], 26, 1.7))),
-      el('div', { class: 'n-main' }, el('div', { class: 'n-title' }, hl(title)), el('div', { class: 'n-sub' }, hl(lines.join('  •  ')))),
+      el('div', { class: 'n-main' }, el('div', { class: 'n-title' }, hl(title)), el('div', { class: 'n-sub' }, hl(lines.join('  •  '))), dueChip(n)),
       el('span', { class: 'n-side' }, el('span', { class: 'n-date', text: (n.pinned ? '📌 ' : '') + homeDate(n.updated) })),
       more);
     onLongPress(card, () => noteSheet(n, card));
@@ -815,6 +854,7 @@
   }
   function paintEditorMeta(n) {
     $('#edPinLabel').textContent = n.pinned ? 'Unpin' : 'Pin';
+    $('#edDueLabel').textContent = n.due ? 'Change reminder…' : 'Reminder…'; $('#edDueClear').hidden = !n.due;
     // Desktop pin button
     const pinBtn = $('#edPin'); if (pinBtn) pinBtn.textContent = n.pinned ? 'Unpin' : 'Pin';
     $('#editor').classList.toggle('nc', n.color !== 'default');
@@ -907,6 +947,10 @@
       let target = v || null;
       if (v === '__new__') { const f = await createFolder(null); if (!f) return; target = f.id; }
       n.folderId = target; state.dirty = true; await saveOpen(); toast('Moved');
+    } else if (act === 'due') {
+      state.dirty = true; await saveOpen(); await setReminder(n.id);
+    } else if (act === 'dueclear') {
+      state.dirty = true; await saveOpen(); await clearReminder(n.id);
     } else if (act === 'icon') {
       state.dirty = true; await saveOpen(); await noteIconDialog(n.id);
     } else if (act === 'pin') {
@@ -1084,6 +1128,7 @@
     $('#sideShowAllFolders').onclick = () => { if (isMobile()) { closeSidebar(); go('folders'); } else { state.sideFoldersOpen = !state.sideFoldersOpen; renderSidebar(); } };
     $('#sideShowAllTags').onclick = () => { state.sideTagsOpen = !state.sideTagsOpen; renderSidebar(); };
     $('#heroNew').onclick = createAndOpen;
+    $('#todayBar').onclick = () => go('due');
     $('#viewAll').onclick = () => go('notes');
     $$('#bottomNav .bn-item').forEach(b => b.addEventListener('click', () => {
       const t = b.dataset.tab;
@@ -1203,6 +1248,8 @@
     NotesDB.requestPersist();
     render();
     if (!state.prefs.welcomed && !navigator.webdriver) welcome();
+    const dn = dueCounts(), dkey = localIso(new Date()).slice(0, 10);
+    if (dn.today + dn.overdue && state.prefs.dueSeen !== dkey) { setPref('dueSeen', dkey); toast((dn.today + dn.overdue) + (dn.today + dn.overdue === 1 ? ' reminder needs' : ' reminders need') + ' your attention today', 5000); }
   }
   boot();
   window.__mochiNote = { state, go, render, welcome };
