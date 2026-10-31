@@ -8,6 +8,22 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+feat: 39.11.1 → 39.12.0 — Templates, note emoji and cover strip, day streak, coloured share image
+
+Added
+- "Templates" in the menu (To-do list, Journal, Meeting notes, Weekly plan, Shopping list, Idea): creates a note with a ready layout, icon and colour.
+- Emoji field in Note → Icon & colour; the emoji replaces the icon in rows, cards and the share image. Backups keep it.
+- Cover strip: grid cards of notes with a chosen colour show a coloured strip on top.
+- Day streak and notes this week: phone Home banner text and a "Day streak" stat on the desktop Today card.
+
+Changed
+- Before → the shared image/PDF was plain white; after → it uses the note's card colour, icon or emoji and cover strip, and the current theme (light or dark).
+- Desktop Today card shows four stats (notes added, total, due today, day streak) and the mascot moved next to the title.
+- Settings → About shows 39.12.0.
+
+Impact
+- Templates are also available on the phone through the menu.
+
 fix: 39.11.0 → 39.11.1 — Tag chips row no longer stretches the page
 
 Fixed

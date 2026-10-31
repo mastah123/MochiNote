@@ -511,3 +511,17 @@ mark.hit { background: var(--yellow-bg); color: inherit; border-radius: 4px; pad
 .main, #notesView, .nv-main { min-width: 0; max-width: 100%; }
 .tag-row { min-width: 0; max-width: 100%; box-sizing: border-box; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 @media (max-width: 899px) { .tag-row { width: calc(100% + 32px); max-width: none; } }
+
+/* v39.12.0 — emoji, cover strip, templates, streak */
+.n-emoji { font-size: 1.35em; line-height: 1; display: inline-block; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.notes:not(.home-list) .note .n-ico .n-emoji { font-size: 1.1rem; }
+.pk-emoji { width: 100%; height: 44px; margin: 0 0 16px; padding: 0 14px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font-size: 1rem; }
+.pk-emoji:focus { outline: 0; border-color: var(--accent); }
+.notes.grid .note[class*="strip-"]::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px; border-radius: var(--radius) var(--radius) 0 0; background: var(--strip); }
+.strip-pink { --strip: var(--pink-fg); } .strip-blue { --strip: var(--blue-fg); } .strip-lilac { --strip: var(--lilac-fg); } .strip-green { --strip: var(--green-fg); } .strip-yellow { --strip: var(--yellow-fg); }
+@media (min-width: 900px) {
+  .hw-stats { grid-template-columns: 1fr 1fr; gap: 12px 10px; }
+  .hw-mascot { right: auto; left: 92px; bottom: auto; top: 12px; }
+  .hw-mascot img { width: 40px; height: 40px; border-radius: 14px; }
+  .hw-heart { top: -8px; right: -6px; font-size: .75rem; }
+}

@@ -10,6 +10,12 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.12.0 — Templates, emoji and cover strip, streak
+- **Templates** in the menu: To-do list, Journal, Meeting notes, Weekly plan, Shopping list, Idea. Each starts a note with a ready layout, icon and colour.
+- **Emoji** option in a note's Icon & colour (shows instead of the icon in lists and cards). Notes with a chosen colour get a **cover strip** along the top of grid cards.
+- **Streak:** Home banner (phone) and the Today card (desktop) show your day streak and notes this week.
+- **Share image / PDF** now look like the note's card: its colour, icon or emoji and the cover strip, in the current light or dark theme.
+
 ### v39.11.1 — Tag row fix
 - The tag chips row scrolls sideways inside its own box. Before, a long row made the whole page wider than the screen (cards were cut off on the right).
 

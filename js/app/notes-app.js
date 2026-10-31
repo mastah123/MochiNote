@@ -4,7 +4,7 @@
   const L = NotesLogic;
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-  const APP_VERSION = '39.11.1';
+  const APP_VERSION = '39.12.0';
   const PREFS_KEY = 'mochinote:prefs';
   const DEFAULT_PREFS = { theme: 'mochi', mode: 'light', view: 'grid', sort: 'edited', userName: '', welcomed: false, tagline: 'Small notes. Big ideas. Keep going!', folderView: 'grid', fontFamily: '', fontSize: 16, autosave: true, autocap: true, openView: true, motion: 'on', lastBackup: 0, backupNudge: true, backupSnooze: 0, trashDays: 30 };
   const DEFAULT_TAGLINE = DEFAULT_PREFS.tagline;
@@ -179,6 +179,15 @@
     $('#heroSub').textContent = (state.prefs.tagline || '').trim() || DEFAULT_TAGLINE;
   }
 
+  /* streak: days in a row (ending today, or yesterday if today is still empty) with a note written or edited */
+  function streakInfo() {
+    const key = ts => { const d = new Date(ts); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+    const days = new Set(); state.notes.filter(n => !n.trashed).forEach(n => { days.add(key(n.created || n.updated)); days.add(key(n.updated || n.created)); });
+    const d = new Date(); if (!days.has(key(d))) d.setDate(d.getDate() - 1);
+    let streak = 0; while (days.has(key(d))) { streak++; d.setDate(d.getDate() - 1); }
+    const week = state.notes.filter(n => !n.trashed && (n.updated || 0) >= Date.now() - 7 * 86400000).length;
+    return { streak, week };
+  }
   const SIDE_FOLDER_ROWS = 4, SIDE_TAG_LIMIT = 8;
   function renderSidebar() {
     $$('.nav-item').forEach(b => {
@@ -254,7 +263,11 @@
     const f = await dialog({ kind: 'select', title: 'Share note', message: 'Choose a format. Your phone’s share sheet opens when it can; otherwise the file is downloaded.', options: [['png', 'Image (.png)'], ['pdf', 'PDF (.pdf)'], ['md', 'Markdown (.md)'], ['txt', 'Plain text']], value: 'png', ok: 'Share' });
     if (!f) return;
     toast('Preparing…', 8000);
-    try { const r = await NoteExport.share(n, f); toast(r === 'downloaded' ? 'Saved to your downloads' : r === 'shared' ? 'Shared' : 'Cancelled'); }
+    const cs = getComputedStyle(document.documentElement), v = k => cs.getPropertyValue(k).trim(), kk = hashIdx(n.id, ROW_ICONS.length), tn = okTint(n.tint) || ROW_TINTS[kk];
+    const look = { pageBg: v('--bg'), bg: n.color !== 'default' ? v(COLOR_VAR[n.color]) : v('--surface'), ink: v('--text'), muted: v('--muted'), line: v('--border'), accent: v('--accent'),
+      badge: { bg: v('--' + tn + '-bg'), fg: v('--' + tn + '-fg'), svg: okEmoji(n.emoji) ? '' : svgIco(okIco(n.icon) || ROW_ICONS[kk], 28, 1.7).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace('class="ico"', 'style="display:block"'), emoji: okEmoji(n.emoji) || '' },
+      strip: okTint(n.tint) ? v('--' + n.tint + '-fg') : '' };
+    try { const r = await NoteExport.share(n, f, look); toast(r === 'downloaded' ? 'Saved to your downloads' : r === 'shared' ? 'Shared' : 'Cancelled'); }
     catch (e) { toast('Could not share: ' + e.message, 5000); }
   }
   async function setReminder(id) {
@@ -305,6 +318,8 @@
     const dc = dueCounts(), tb = $('#todayBar'), dueNow = dc.overdue + dc.today;
     tb.hidden = !(plainHome && dueNow); $('#main').dataset.today = (plainHome && dueNow) ? '1' : '';
     if (!tb.hidden) { tb.textContent = ''; tb.append(icon(svgIco('bell', 22, 1.8)), el('span', { class: 'tb-text' }, [dc.today ? dc.today + ' due today' : '', dc.overdue ? dc.overdue + ' overdue' : ''].filter(Boolean).join(' · ')), icon(svgIco('arrow', 18, 1.8))); }
+    const sk = streakInfo(), hft = $('.hf-text');
+    if (sk.streak >= 2) hft.textContent = sk.streak + '-day streak · ' + sk.week + (sk.week === 1 ? ' note' : ' notes') + ' this week'; else { hft.textContent = ''; hft.append('A little progress each day', el('br'), 'leads to big results.'); }
     $('#homeFooter').hidden = !(homeAny && plainHome); $('#viewAll').hidden = !(homeAny && plainHome); renderAside(homeAny);
     $('#notesLabel').textContent = homeAny ? (state.query ? 'Results' : 'Recent Notes') : deskAll ? 'All notes' : state.view === 'all' && !state.folderId
       ? (state.tag ? '#' + state.tag : state.query ? 'Results' : p.sort === 'edited' ? 'Recent notes' : 'Notes')
@@ -379,6 +394,27 @@
       mk('a3', 'actCapture', 'capture', 'Quick Capture', quickCapture)
     ];
   }
+  /* templates: a ready-made note (title, text, icon and colour) */
+  const li = (...x) => '<ul>' + x.map(t => '<li>' + t + '</li>').join('') + '</ul>';
+  const chk = (...x) => '<ul class="checklist">' + x.map(t => '<li>' + t + '</li>').join('') + '</ul>';
+  const TEMPLATES = [
+    { id: 'todo', name: 'To-do list', title: 'To-do', icon: 'check', tint: 'green', html: () => chk('First task', 'Second task', 'Third task') },
+    { id: 'journal', name: 'Journal', title: () => 'Journal · ' + new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }), icon: 'book', tint: 'lilac', html: () => '<h2>How I feel</h2><div><br></div><h2>What happened today</h2><div><br></div><h2>Grateful for</h2><ol><li><br></li><li><br></li><li><br></li></ol>' },
+    { id: 'meeting', name: 'Meeting notes', title: 'Meeting notes', icon: 'briefcase', tint: 'blue', html: () => '<h2>Who</h2><div><br></div><h2>Agenda</h2>' + li('Topic one', 'Topic two') + '<h2>Notes</h2><div><br></div><h2>Action items</h2>' + chk('Task — owner') },
+    { id: 'week', name: 'Weekly plan', title: 'Week plan', icon: 'calendar', tint: 'yellow', html: () => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Weekend'].map(d => '<h3>' + d + '</h3><div><br></div>').join('') },
+    { id: 'shop', name: 'Shopping list', title: 'Shopping list', icon: 'cart', tint: 'pink', html: () => chk('Fruits and vegetables', 'Bread', 'Milk', 'Something nice') },
+    { id: 'idea', name: 'Idea', title: 'New idea', icon: 'bulb', tint: 'yellow', html: () => '<h2>The idea</h2><div><br></div><h2>Why it matters</h2><div><br></div><h2>Next steps</h2>' + chk('First step') }
+  ];
+  async function newFromTemplate() {
+    closeSidebar();
+    const id = await dialog({ kind: 'select', title: 'New from template', message: 'Starts a new note with a ready-made layout.', options: TEMPLATES.map(t => [t.id, t.name]), value: 'todo', ok: 'Create' });
+    const t = TEMPLATES.find(x => x.id === id); if (!t) return;
+    const html = t.html(), text = html.replace(/<\/(div|h[1-6]|li|p)>/g, '\n').replace(/<br\s*\/?>/g, '').replace(/<[^>]+>/g, '').replace(/\n{2,}/g, '\n').trim();
+    const n = newNote({ title: typeof t.title === 'function' ? t.title() : t.title, html, text, icon: t.icon, tint: t.tint, tags: [] });
+    if (state.view === 'all' && state.folderId) n.folderId = state.folderId;
+    state.notes.push(n); try { await persistNote(n); } catch (e) { toast('Could not create note: ' + e.message); return; }
+    openEditor(n.id, true);
+  }
   async function addTag() {
     const v = await dialog({ kind: 'prompt', title: 'Add a tag', message: 'Starts a new note with the tag, so it shows up in the menu.', placeholder: 'tag name', ok: 'Add' });
     const t = (v || '').trim().replace(/^#+/, '').replace(/[^\p{L}\p{N}_-]+/gu, '');
@@ -401,7 +437,7 @@
     const added = live.filter(n => (n.created || 0) >= d0.getTime()).length;
     const today = $('#hwToday'); today.textContent = '';
     today.append(el('div', { class: 'hw-row' }, el('h3', { text: 'Today' }), el('span', { class: 'hw-date', text: new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) })),
-      el('div', { class: 'hw-stats' }, el('div', {}, el('b', { text: String(added) }), el('span', { text: 'Notes added' })), el('div', {}, el('b', { text: String(live.length) }), el('span', { text: 'Total notes' })), el('button', { class: 'hw-due', type: 'button', onclick: () => go('due') }, el('b', { text: String(dueCounts().today + dueCounts().overdue) }), el('span', { text: 'Due today' }))),
+      el('div', { class: 'hw-stats' }, el('div', {}, el('b', { text: String(added) }), el('span', { text: 'Notes added' })), el('div', {}, el('b', { text: String(live.length) }), el('span', { text: 'Total notes' })), el('button', { class: 'hw-due', type: 'button', onclick: () => go('due') }, el('b', { text: String(dueCounts().today + dueCounts().overdue) }), el('span', { text: 'Due today' })), el('div', {}, el('b', { text: String(streakInfo().streak) }), el('span', { text: 'Day streak' }))),
       el('div', { class: 'hw-mascot', 'aria-hidden': 'true' }, el('img', { src: 'assets/mascot.svg', alt: '', width: 64, height: 64 }), el('span', { class: 'hw-heart', text: '♥' })));
     const ti = Math.floor(Date.now() / 86400000) % TIPS.length, tip = $('#hwTip'); tip.textContent = '';
     tip.append(el('div', { class: 'hw-row' }, el('span', { class: 'hw-ico' }, icon(svgIco('bulb', 24, 1.7))), el('h3', { text: 'Quick Tip' })), el('p', { text: TIPS[ti] }),
@@ -418,25 +454,29 @@
   const TILE_ICONS = ['doc', 'folder', 'tag', 'bulb'], ROW_ICONS = ['doc', 'folder', 'tag', 'file', 'bulb'];
   const TINTS = ['pink', 'blue', 'lilac', 'green', 'yellow'], TILE_TINTS = ['pink', 'blue', 'lilac', 'green'], ROW_TINTS = ['pink', 'blue', 'green', 'lilac', 'yellow'];
   const PICK_ICONS = ['doc', 'file', 'folder', 'tag', 'bulb', 'star', 'heart', 'bookmark', 'calendar', 'cart', 'briefcase', 'book', 'code', 'home', 'plane', 'music', 'check', 'pin'];
+  const okEmoji = e => (typeof e === 'string' && e.length <= 8 && /\p{Extended_Pictographic}/u.test(e)) ? e : null;
+  const glyph = (n, size, sw, def) => okEmoji(n.emoji) ? el('span', { class: 'n-emoji', 'aria-hidden': 'true', text: n.emoji }) : icon(svgIco(okIco(n.icon) || def, size, sw));
   const okTint = t => TINTS.includes(t) ? t : null, okIco = n => (n && IPATHS[n]) ? n : null;
   const folderIdx = f => Math.max(0, state.folders.filter(x => !x.parentId).sort((a, b) => (a.created || 0) - (b.created || 0)).findIndex(x => x.id === f.id));
   /* icon + colour picker: resolves {icon, tint} (null = default) or null when cancelled */
   function pickIcon(o) {
     return new Promise(resolve => {
       let curIcon = okIco(o.icon), curTint = okTint(o.tint), out = null;
+      let curEmoji = o.allowEmoji ? okEmoji(o.emoji) : null;
+      const emo = o.allowEmoji ? el('input', { class: 'pk-emoji', type: 'text', maxlength: 8, placeholder: 'Emoji (optional) 😀', 'aria-label': 'Emoji', value: curEmoji || '', oninput: e => { curEmoji = okEmoji(e.target.value.trim()); paint(); } }) : null;
       const d = el('dialog', { class: 'dlg pick' }), prev = el('span', { class: 'pk-prev' });
       const gi = PICK_ICONS.map(n => [el('button', { type: 'button', class: 'pk-i', 'aria-label': n, onclick: () => { curIcon = n; paint(); } }, icon(svgIco(n, 22, 1.7))), n]);
       const gc = TINTS.map(n => [el('button', { type: 'button', class: 'pk-c c-' + n, 'aria-label': n + ' colour', onclick: () => { curTint = n; paint(); } }), n]);
       const paint = () => {
-        prev.className = 'pk-prev c-' + (curTint || o.defTint); prev.textContent = ''; prev.append(icon(svgIco(curIcon || o.defIcon, 28, 1.7)));
+        prev.className = 'pk-prev c-' + (curTint || o.defTint); prev.textContent = ''; if (curEmoji) prev.append(el('span', { class: 'n-emoji', text: curEmoji })); else prev.append(icon(svgIco(curIcon || o.defIcon, 28, 1.7)));
         gi.forEach(([b, n]) => b.setAttribute('aria-pressed', String(n === curIcon))); gc.forEach(([b, n]) => b.setAttribute('aria-pressed', String(n === curTint)));
       };
       d.append(el('h2', { text: o.title }), el('div', { class: 'pk-top' }, prev, el('span', { class: 'pk-name', text: o.name || '' })),
-        el('div', { class: 'pk-grid' }, gi.map(x => x[0])), el('div', { class: 'pk-colors' }, gc.map(x => x[0])),
+        el('div', { class: 'pk-grid' }, gi.map(x => x[0])), el('div', { class: 'pk-colors' }, gc.map(x => x[0])), emo,
         el('div', { class: 'dlg-btns' },
-          el('button', { type: 'button', class: 'btn-ghost', onclick: () => { out = { icon: null, tint: null }; d.close(); } }, 'Default'),
+          el('button', { type: 'button', class: 'btn-ghost', onclick: () => { out = { icon: null, tint: null, emoji: null }; d.close(); } }, 'Default'),
           el('button', { type: 'button', class: 'btn-ghost', onclick: () => d.close() }, 'Cancel'),
-          el('button', { type: 'button', class: 'btn-primary', onclick: () => { out = { icon: curIcon, tint: curTint }; d.close(); } }, 'Save')));
+          el('button', { type: 'button', class: 'btn-primary', onclick: () => { out = { icon: curIcon, tint: curTint, emoji: curEmoji }; d.close(); } }, 'Save')));
       d.addEventListener('close', () => { d.remove(); resolve(out); });
       document.body.append(d); paint(); d.showModal();
     });
@@ -444,10 +484,10 @@
   async function noteIconDialog(id) {
     const n = noteById(id); if (!n) return;
     const k = hashIdx(n.id, ROW_ICONS.length);
-    const r = await pickIcon({ title: 'Note icon', name: n.title.trim() || 'Untitled', icon: n.icon, tint: n.tint, defIcon: ROW_ICONS[k], defTint: ROW_TINTS[k] });
+    const r = await pickIcon({ title: 'Note icon', allowEmoji: true, emoji: n.emoji, name: n.title.trim() || 'Untitled', icon: n.icon, tint: n.tint, defIcon: ROW_ICONS[k], defTint: ROW_TINTS[k] });
     if (!r) return;
-    await patchNote(n, { icon: r.icon || undefined, tint: r.tint || undefined }, false);
-    if (!r.icon) delete n.icon; if (!r.tint) delete n.tint; await persistNote(n);
+    await patchNote(n, { icon: r.icon || undefined, tint: r.tint || undefined, emoji: r.emoji || undefined }, false);
+    if (!r.icon) delete n.icon; if (!r.tint) delete n.tint; if (!r.emoji) delete n.emoji; await persistNote(n);
     toast('Saved'); render();
   }
   async function folderIconDialog(id) {
@@ -689,10 +729,10 @@
   function noteCard(n) {
     const pv = L.makePreview(n.text, 220);
     const rich = n.title.trim() ? richPreview(n, 4) : null;
-    const card = el('article', { class: 'note', style: n.color !== 'default' ? '--nc:var(' + COLOR_VAR[n.color] + ')' : false, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
+    const card = el('article', { class: 'note' + (okTint(n.tint) ? ' strip-' + n.tint : ''), style: n.color !== 'default' ? '--nc:var(' + COLOR_VAR[n.color] + ')' : false, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
       onclick: e => { if (!e.target.closest('.row-actions')) openEditor(n.id); },
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
-      el('span', { class: 'n-ico c-' + (okTint(n.tint) || ROW_TINTS[hashIdx(n.id, ROW_ICONS.length)]), 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[hashIdx(n.id, ROW_ICONS.length)], 20, 1.7))),
+      el('span', { class: 'n-ico c-' + (okTint(n.tint) || ROW_TINTS[hashIdx(n.id, ROW_ICONS.length)]), 'aria-hidden': 'true' }, glyph(n, 20, 1.7, ROW_ICONS[hashIdx(n.id, ROW_ICONS.length)])),
       n.pinned ? el('span', { class: 'pin-mark', title: 'Pinned' }, el('span', { class: 'pm-emoji', text: '📌' }), icon(ICONS.pin)) : null,
       el('div', { class: 'n-title' }, (okIco(n.icon) || okTint(n.tint)) ? el('span', { class: 'n-badge c-' + (okTint(n.tint) || 'pink') }, icon(svgIco(okIco(n.icon) || 'doc', 15, 1.8))) : null, hl(n.title.trim() || (pv ? L.makePreview(pv, 40) : 'Untitled'))),
       pv ? el('div', { class: 'n-prev' }, hl(n.title.trim() ? pv : '')) : null,
@@ -728,7 +768,7 @@
     const card = el('article', { class: 'note hrow c-' + tn, tabindex: '0', role: 'button', 'aria-label': 'Open note ' + L.titleOf(n),
       onclick: () => openEditor(n.id),
       onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); openEditor(n.id); } } },
-      el('span', { class: 'n-ico', 'aria-hidden': 'true' }, icon(svgIco(okIco(n.icon) || ROW_ICONS[k], 26, 1.7))),
+      el('span', { class: 'n-ico', 'aria-hidden': 'true' }, glyph(n, 26, 1.7, ROW_ICONS[k])),
       el('div', { class: 'n-main' }, el('div', { class: 'n-title' }, hl(title)), el('div', { class: 'n-sub' }, hl(lines.join('  •  '))), dueChip(n)),
       el('span', { class: 'n-side' }, el('span', { class: 'n-date', text: (n.pinned ? '📌 ' : '') + homeDate(n.updated) })),
       more);
@@ -1128,7 +1168,7 @@
   const focusSearch = () => { if (isMobile()) openSearch(); else $('#search').focus(); };
 
   function wire() {
-    $$('.nav-item').forEach(b => b.addEventListener('click', () => { if (b.dataset.act === 'search') { closeSidebar(); focusSearch(); } else go(b.dataset.view); }));
+    $$('.nav-item').forEach(b => b.addEventListener('click', () => { if (b.dataset.act === 'search') { closeSidebar(); focusSearch(); } else if (b.dataset.act === 'templates') newFromTemplate(); else go(b.dataset.view); }));
     $('#themeToggle').onclick = () => { setPref('mode', state.prefs.mode === 'dark' ? 'light' : 'dark'); paintTheme(); if (state.view === 'settings') renderSettings(); };
     $('#avatarBtn').onclick = editHero; $('#profileBtn').onclick = editHero;
     $('#openSidebar').onclick = () => { if (state.view === 'settings') { if (history.state && history.state.kind === 'view' && history.length > 1) history.back(); else go('all'); } else openSidebar(); }; $('#scrim').onclick = requestCloseSidebar;
