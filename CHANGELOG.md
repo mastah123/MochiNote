@@ -10,6 +10,9 @@ Commit messages are in [commit.txt](commit.txt).
 | `feat:` | minor | 1.0.0 → 1.1.0 | New features |
 | `feat!:` | major | 1.0.0 → 2.0.0 | Breaking changes |
 
+### v39.11.1 — Tag row fix
+- The tag chips row scrolls sideways inside its own box. Before, a long row made the whole page wider than the screen (cards were cut off on the right).
+
 ### v39.11.0 — Share, backup reminder, Trash clean-up
 - **Share…** in a note's ⋮ menu (editor and lists): Image (.png), PDF, Markdown (.md) or plain text. Opens the phone's share sheet when available, otherwise downloads the file.
 - Backup reminder: about once a week the app offers to export a backup (not before 3 notes; "Later" waits 3 days). Switch it off in Settings → Behavior.

@@ -8,6 +8,18 @@ New entries go at the top, below this legend.
 
 ==========================================================================
 
+fix: 39.11.0 → 39.11.1 — Tag chips row no longer stretches the page
+
+Fixed
+- Before → with many tags the chips row grew to its full length and widened the whole page (cards cut off on the right, sideways page scroll); after → the page keeps the screen width and only the chips row scrolls horizontally.
+- Cause: the page grid column could grow to fit its content; it is now allowed to shrink (minmax(0, 1fr)) on phone and desktop.
+
+Changed
+- Settings → About shows 39.11.1.
+
+Impact
+- Applies to All notes, tag/category lists and the Categories page, on phone and desktop.
+
 feat: 39.10.0 → 39.11.0 — Share a note as image, PDF, Markdown or text; weekly backup reminder; Trash auto-clean
 
 Added

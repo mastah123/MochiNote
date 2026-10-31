@@ -504,3 +504,10 @@ mark.hit { background: var(--yellow-bg); color: inherit; border-radius: 4px; pad
 }
 .hw-stats .hw-due { border: 0; background: none; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; display: block; }
 .hw-stats .hw-due b { display: block; }
+
+/* v39.11.1 — the tag row scrolls sideways inside its own box; it never widens the page */
+.app { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .app { grid-template-columns: 290px minmax(0, 1fr); } }
+.main, #notesView, .nv-main { min-width: 0; max-width: 100%; }
+.tag-row { min-width: 0; max-width: 100%; box-sizing: border-box; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+@media (max-width: 899px) { .tag-row { width: calc(100% + 32px); max-width: none; } }
